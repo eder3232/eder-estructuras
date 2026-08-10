@@ -13,6 +13,16 @@ export default function Home() {
             Resortes
           </Link>
         </li>
+        <li>
+          <Link href="/armaduras-2d" className="font-medium underline underline-offset-4">
+            Armaduras 2D
+          </Link>
+        </li>
+        <li>
+          <Link href="/frame2d" className="font-medium underline underline-offset-4">
+            Pórticos 2D
+          </Link>
+        </li>
       </ul>
     </div>
   );
