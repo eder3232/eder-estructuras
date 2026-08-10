@@ -3,11 +3,7 @@ import { SpringElement, System, type SolveResult } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
 import { atomElements } from "./elements";
 
-export interface DomainError {
-  source: "node" | "element";
-  refId: string;
-  message: string;
-}
+import type { DomainError } from "@/components/custom/errors-panel";
 
 export type SpringsResults =
   | { status: "ok"; solved: SolveResult; nodesById: Map<string, NodeRow> }
