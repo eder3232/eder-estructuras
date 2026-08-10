@@ -45,9 +45,26 @@ Esto es intencional: preferimos que sea visible en cada import, no oculto detrá
 
 Todo componente que no es un fork de shadcn vive aquí, sin importar de qué tipo sea (inputs, cards, layouts, lo que se necesite). No se agrupa de antemano por categoría porque no sabemos qué va a hacer falta — si con el tiempo se acumulan suficientes componentes relacionados, se organizan en subcarpetas dentro de `custom/` en ese momento.
 
-Ejemplo actual: `custom/number-input.tsx`, que envuelve el `number-field` de [Base UI](https://base-ui.com/) (`@base-ui/react`). Este proyecto tiene muchos inputs numéricos (parámetros de análisis estructural) y `<input type="number">` controlado con `useState` es conocido por dar problemas en React (cursor que salta, valores intermedios inválidos, etc.). El componente de Base UI resuelve esto, así que **siempre que se necesite un input numérico en el proyecto, se usa `custom/number-input.tsx` en vez de un `<input type="number">` nativo o el `input.tsx` de shadcn**.
+Este proyecto tiene muchos inputs numéricos (parámetros de análisis estructural) y `<input type="number">` controlado con `useState` es conocido por dar problemas en React (cursor que salta, valores intermedios inválidos, etc.). Investigando el proyecto anterior (`thesis-structures`) se identificaron dos necesidades distintas, no una sola, así que hay dos componentes:
 
-> Antes de implementar `custom/number-input.tsx`, revisar la API actual de `node_modules/@base-ui/react/number-field` — esta es una librería que puede tener cambios entre versiones, no asumir la API de memoria.
+#### `custom/number-input.tsx` — input numérico simple
+
+Envuelve el `number-field` de [Base UI](https://base-ui.com/) (`@base-ui/react`). Da stepper (botones +/-), flechas de teclado, scrub con el mouse y accesibilidad correcta. **No evalúa expresiones matemáticas** — solo acepta números.
+
+Usar aquí cuando el campo es un valor numérico simple (ej. un parámetro de configuración, un conteo) sin necesidad de que el usuario escriba una fórmula.
+
+#### `custom/formula-input.tsx` — input tipo Excel (valor o fórmula)
+
+En el proyecto anterior, casi todos los campos numéricos del dominio (coordenadas, cargas, momentos, condiciones especiales — más de 100 usos) usaban un componente casero (`EderInput`) que permitía escribir un valor **o una expresión matemática** (ej. `3.5*2`), evaluada con [mathjs](https://mathjs.org/) al confirmar — como una celda de Excel, donde puedes escribir `5` o `3.5*2` en el mismo campo (sin `=` ni referencias a otras celdas, solo expresiones aritméticas). Ese componente sí se usaba masivamente y la funcionalidad es real, así que se reconstruyó como `custom/formula-input.tsx`, corrigiendo los problemas del original:
+
+- Un solo elemento `<input>` que cambia de representación al enfocar/desenfocar (valor formateado cuando no se edita, texto crudo editable cuando sí), en vez de intercambiar un `<div>` y un `<input>` con un hack de refoco — patrón estándar para "barras de fórmula" (Excel, Google Sheets, editores de celda de librerías de tablas como TanStack Table/AG Grid).
+- Enter y blur confirman por el mismo camino (antes divergían entre versiones del componente viejo).
+- Escape cancela la edición sin perder el valor anterior.
+- Si la expresión no evalúa a un número válido, se muestra un toast de error (`sonner`, ya montado en `layout.tsx`) y se conserva el valor anterior — antes fallaba en silencio (`onChange(NaN)`), que es probablemente el "no se mostraba bien" que se recordaba de memoria.
+
+Usar este componente para cualquier campo numérico del dominio de la app (parámetros de análisis estructural) donde tenga sentido que el usuario pueda escribir una operación en vez de precalcularla.
+
+> Base UI y mathjs pueden cambiar de API entre versiones — revisar `node_modules/@base-ui/react/number-field` y la documentación de mathjs antes de extender estos componentes, no asumir la API de memoria.
 
 ## Resumen rápido
 
