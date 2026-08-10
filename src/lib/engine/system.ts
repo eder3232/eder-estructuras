@@ -9,10 +9,39 @@ export interface AddNodeInput {
   displacement?: number[];
 }
 
+export interface DofOrderEntry {
+  nodeId: string;
+  localDof: number;
+  globalIndex: number;
+  restrained: boolean;
+}
+
+export interface PartitionResult {
+  free: number[];
+  restrained: number[];
+  kff: number[][];
+  kfr: number[][];
+  krf: number[][];
+  krr: number[][];
+}
+
+export interface AssemblyStep {
+  elementId: string;
+  globalStiffnessAfter: number[][];
+}
+
+export interface AssemblyResult {
+  dofOrder: DofOrderEntry[];
+  globalStiffness: number[][];
+  steps: AssemblyStep[];
+  partition: PartitionResult;
+}
+
 export interface SolveResult {
   displacements: Map<string, number[]>;
   reactions: Map<string, number[]>;
   internalForces: Map<string, unknown>;
+  assembly: AssemblyResult;
 }
 
 interface DofIndex {
@@ -106,10 +135,11 @@ export class System {
     return [...dofIndex.byNode.get(fromId)!, ...dofIndex.byNode.get(toId)!];
   }
 
-  private assembleGlobal(dofIndex: DofIndex): { k: number[][]; f0: number[] } {
+  private assembleGlobal(dofIndex: DofIndex): { k: number[][]; f0: number[]; steps: AssemblyStep[] } {
     const t = this.nodes.size * this.dofPerNode;
     const k: number[][] = zeros(t, t).valueOf() as number[][];
     const f0: number[] = new Array(t).fill(0);
+    const steps: AssemblyStep[] = [];
 
     for (const element of this.elements.values()) {
       const map = this.elementDofMap(element, dofIndex);
@@ -134,9 +164,11 @@ export class System {
       for (let i = 0; i < size; i++) {
         f0[map[i]] += localF0[i];
       }
+
+      steps.push({ elementId: element.id, globalStiffnessAfter: k.map((row) => [...row]) });
     }
 
-    return { k, f0 };
+    return { k, f0, steps };
   }
 
   private gather(matrix: number[][], rows: number[], cols: number[]): number[][] {
@@ -149,7 +181,7 @@ export class System {
 
   solve(): SolveResult {
     const dofIndex = this.buildDOFOrder();
-    const { k, f0 } = this.assembleGlobal(dofIndex);
+    const { k, f0, steps } = this.assembleGlobal(dofIndex);
 
     const nodesInOrder = [...this.nodes.values()];
     const t = nodesInOrder.length * this.dofPerNode;
@@ -224,6 +256,21 @@ export class System {
       );
     }
 
-    return { displacements, reactions, internalForces };
+    const dofOrder: DofOrderEntry[] = [];
+    for (const node of nodesInOrder) {
+      const indices = dofIndex.byNode.get(node.id)!;
+      node.dof.forEach((d, i) => {
+        dofOrder.push({ nodeId: node.id, localDof: i, globalIndex: indices[i], restrained: d.restrained });
+      });
+    }
+
+    const partition: PartitionResult = { free, restrained, kff, kfr, krf, krr };
+
+    return {
+      displacements,
+      reactions,
+      internalForces,
+      assembly: { dofOrder, globalStiffness: k, steps, partition },
+    };
   }
 }
