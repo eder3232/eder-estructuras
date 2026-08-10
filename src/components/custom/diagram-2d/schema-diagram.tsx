@@ -23,7 +23,7 @@ export function SchemaDiagram({ nodes, elements, supports, forces }: SchemaDiagr
 
   return (
     <SvgCanvas viewBox={viewBox}>
-      <g className="stroke-foreground" strokeWidth={1.5} vectorEffect="non-scaling-stroke">
+      <g className="stroke-foreground" strokeWidth={1.5}>
         {elements.map((element) => {
           const from = nodesById.get(element.fromNodeId);
           const to = nodesById.get(element.toNodeId);

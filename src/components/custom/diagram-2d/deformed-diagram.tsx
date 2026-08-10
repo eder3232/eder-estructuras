@@ -60,7 +60,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
       </div>
 
       <SvgCanvas viewBox={viewBox}>
-        <g className="stroke-muted-foreground" strokeWidth={1} strokeDasharray="4 3" vectorEffect="non-scaling-stroke">
+        <g className="stroke-muted-foreground" strokeWidth={1} strokeDasharray="4 3">
           {elements.map((element) => {
             const from = nodesById.get(element.fromNodeId);
             const to = nodesById.get(element.toNodeId);
@@ -71,7 +71,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
           })}
         </g>
 
-        <g strokeWidth={2} vectorEffect="non-scaling-stroke">
+        <g strokeWidth={2}>
           {elements.map((element) => {
             const from = displacedById.get(element.fromNodeId);
             const to = displacedById.get(element.toNodeId);

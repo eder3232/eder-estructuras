@@ -61,7 +61,8 @@ Lo que **no** se resolvió acá, a propósito: la forma deformada sigue siendo u
 
 - SVG puro, sin three.js ni librería de gráficos — consistente con el principio 4 del roadmap ("2D no es 3D").
 - Colores por clase de Tailwind sobre tokens de tema (`fill-primary`, `stroke-destructive`, `stroke-warning`, `fill-muted-foreground`) para que la visualización se adapte a dark mode automáticamente — el original tenía colores hardcodeados (`"purple"`, `"black"`, `"red"`) que no se adaptaban.
-- `vector-effect="non-scaling-stroke"` en todo trazo, para que el grosor de línea no dependa de la escala del `viewBox`.
+- `vector-effect="non-scaling-stroke"` **en cada forma que se traza, nunca en el `<g>` que la contiene**: `vector-effect` no es una propiedad heredable, así que ponerlo en el grupo no hace nada por los hijos. `stroke-width` **sí** hereda, y ahí está la trampa — un `<g strokeWidth={1.5} vectorEffect="…">` con hijos que no repiten el `vectorEffect` deja el trazo en **unidades del modelo**. A la escala típica de estos diagramas (un `viewBox` de ~5 unidades en un lienzo de 500 px ⇒ ~96 px por unidad) eso son ~144 px de grosor, y el glifo desaparece bajo su propio borde. Fue exactamente el bug de los apoyos de `/armaduras-2d` y de los empotramientos de `/frame2d`.
+- Corolario del punto anterior: **toda forma maciza lleva `stroke-none` explícito**. Las puntas de flecha y las etiquetas de valor viven dentro de un grupo que fija el color con `stroke-blue-500`/`stroke-warning`; sin `stroke-none` heredan ese color con el `stroke-width` inicial (`1`, otra vez en unidades del modelo, no en píxeles).
 - El estado de UI que solo usa un componente (factor de escala) es `useState` local, no un átomo global — reservar Jotai para lo que de verdad comparten varios componentes (como `atomDecimals`).
 
 ## Fuera de alcance de este patrón (a propósito)

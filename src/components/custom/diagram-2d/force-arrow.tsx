@@ -44,10 +44,20 @@ export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowP
   return (
     <g className={COLOR_CLASS[variant]}>
       <line x1={tailX} y1={tailY} x2={headX} y2={headY} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      {/* La punta y la etiqueta son macizas: sin `stroke-none` heredan el color
+          del grupo con el ancho inicial (1 unidad del modelo, no 1 px). */}
       <polygon
         points={`${headX},${headY} ${baseX + perp.x * headSize},${baseY + perp.y * headSize} ${baseX - perp.x * headSize},${baseY - perp.y * headSize}`}
+        className="stroke-none"
       />
-      <text x={labelX} y={labelY} fontSize={unitSize} textAnchor="middle" dominantBaseline="middle">
+      <text
+        x={labelX}
+        y={labelY}
+        fontSize={unitSize}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className="stroke-none"
+      >
         {value.toFixed(decimals)}
       </text>
     </g>

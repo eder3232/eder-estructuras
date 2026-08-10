@@ -10,13 +10,28 @@ interface SupportIconProps {
   unitSize: number;
 }
 
-/** Achurado de suelo: la línea de base más las rayitas inclinadas. */
+/**
+ * Achurado de suelo: la línea de base más las rayitas inclinadas.
+ *
+ * Cada línea declara su propio `vectorEffect`: no es una propiedad heredable,
+ * así que ponerlo en el `<g>` no alcanza. `strokeWidth` sí hereda, y sin el
+ * efecto se interpreta en unidades del modelo — a esta escala, un trazo de 1.5
+ * tapaba el glifo entero.
+ */
 function Ground({ half, y }: { half: number; y: number }) {
   return (
-    <g strokeWidth={1.5} vectorEffect="non-scaling-stroke">
-      <line x1={-half} y1={y} x2={half} y2={y} />
+    <g>
+      <line x1={-half} y1={y} x2={half} y2={y} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
       {[-1, -0.5, 0, 0.5, 1].map((t) => (
-        <line key={t} x1={t * half} y1={y} x2={t * half - half * 0.27} y2={y + half * 0.38} />
+        <line
+          key={t}
+          x1={t * half}
+          y1={y}
+          x2={t * half - half * 0.5}
+          y2={y + half * 0.7}
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
       ))}
     </g>
   );
@@ -57,7 +72,6 @@ export function SupportIcon({
     <g
       transform={`translate(${cx} ${cy}) rotate(${rotation})`}
       className="fill-muted-foreground stroke-muted-foreground"
-      vectorEffect="non-scaling-stroke"
     >
       {isFixed ? (
         <Ground half={half * 1.8} y={0} />

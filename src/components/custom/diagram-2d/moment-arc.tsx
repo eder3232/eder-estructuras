@@ -65,8 +65,11 @@ export function MomentArc({ x, z, value, unitSize, variant }: MomentArcProps) {
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
+      {/* Maciza: sin `stroke-none` hereda el color del grupo con el ancho
+          inicial (1 unidad del modelo, no 1 px). */}
       <polygon
         points={`${tip.x},${tip.y} ${base.x + perp.x * headSize},${base.y + perp.y * headSize} ${base.x - perp.x * headSize},${base.y - perp.y * headSize}`}
+        className="stroke-none"
       />
       <text
         x={cx}

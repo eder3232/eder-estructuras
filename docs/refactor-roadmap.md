@@ -159,7 +159,7 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **cierre del Tren D** (`/armaduras-3d` completo).
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **arreglo del render de los apoyos** en los diagramas 2D (2026-08-10), después del cierre del Tren D (`/armaduras-3d` completo). El estado de los trenes no cambió; sí cambió el punto 5, que ahora explica cómo mirar la app sin la extensión de Chrome.
 
 ### 1. Dónde está parado el proyecto
 
@@ -204,7 +204,8 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D2 | `element-table.tsx` de `/armaduras-2d` y `/armaduras-3d` son **byte-idénticos** salvo el import del store (una barra espacial pide los mismos datos que una plana). Se dejaron duplicados a propósito, con el mismo criterio con que se extrajo `errors-panel`: **el tercer caso dispara la extracción** a `src/components/custom/` | `src/app/armaduras-{2d,3d}/components/element-table.tsx` | chico |
 | D3 | La forma deformada de `frame2d` es una recta entre nudos. Con flexión el tramo real es una cúbica de Hermite gobernada por los giros de los extremos — mejora pedagógica clara, pero hay que muestrear con las funciones de forma del elemento, no solo mover los extremos | `diagram-2d/deformed-diagram.tsx` | mediano |
 | D4 | Los diagramas de corte y momento a lo largo de la barra (`graphShear`/`graphMoment` del original) no se portaron. Son otra vista, no una variante de la deformada | — | mediano |
-| D5 | Verificación visual pendiente — ver punto 5 | — | chico |
+| D5 | Verificación visual pendiente — ver punto 5. Ya no es "todo": `/armaduras-2d` y el esquema de `/frame2d` se miraron; falta la deformada de `/frame2d`, `/armaduras-3d` y el modo oscuro | — | chico |
+| D6 | Las etiquetas de valor de las flechas (`force-arrow.tsx`) se dibujan a una distancia fija de la punta y **se superponen con las barras y entre sí** cuando el nudo tiene carga en x y en z a la vez (visible en el nudo `v3` del esquema semilla de `/armaduras-2d`). Se detectó mirando, no calculando. Arreglo posible: correr la etiqueta perpendicular al eje de la flecha, o darle un `paint-order: stroke` con halo del color de fondo | `diagram-2d/force-arrow.tsx` | chico |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
 
@@ -220,9 +221,22 @@ pnpm build         # prerrenderiza las 4 rutas + home
 
 `pnpm lint` da **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos por `react-hooks/set-state-in-effect`). **No son regresiones y no se tocan**: `ui/` es intocable por convención. Si aparece un tercer error, ese sí es nuevo.
 
-**Lo que nunca se miró en un navegador** (la extensión de Chrome no estuvo conectada en ninguna de las dos sesiones que hicieron visualización):
+**Cómo mirar la app sin la extensión de Chrome.** La extensión no se conectó en ninguna sesión hasta ahora, y eso dejó pasar un bug de render que ninguna verificación numérica iba a encontrar (ver abajo). No hace falta la extensión: **Chrome headless saca capturas desde la línea de comandos**, y eso alcanza para revisar una vista.
 
-- **`/frame2d`**: el arco de momento (`moment-arc.tsx`) y el glifo de empotramiento se verificaron renderizando su markup SVG y comprobando la geometría numéricamente, pero no se vieron con los ojos. Abrir la sección "5. Forma deformada", donde las reacciones de los empotramientos dibujan arcos reales.
+```bash
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --no-sandbox \
+  --user-data-dir="<dir temporal>" --window-size=1400,3000 \
+  --screenshot="<ruta absoluta>\shot.png" --virtual-time-budget=12000 \
+  "http://localhost:3000/armaduras-2d"
+```
+
+Dos detalles que cuestan tiempo si no se saben: el `--screenshot` necesita **ruta absoluta de Windows** y un `--user-data-dir` propio (si no, "Acceso denegado"), y `--window-size` alto captura la página entera de una (no hay scroll). Lo que **no** se puede es clickear: para ver una sección del acordeón que arranca cerrada (la forma deformada es la número 5), hay que tocar `defaultValue` del `<Accordion>` en `results-panel.tsx`, sacar la captura y revertir.
+
+**Lo que ya se miró** (2026-08-10, por headless): el esquema y la deformada de `/armaduras-2d`, y el esquema de `/frame2d`. Ahí apareció el bug de `vector-effect` descrito en [`docs/diagram-pattern.md`](./diagram-pattern.md) ("Decisiones técnicas a mantener"): los apoyos se dibujaban con un trazo de ~144 px y tapaban el diagrama. **La lección importa más que el bug**: el markup SVG era correcto atributo por atributo y la geometría daba bien: lo que fallaba era el modelo de herencia de CSS, y eso solo se ve mirando.
+
+**Lo que sigue sin mirarse:**
+
+- **`/frame2d`**, sección "5. Forma deformada": el arco de momento (`moment-arc.tsx`) sobre las reacciones de los empotramientos. El esquema de esa ruta sí se vio.
 - **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
 - **Modo oscuro, en ningún sistema**: el repo define los tokens `.dark` en `globals.css` pero no monta ningún switch de tema, así que nunca se activó. Para la escena 3D esto importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS.
 
