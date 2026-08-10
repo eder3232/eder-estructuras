@@ -28,12 +28,16 @@ Abre [http://localhost:3000](http://localhost:3000) para ver el resultado. La ap
 
 ### Scripts disponibles
 
-| Comando       | Descripción                          |
-| ------------- | ------------------------------------- |
-| `pnpm dev`    | Levanta el servidor de desarrollo     |
-| `pnpm build`  | Compila la app para producción        |
-| `pnpm start`  | Sirve la build de producción          |
-| `pnpm lint`   | Corre ESLint sobre el proyecto        |
+| Comando            | Descripción                                    |
+| ------------------ | ---------------------------------------------- |
+| `pnpm dev`         | Levanta el servidor de desarrollo              |
+| `pnpm build`       | Compila la app para producción                 |
+| `pnpm start`       | Sirve la build de producción                   |
+| `pnpm test`        | Corre los tests del motor de cálculo (Vitest)  |
+| `pnpm lint`        | Corre ESLint sobre el proyecto                 |
+| `npx tsc --noEmit` | Chequea tipos sin compilar                     |
+
+> **Ojo con `pnpm lint`**: hoy reporta **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos `react-hooks/set-state-in-effect`). No son regresiones y no se corrigen: `ui/` es intocable por convención (ver [`docs/components.md`](./docs/components.md)). Si aparece un tercer error, ese sí es nuevo.
 
 ## Estructura del proyecto
 
@@ -53,7 +57,7 @@ src/
 - [`docs/git-workflow.md`](./docs/git-workflow.md) — directriz de control de versiones: fase actual de commits directos a `main`, Conventional Commits, versionado con SemVer y el cambio de flujo a ramas + PR una vez taggeada `v1.0.0`.
 - [`docs/components.md`](./docs/components.md) — convención de organización de componentes: qué queda intocable en `ui/`, cómo forkear a `ui-custom/`, y qué va en `custom/`.
 - [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto anterior (`thesis-structures`) y el orden de fases/trenes propuesto para el refactor: motor de cálculo unificado, patrón de estado, visualización, y la exportación a Excel con fórmulas vivas.
-- [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejaron `/springs` y `/armaduras-2d`.
+- [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejaron `/springs`, `/armaduras-2d` y `/frame2d` (1, 2 y 3 DOF por nudo).
 - [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — **léelo antes de tocar visualización**: el patrón de esquema/forma deformada en SVG puro (sin three.js), con qué es genérico (`src/components/custom/diagram-2d/`) y cómo se resolvió el DOF rotacional (empotramiento, arco de momento, criterio de color) al portarlo a `/frame2d`.
 
 Más guías (arquitectura, convenciones de código, etc.) se irán agregando en `docs/` a medida que el proyecto lo requiera.
@@ -71,7 +75,16 @@ Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-ro
 - [x] **Tren A (armaduras 2D)** — mismo patrón replicado en `/armaduras-2d` (2 DOF/nudo, rigidez axial con transformación geométrica vía `TrussElement2D`). Lo genérico entre ambos sistemas (`matrix-table`, control de decimales, tabla de DOF) se extrajo a `src/components/custom/` para no duplicarlo.
 - [x] **Tren B** — capa de visualización 2D en SVG puro (`src/components/custom/diagram-2d/`, sin three.js): esquema no deformado, forma deformada con slider de escala, barras coloreadas por tracción/compresión y reacciones, conectada a `/armaduras-2d`.
 - [x] **Tren C (frame2d)** — pórticos planos completos de punta a punta: `FrameElement2D` (rigidez 6×6 axial+flexión, fuerzas internas axial/corte/momento) con regresión portada del ejemplo del proyecto original, página `/frame2d` con el patrón de estado, y visualización con el DOF rotacional resuelto (empotramiento, arco de momento, color por fuerza axial). Incluye momentos de empotramiento perfecto por barra, corrigiendo el bug de transformación del original (ver `docs/refactor-roadmap.md`); falta todavía la UI de tablas de carga que los calcule sola.
-- [ ] **Tren C (frame2d-seismic) — siguiente paso**: extensión real sobre `frame2d`, no un fork copiado. Ver `docs/refactor-roadmap.md`.
+- [ ] **Tren C (frame2d-seismic)**: extensión real sobre `frame2d`, no un fork copiado. Ver `docs/refactor-roadmap.md`.
 - [ ] Trenes D (armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
 Ya existen tres páginas funcionales: [`/springs`](./src/app/springs), [`/armaduras-2d`](./src/app/armaduras-2d) y [`/frame2d`](./src/app/frame2d) — 1, 2 y 3 grados de libertad por nudo. Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización SVG) que se replica para el resto de los sistemas.
+
+### Próximo paso
+
+Hay **dos hilos pendientes independientes** — no dependen entre sí, se pueden tomar en cualquier orden:
+
+- **A — `frame2d-seismic`** (cierra el Tren C y desbloquea el D). Es la recomendación para arrancar.
+- **B — tablas de carga que calculen los momentos de empotramiento perfecto**. El mecanismo ya funciona, pero hoy los 6 valores de FEM se cargan a mano por barra; falta la UI que los calcule a partir de la carga (distribuida, puntual, momento, distribuida intermedia).
+
+Los dos están desarrollados, con su contexto y sus trampas, en la sección **"Si estás retomando después de un `/clear`"** de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md), junto con el estado de verificación (qué está probado y qué no).
