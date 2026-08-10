@@ -2,6 +2,8 @@
 
 Este documento diagnostica el estado real de `thesis-structures` (el proyecto anterior, en `D:\programming\repos_clonados\thesis-structures`) y propone un orden concreto para refactorizarlo en este repo. Es un plan vivo: se actualiza a medida que cada fase se completa o cambia de alcance.
 
+> **¿Retomando el trabajo en frío?** Andá directo a **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** (al final del documento): estado actual, qué leer, qué falta y qué está verificado, todo junto. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
+
 ## Resumen ejecutivo
 
 ~40,000 líneas en `src`, 5 "programas" independientes (armor2d, armor3d, frame2d, frame2d-seismic, springs), **0 tests**, **0 componentes 3D reutilizados entre programas**, y una capa de dominio que reimplementa el mismo algoritmo (método matricial de rigideces) 5 veces con nombres distintos para los mismos conceptos. El diagnóstico del autor original ("es una desgracia total, en especial three.js") se confirma con evidencia concreta abajo, no es autocrítica exagerada.
@@ -140,7 +142,9 @@ Riesgos técnicos a resolver antes de comprometerse con esto como feature:
 - Contenido educativo (`src/content`): se migra en el Tren 8, no bloquea nada antes.
 - **Armaduras plus / frame plus** (temperatura, defectos de fabricación): en el método matricial ambos efectos se modelan como una carga nodal equivalente (`F = K·u + F0`, y la fuerza interna pasa de `f = k·u` a `f = k·(u − δ0)`), no como un cambio en la rigidez. Por eso `Element` expone el hook opcional `equivalentLoad()` — que **ya está en uso**, estrenado por los FEM de `FrameElement2D` (ver la sección dedicada arriba), así que el mecanismo está probado de punta a punta y esta fase no arranca de cero. La *implementación* de temperatura/defectos igual queda bloqueada hasta que los Trenes A–D (los 5 sistemas base, completos de punta a punta) terminen, para no diversificar antes de tener una base consistente.
 
-## Próximo paso inmediato
+## Qué quedó hecho en cada sistema
+
+> Si venís de un `/clear`, saltá a **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** — esta sección es el detalle histórico de cada sistema, aquella es el estado accionable.
 
 `/springs` y `/armaduras-2d` ya están hechos de punta a punta (springs: commits `d5d041a`/`960a38e`/`932f9e2`; armaduras 2D + visualización SVG: commits `0f55146`/`782aec8`/`828f2e2`), incluyendo la capa de visualización del Tren B (esquema, forma deformada, reacciones). El patrón de estado/resultados está en **[`docs/state-pattern.md`](./state-pattern.md)**; el de visualización, en **[`docs/diagram-pattern.md`](./diagram-pattern.md)** — leer ambos antes de tocar código nuevo de UI. Lo genérico entre sistemas (tablas de matrices, control de decimales, tabla de DOF, y `src/components/custom/diagram-2d/`) vive en `src/components/custom/`, no duplicado por sistema.
 
@@ -153,21 +157,75 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 - **Fuerzas internas**: `armor3d` nunca las calculaba. Su store declaraba un `internalForces` que quedaba siempre vacío, y la UI no las mostraba. Acá salen de `TrussElement3D.internalForce()` como en cualquier otro sistema. Efecto lateral: los valores de fuerza interna de la regresión **no se pueden cotejar contra la app vieja** — salen de un script Node independiente que además verifica equilibrio nudo por nudo.
 - **Resortes de nudo**: el original pedía un `springs: {x, y, z}` por nudo en la UI y en la clase `Vertices`, pero ese valor **nunca entraba al ensamblaje** (`buildGlobal` solo recorre barras; el `dataArray.k` que lo guardaba no se leía en ningún lado). Era entrada muerta, así que no se portó. Si alguna vez se quiere de verdad, es una feature nueva —sumar `k` en la diagonal del DOF correspondiente—, no una regresión a recuperar.
 
-### Si estás retomando después de un `/clear`
+## Si estás retomando después de un `/clear`
 
-Hay **dos hilos pendientes independientes**. No dependen entre sí; se pueden hacer en cualquier orden. La recomendación es arrancar por el A, porque cierra el Tren C y deja los 5 sistemas base completos.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **cierre del Tren D** (`/armaduras-3d` completo).
 
-**Hilo A — `frame2d-seismic` (segunda mitad del Tren C).** Es la continuación natural. Como extensión real sobre `frame2d`, **no un fork copiado**: ese fue el bug de duplicación diagnosticado en el original, donde `frame2D.ts` de ambos programas era casi idéntico letra por letra. El orden probado sigue siendo motor primero, validado con un test de regresión, antes de tocar estado/UI. Antes de escribir nada: revisar `D:\programming\repos_clonados\thesis-structures\src\programs\frame2d-seismic\` y **diffearlo contra `frame2d`** para aislar qué agrega de verdad el caso sísmico. Lo que quede en común no se copia — se reusa.
+### 1. Dónde está parado el proyecto
 
-**Hilo B — tablas de carga que calculen los FEM.** El mecanismo de momentos de empotramiento perfecto ya está portado y funcionando (ver la sección "Los momentos de empotramiento perfecto (FEM) y el bug de transformación", más arriba en este mismo documento), pero **hoy los 6 valores se cargan a mano por barra**. Falta la UI que los calcule a partir de la carga: distribuida, puntual, momento y distribuida intermedia. Es la UI más grande del frame2d original (`components/edgesTable/fem/`, con imágenes explicativas por tipo de carga). Leer esa sección antes de tocarlo — ahí está la convención de signo y por qué el original transformaba mal.
+Cuatro sistemas completos de punta a punta — motor con tests, estado, tablas de entrada, resultados pedagógicos y visualización:
 
-**Deuda chica anotada al pasar** (no bloquea nada, pero es real): cuando `Kff` no tiene inversa —el caso normal de agregar un nudo antes de conectarlo— el mensaje que ve el usuario es el de mathjs en inglés, *"Cannot calculate inverse, determinant is zero"*. Pasa igual en los cuatro sistemas, así que arreglarlo es tocar `System.solve()` una vez, no cada página.
+| Ruta | Motor | DOF/nudo | Visualización |
+|---|---|---|---|
+| `/springs` | `src/lib/engine/springs/` | 1 | — (no la necesita) |
+| `/armaduras-2d` | `src/lib/engine/trusses-2d/` | 2 (x, z) | SVG (`diagram-2d/`) |
+| `/frame2d` | `src/lib/engine/frame2d/` | 3 (x, z, θ) | SVG (`diagram-2d/`) |
+| `/armaduras-3d` | `src/lib/engine/trusses-3d/` | 3 (x, y, z) | three.js (`diagram-3d/`) |
 
-### Estado de verificación (lo que está y lo que no)
+Trenes 0, 1, 2, A, B, D ✅ · Tren C a la mitad (falta `frame2d-seismic`) · Fases 6-8 sin empezar.
 
-Para no re-verificar de cero ni asumir de más:
+**Dato útil**: la página de cada sistema arranca con los mismos datos semilla que su test de regresión, así que los números en pantalla se pueden cotejar contra valores ya validados sin calcular nada a mano.
 
-- `pnpm test` (35 tests), `npx tsc --noEmit`, `pnpm build` y `pnpm dev` sobre `/armaduras-3d` pasan limpios.
-- `pnpm lint` da **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos por `react-hooks/set-state-in-effect`). **No son regresiones y no se tocan**: `ui/` es intocable por convención (ver [`docs/components.md`](./components.md)). Si aparece un tercer error, ese sí es nuevo.
-- **Lo que nunca se miró en un navegador**: el arco de momento (`moment-arc.tsx`) y el glifo de empotramiento se verificaron renderizando su markup SVG y comprobando la geometría numéricamente, pero no se vieron con los ojos porque la extensión de Chrome no estaba conectada. Vale la pena un `pnpm dev` sobre `/frame2d` y abrir la sección "5. Forma deformada", donde las reacciones de los empotramientos dibujan arcos reales.
-- **Toda la escena 3D tampoco se miró** — la extensión de Chrome seguía sin conectar. Lo que sí se comprobó: la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, `pnpm build` la prerrenderiza, y `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Lo que **no** está comprobado es lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben. Abrir `/armaduras-3d`, rotar con el mouse y desplegar "5. Forma deformada" es lo primero a hacer cuando haya navegador.
+### 2. Qué leer antes de escribir código (en este orden)
+
+1. Este documento — el porqué del orden de trabajo y el diagnóstico del proyecto original.
+2. [`docs/state-pattern.md`](./state-pattern.md) — **obligatorio antes de armar la página de un sistema nuevo**.
+3. [`docs/diagram-pattern.md`](./diagram-pattern.md) si tocás visualización de un sistema **plano**; [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md) si es **espacial**. Son módulos hermanos, ninguno importa del otro.
+4. [`docs/components.md`](./components.md) — qué es intocable en `ui/` y cómo forkear.
+5. [`docs/git-workflow.md`](./git-workflow.md) — commits directos a `main`, Conventional Commits.
+
+Regla general: **ante una discrepancia, gana el código**. Estos documentos pueden quedar desactualizados; `src/app/<sistema>/` y `src/lib/engine/` no.
+
+### 3. Los dos hilos grandes pendientes
+
+No dependen entre sí, se pueden tomar en cualquier orden. La recomendación es **arrancar por el A**, porque cierra el Tren C y deja los 5 sistemas base completos.
+
+**Hilo A — `frame2d-seismic` (segunda mitad del Tren C).** Como extensión real sobre `frame2d`, **no un fork copiado**: ese fue el bug de duplicación diagnosticado en el original, donde `frame2D.ts` de ambos programas era casi idéntico letra por letra. Antes de escribir nada: revisar `D:\programming\repos_clonados\thesis-structures\src\programs\frame2d-seismic\` y **diffearlo contra `frame2d`** para aislar qué agrega de verdad el caso sísmico. Lo que quede en común no se copia — se reusa. El orden probado sigue siendo: motor primero, validado con un test de regresión, antes de tocar estado/UI.
+
+**Hilo B — tablas de carga que calculen los FEM.** El mecanismo de momentos de empotramiento perfecto ya está portado y funcionando (ver la sección "Los momentos de empotramiento perfecto (FEM) y el bug de transformación", más arriba en este mismo documento), pero **hoy los 6 valores se cargan a mano por barra**. Falta la UI que los calcule a partir de la carga: distribuida, puntual, momento y distribuida intermedia. Es la UI más grande del frame2d original (`components/edgesTable/fem/`, con imágenes explicativas por tipo de carga). Leer esa sección antes de tocarlo — ahí está la convención de signo y por qué el original transformaba mal. Ojo con el pendiente que ya está anotado ahí: la tabla de carga distribuida debería ofrecer "perpendicular a la barra" vs. "vertical (gravedad)" y hacer la descomposición sola.
+
+### 4. Deudas chicas anotadas al pasar
+
+Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para poder agarrar una si sobra tiempo:
+
+| # | Qué | Dónde | Tamaño |
+|---|---|---|---|
+| D1 | Cuando `Kff` no tiene inversa —el caso normal de agregar un nudo antes de conectarlo— el usuario ve el mensaje de mathjs en inglés: *"Cannot calculate inverse, determinant is zero"*. Pasa igual en los 4 sistemas | `System.solve()` en `src/lib/engine/system.ts`, un solo lugar | chico |
+| D2 | `element-table.tsx` de `/armaduras-2d` y `/armaduras-3d` son **byte-idénticos** salvo el import del store (una barra espacial pide los mismos datos que una plana). Se dejaron duplicados a propósito, con el mismo criterio con que se extrajo `errors-panel`: **el tercer caso dispara la extracción** a `src/components/custom/` | `src/app/armaduras-{2d,3d}/components/element-table.tsx` | chico |
+| D3 | La forma deformada de `frame2d` es una recta entre nudos. Con flexión el tramo real es una cúbica de Hermite gobernada por los giros de los extremos — mejora pedagógica clara, pero hay que muestrear con las funciones de forma del elemento, no solo mover los extremos | `diagram-2d/deformed-diagram.tsx` | mediano |
+| D4 | Los diagramas de corte y momento a lo largo de la barra (`graphShear`/`graphMoment` del original) no se portaron. Son otra vista, no una variante de la deformada | — | mediano |
+| D5 | Verificación visual pendiente — ver punto 5 | — | chico |
+
+### 5. Estado de verificación (lo que está probado y lo que no)
+
+Para no re-verificar de cero ni asumir de más.
+
+**Pasa limpio hoy** (`main`, después del Tren D):
+
+```
+pnpm test          # 35 tests, 11 archivos
+npx tsc --noEmit   # sin salida
+pnpm build         # prerrenderiza las 4 rutas + home
+```
+
+`pnpm lint` da **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos por `react-hooks/set-state-in-effect`). **No son regresiones y no se tocan**: `ui/` es intocable por convención. Si aparece un tercer error, ese sí es nuevo.
+
+**Lo que nunca se miró en un navegador** (la extensión de Chrome no estuvo conectada en ninguna de las dos sesiones que hicieron visualización):
+
+- **`/frame2d`**: el arco de momento (`moment-arc.tsx`) y el glifo de empotramiento se verificaron renderizando su markup SVG y comprobando la geometría numéricamente, pero no se vieron con los ojos. Abrir la sección "5. Forma deformada", donde las reacciones de los empotramientos dibujan arcos reales.
+- **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
+- **Modo oscuro, en ningún sistema**: el repo define los tokens `.dark` en `globals.css` pero no monta ningún switch de tema, así que nunca se activó. Para la escena 3D esto importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS.
+
+Un `pnpm dev` y mirar esas tres cosas es media hora bien gastada apenas haya navegador.
+
+**Si hace falta regenerar valores esperados de una regresión**: los de armaduras 2D y 3D salieron de scripts Node aislados, escritos aparte y **sin reutilizar código del repo** (ensamblaje y eliminación gaussiana propios), que además verifican equilibrio nudo por nudo. Esos scripts fueron temporales y no están versionados a propósito: el valor está en el test, no en el script. Si necesitás otros, escribí uno nuevo con el mismo criterio — reusar el motor para generar los valores que validan al motor no probaría nada.

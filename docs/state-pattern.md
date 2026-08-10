@@ -1,6 +1,8 @@
 # Patrón de estado y resultados (Tren A)
 
-Este documento describe el patrón que dejaron `/springs` y `/armaduras-2d` funcionando de punta a punta (Tren A completo), para replicarlo en los sistemas que siguen (Tren B en adelante: frame2d, frame2d-seismic, armor3d). Si estás retomando el trabajo después de un `/clear`, este es el punto de partida — junto con [`docs/refactor-roadmap.md`](./refactor-roadmap.md) (por qué este orden de trabajo) y [`docs/components.md`](./components.md) (convención de carpetas de componentes).
+Este documento describe el patrón que estrenaron `/springs` y `/armaduras-2d` (Tren A) y que después replicaron `/frame2d` (Tren C) y `/armaduras-3d` (Tren D) sin necesidad de modificarlo. **Leelo antes de armar la página de un sistema nuevo** — el único que queda es `frame2d-seismic`.
+
+Si estás retomando el trabajo después de un `/clear`, el punto de partida no es este archivo sino la sección ["Si estás retomando después de un `/clear`"](./refactor-roadmap.md#si-estás-retomando-después-de-un-clear) de [`docs/refactor-roadmap.md`](./refactor-roadmap.md), que dice qué está hecho y qué falta. Después volvé acá. La convención de carpetas de componentes está en [`docs/components.md`](./components.md).
 
 **Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/`, `src/app/armaduras-2d/`, `src/app/frame2d/` y `src/app/armaduras-3d/` — cuatro implementaciones del mismo patrón con 1, 2, 3 y 3 DOF por nudo (los dos últimos con la misma cantidad pero distinta naturaleza: rotación vs. tres traslaciones), útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
 

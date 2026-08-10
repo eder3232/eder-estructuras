@@ -85,9 +85,13 @@ Ya existen cuatro páginas funcionales: [`/springs`](./src/app/springs), [`/arma
 
 ### Próximo paso
 
-Hay **dos hilos pendientes independientes** — no dependen entre sí, se pueden tomar en cualquier orden:
+> **Empezá acá si retomás en frío.** La sección **["Si estás retomando después de un `/clear`"](./docs/refactor-roadmap.md#si-estás-retomando-después-de-un-clear)** de `docs/refactor-roadmap.md` es autosuficiente: qué está hecho, qué leer y en qué orden, los hilos pendientes con sus trampas, las deudas chicas y qué está verificado y qué no. Lo de abajo es solo el resumen.
 
-- **A — `frame2d-seismic`** (cierra el Tren C y deja los 5 sistemas base completos). Es la recomendación para arrancar.
+**Dos hilos grandes**, independientes entre sí:
+
+- **A — `frame2d-seismic`** (cierra el Tren C y deja los 5 sistemas base completos). Es la recomendación para arrancar. Va como extensión real sobre `frame2d`, **no un fork copiado** — ese fue el bug diagnosticado en el original.
 - **B — tablas de carga que calculen los momentos de empotramiento perfecto**. El mecanismo ya funciona, pero hoy los 6 valores de FEM se cargan a mano por barra; falta la UI que los calcule a partir de la carga (distribuida, puntual, momento, distribuida intermedia).
 
-Los dos están desarrollados, con su contexto y sus trampas, en la sección **"Si estás retomando después de un `/clear`"** de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md), junto con el estado de verificación (qué está probado y qué no).
+**Deudas chicas** (ninguna bloquea nada, la tabla completa está en el roadmap): el mensaje de mathjs en inglés cuando `Kff` es singular; `element-table.tsx` duplicado byte-idéntico entre las dos armaduras (se extrae al tercer caso); la deformada de `frame2d` como recta en vez de cúbica de Hermite; los diagramas de corte y momento sin portar.
+
+**Lo primero a hacer cuando haya navegador**: nada de la capa visual se miró nunca con los ojos — ni los arcos de momento de `/frame2d`, ni la escena 3D de `/armaduras-3d`, ni el modo oscuro en ningún sistema. Está todo detallado en "Estado de verificación" dentro de esa misma sección del roadmap.

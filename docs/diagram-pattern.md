@@ -1,6 +1,6 @@
 # Patrón de visualización 2D (Tren B)
 
-Este documento describe el patrón que dejó `/armaduras-2d` con su capa de visualización SVG, para replicarlo en frame2d/frame2d-seismic (Tren C) y en cualquier sistema plano que siga. Complementa a [`docs/state-pattern.md`](./state-pattern.md) (patrón de estado/resultados) — léelo primero si no lo hiciste, este documento asume que ya existe un `store/results.ts` con un `SolveResult` resuelto.
+Este documento describe el patrón que dejó `/armaduras-2d` con su capa de visualización SVG, ya replicado en `/frame2d` (Tren C) y aplicable a cualquier sistema **plano** que siga — el único que queda es `frame2d-seismic`. Para sistemas **espaciales** el módulo es otro: ver [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md) (three.js). Complementa a [`docs/state-pattern.md`](./state-pattern.md) (patrón de estado/resultados) — léelo primero si no lo hiciste, este documento asume que ya existe un `store/results.ts` con un `SolveResult` resuelto.
 
 **Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/components/custom/diagram-2d/` (genérico) y `src/app/armaduras-2d/components/schema-diagram.tsx` + `.../components/results/deformed-shape.tsx` (específico de armaduras 2D). Ante la duda, leé el código ahí — este documento puede quedar desactualizado, el código no.
 
@@ -67,6 +67,6 @@ Lo que **no** se resolvió acá, a propósito: la forma deformada sigue siendo u
 ## Fuera de alcance de este patrón (a propósito)
 
 - Interactividad (hover/click sobre un nudo o barra para resaltarlo en las tablas) — no se pidió, se agrega después si hace falta.
-- Deformada curva entre nudos (cúbica de Hermite con los giros de los extremos) — ver la sección del DOF rotacional.
-- Diagramas de corte y momento a lo largo de la barra — el original los tenía (`graphShear`, `graphMoment`) y son contenido pedagógico valioso, pero son otra vista, no una variante de la deformada: se evalúan en el Tren C junto a `frame2d-seismic` o después.
+- Deformada curva entre nudos (cúbica de Hermite con los giros de los extremos) — ver la sección del DOF rotacional. Anotada como deuda **D3** en el roadmap.
+- Diagramas de corte y momento a lo largo de la barra — el original los tenía (`graphShear`, `graphMoment`) y son contenido pedagógico valioso, pero son otra vista, no una variante de la deformada. Anotada como deuda **D4** en el roadmap.
 - Exportar el SVG como imagen — no se pidió.

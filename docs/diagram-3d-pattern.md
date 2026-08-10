@@ -75,5 +75,5 @@ Los adaptadores cargan la escena con `next/dynamic` y `ssr: false` — permitido
 ## Fuera de alcance de este patrón (a propósito)
 
 - **Modo oscuro visto de verdad**: los colores se leen de los tokens, así que debería seguir al tema, pero el repo todavía no monta un switch de tema, así que no se pudo comprobar.
-- **Verificación visual**: ver la nota de estado de verificación en [`docs/refactor-roadmap.md`](./refactor-roadmap.md). La escena no se miró en un navegador.
+- **Verificación visual**: la escena **no se miró nunca en un navegador** — la extensión de Chrome no estaba conectada. Qué sí se comprobó y qué no está detallado en ["Estado de verificación"](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no) del roadmap. Es lo primero a revisar en la próxima sesión que tenga navegador.
 - Interactividad (click sobre una barra para resaltarla en las tablas), exportar la vista como imagen, y vistas ortográficas predefinidas (planta/elevación) — no se pidieron.
