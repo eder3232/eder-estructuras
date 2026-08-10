@@ -13,6 +13,7 @@ La app original incluye módulos interactivos de análisis estructural (armadura
 - **TypeScript**
 - **Tailwind CSS v4**
 - **[shadcn/ui](https://ui.shadcn.com/)** (estilo `radix-sera`, base color `neutral`) — componentes en `src/components/ui`
+- **[three.js](https://threejs.org/)** vía `@react-three/fiber` y `@react-three/drei` — **solo** para la escena 3D de armaduras espaciales; los sistemas planos se dibujan con SVG puro (ver [`docs/diagram-pattern.md`](./docs/diagram-pattern.md))
 - **pnpm** como package manager (`pnpm@10.15.1`)
 
 ## Primeros pasos
@@ -33,7 +34,7 @@ Abre [http://localhost:3000](http://localhost:3000) para ver el resultado. La ap
 | `pnpm dev`         | Levanta el servidor de desarrollo              |
 | `pnpm build`       | Compila la app para producción                 |
 | `pnpm start`       | Sirve la build de producción                   |
-| `pnpm test`        | Corre los tests del motor de cálculo (Vitest)  |
+| `pnpm test`        | Corre los tests del motor y de los stores (Vitest) |
 | `pnpm lint`        | Corre ESLint sobre el proyecto                 |
 | `npx tsc --noEmit` | Chequea tipos sin compilar                     |
 
@@ -58,7 +59,8 @@ src/
 - [`docs/components.md`](./docs/components.md) — convención de organización de componentes: qué queda intocable en `ui/`, cómo forkear a `ui-custom/`, y qué va en `custom/`.
 - [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto anterior (`thesis-structures`) y el orden de fases/trenes propuesto para el refactor: motor de cálculo unificado, patrón de estado, visualización, y la exportación a Excel con fórmulas vivas.
 - [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejaron `/springs`, `/armaduras-2d` y `/frame2d` (1, 2 y 3 DOF por nudo).
-- [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — **léelo antes de tocar visualización**: el patrón de esquema/forma deformada en SVG puro (sin three.js), con qué es genérico (`src/components/custom/diagram-2d/`) y cómo se resolvió el DOF rotacional (empotramiento, arco de momento, criterio de color) al portarlo a `/frame2d`.
+- [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — **léelo antes de tocar visualización de un sistema plano**: el patrón de esquema/forma deformada en SVG puro (sin three.js), con qué es genérico (`src/components/custom/diagram-2d/`) y cómo se resolvió el DOF rotacional (empotramiento, arco de momento, criterio de color) al portarlo a `/frame2d`.
+- [`docs/diagram-3d-pattern.md`](./docs/diagram-3d-pattern.md) — el módulo hermano para sistemas espaciales (`src/components/custom/diagram-3d/`, con three.js): por qué es un módulo aparte y no una extensión del de 2D, la cámara con z hacia arriba sin remapear ejes, y cómo se leen los tokens de tema `oklch` para materiales que no aceptan clases de CSS.
 
 Más guías (arquitectura, convenciones de código, etc.) se irán agregando en `docs/` a medida que el proyecto lo requiera.
 
@@ -75,16 +77,17 @@ Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-ro
 - [x] **Tren A (armaduras 2D)** — mismo patrón replicado en `/armaduras-2d` (2 DOF/nudo, rigidez axial con transformación geométrica vía `TrussElement2D`). Lo genérico entre ambos sistemas (`matrix-table`, control de decimales, tabla de DOF) se extrajo a `src/components/custom/` para no duplicarlo.
 - [x] **Tren B** — capa de visualización 2D en SVG puro (`src/components/custom/diagram-2d/`, sin three.js): esquema no deformado, forma deformada con slider de escala, barras coloreadas por tracción/compresión y reacciones, conectada a `/armaduras-2d`.
 - [x] **Tren C (frame2d)** — pórticos planos completos de punta a punta: `FrameElement2D` (rigidez 6×6 axial+flexión, fuerzas internas axial/corte/momento) con regresión portada del ejemplo del proyecto original, página `/frame2d` con el patrón de estado, y visualización con el DOF rotacional resuelto (empotramiento, arco de momento, color por fuerza axial). Incluye momentos de empotramiento perfecto por barra, corrigiendo el bug de transformación del original (ver `docs/refactor-roadmap.md`); falta todavía la UI de tablas de carga que los calcule sola.
+- [x] **Tren D (armaduras 3D)** — armaduras espaciales completas de punta a punta: `TrussElement3D` (la misma barra axial del caso plano con un tercer coseno director), página `/armaduras-3d` con el patrón de estado, y visualización real en three.js (rotar con el mouse, apoyos espaciales, forma deformada). Agrega dos cosas que el original no tenía: **fuerzas internas** (que `armor3d` declaraba pero nunca calculaba) y tests del store. Se adelantó a `frame2d-seismic` porque los dos hilos eran independientes.
 - [ ] **Tren C (frame2d-seismic)**: extensión real sobre `frame2d`, no un fork copiado. Ver `docs/refactor-roadmap.md`.
-- [ ] Trenes D (armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
+- [ ] Fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
-Ya existen tres páginas funcionales: [`/springs`](./src/app/springs), [`/armaduras-2d`](./src/app/armaduras-2d) y [`/frame2d`](./src/app/frame2d) — 1, 2 y 3 grados de libertad por nudo. Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización SVG) que se replica para el resto de los sistemas.
+Ya existen cuatro páginas funcionales: [`/springs`](./src/app/springs), [`/armaduras-2d`](./src/app/armaduras-2d), [`/frame2d`](./src/app/frame2d) y [`/armaduras-3d`](./src/app/armaduras-3d) — 1, 2, 3 y 3 grados de libertad por nudo (las dos últimas con la misma cantidad pero distinta naturaleza: una rotación vs. tres traslaciones). Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización) que se replica para el resto de los sistemas.
 
 ### Próximo paso
 
 Hay **dos hilos pendientes independientes** — no dependen entre sí, se pueden tomar en cualquier orden:
 
-- **A — `frame2d-seismic`** (cierra el Tren C y desbloquea el D). Es la recomendación para arrancar.
+- **A — `frame2d-seismic`** (cierra el Tren C y deja los 5 sistemas base completos). Es la recomendación para arrancar.
 - **B — tablas de carga que calculen los momentos de empotramiento perfecto**. El mecanismo ya funciona, pero hoy los 6 valores de FEM se cargan a mano por barra; falta la UI que los calcule a partir de la carga (distribuida, puntual, momento, distribuida intermedia).
 
 Los dos están desarrollados, con su contexto y sus trampas, en la sección **"Si estás retomando después de un `/clear`"** de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md), junto con el estado de verificación (qué está probado y qué no).

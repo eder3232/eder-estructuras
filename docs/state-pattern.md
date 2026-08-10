@@ -2,7 +2,7 @@
 
 Este documento describe el patrón que dejaron `/springs` y `/armaduras-2d` funcionando de punta a punta (Tren A completo), para replicarlo en los sistemas que siguen (Tren B en adelante: frame2d, frame2d-seismic, armor3d). Si estás retomando el trabajo después de un `/clear`, este es el punto de partida — junto con [`docs/refactor-roadmap.md`](./refactor-roadmap.md) (por qué este orden de trabajo) y [`docs/components.md`](./components.md) (convención de carpetas de componentes).
 
-**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/`, `src/app/armaduras-2d/` y `src/app/frame2d/` — tres implementaciones del mismo patrón con 1, 2 y 3 DOF por nudo, útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
+**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/`, `src/app/armaduras-2d/`, `src/app/frame2d/` y `src/app/armaduras-3d/` — cuatro implementaciones del mismo patrón con 1, 2, 3 y 3 DOF por nudo (los dos últimos con la misma cantidad pero distinta naturaleza: rotación vs. tres traslaciones), útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
 
 ## Por qué existe este patrón
 
@@ -109,6 +109,17 @@ El tercer sistema no necesitó tocar el patrón, solo instanciarlo con una difer
 - En el store, la "fuerza" del DOF rotacional es un **momento** (`momentR`) y su "desplazamiento" es un **giro** (`displacementR`) — misma posición en el vector, magnitud física distinta. Los toggles de restricción se resolvieron con mapas `axis → campo` en vez de un `if` por eje, que con 3 ejes ya no escalaba.
 - `dofLabels = ["x", "z", "θ"]` se exporta desde `store/nodes.ts` y lo consumen `DofOrderTable`, `assembly-steps` y `partition-and-solution`, en vez de repetir el array `AXIS_LABEL` en cada archivo como en armaduras 2D.
 - `internal-forces-table.tsx` es el que más se aleja del original: la fuerza interna ya no es un escalar sino axial + corte + momento **en cada extremo**, así que la tabla tiene dos filas por barra y muestra el paso intermedio `u_local = T·u_global` antes de `f_local = k_local·u_local`.
+
+## Lo que agregó armaduras 3D (3 DOF/nudo otra vez, Tren D)
+
+El cuarto sistema tampoco tocó el patrón, y es el que mejor muestra dónde está el límite entre "mismo número de DOF" y "mismo tipo de DOF". Frente a frame2d, que también tiene 3 DOF por nudo:
+
+- **Los tres DOF son la misma magnitud física** (traslaciones), así que no aparece la distinción fuerza/momento ni desplazamiento/giro que frame2d necesitó. `dofLabels = ["x", "y", "z"]` y listo.
+- **Los mapas eje → campo del store se exportan y los consume la UI**, no solo los toggles. Con tres ejes simétricos, `node-table.tsx` genera sus 14 columnas iterando `nodeAxes` en vez de escribirlas a mano, y `partition-and-solution.tsx` indexa el campo por `nodeAxes[entry.localDof]` en vez de un ternario. Es el mismo criterio que estrenó frame2d ("con 3 ejes un `if` por eje ya no escala"), llevado un paso más: si los ejes son simétricos, la UI también se puede generar.
+- **`element-table.tsx` quedó byte-idéntico al de armaduras 2D** — una barra espacial pide exactamente los mismos datos que una plana (extremos, área, E); toda la diferencia entre 2D y 3D vive en los nudos. Es la primera pareja idéntica del repo. Siguiendo el criterio con que se extrajo `errors-panel` (al llegar el tercer caso), **se dejó duplicada a propósito**: el próximo sistema que necesite esta misma tabla dispara la extracción a `src/components/custom/`.
+- **Hay tests del store**, no solo del motor (`src/app/armaduras-3d/store/results.test.ts`). Con tres ejes intercambiables, cruzar `y` con `z` en un solo mapa produce resultados plausibles que ninguna revisión visual detecta. Vale la pena replicarlo en cualquier sistema con ejes simétricos.
+
+La visualización, que sí cambió de tecnología, está en [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md).
 
 ## Checklist ejecutado para portar a armaduras 2D (referencia para el próximo sistema)
 
