@@ -118,4 +118,4 @@ Riesgos técnicos a resolver antes de comprometerse con esto como feature:
 
 ## Próximo paso inmediato
 
-Tren A: estandarizar el patrón dominio↔estado (Jotai) y el patrón de tablas de entrada (`FormulaInput`/`NumberInput`), y construir las páginas `/springs` y `/armaduras-2d` de punta a punta sobre el motor ya validado (Trenes 1 y 2, hechos).
+`/springs` ya está hecho de punta a punta (commits `d5d041a`, `960a38e`, `932f9e2`). El patrón que dejó — átomos de datos planos, átomo derivado que llama al motor, y el diseño pedagógico de resultados por acordeón — está documentado en **[`docs/state-pattern.md`](./state-pattern.md), léelo antes de tocar código nuevo de UI/estado**. Ahí está también el checklist concreto para el siguiente paso: replicar el mismo patrón en `/armaduras-2d`, usando `TrussElement2D` (`src/lib/engine/trusses-2d/`, ya construido y probado en el Tren 2).
