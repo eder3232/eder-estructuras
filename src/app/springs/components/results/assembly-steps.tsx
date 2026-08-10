@@ -1,5 +1,5 @@
 import type { AssemblyResult } from "@/lib/engine";
-import { MatrixTable } from "../matrix-table";
+import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 

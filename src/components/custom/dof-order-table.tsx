@@ -1,13 +1,14 @@
 import type { AssemblyResult } from "@/lib/engine";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { NodeRow } from "../../store/nodes";
 
 interface DofOrderTableProps {
   dofOrder: AssemblyResult["dofOrder"];
-  nodesById: Map<string, NodeRow>;
+  nodesById: Map<string, { name: string }>;
+  /** Etiqueta de cada grado de libertad local (ej. ["x", "z"] en armaduras 2D). Si se omite, no se muestra la columna. */
+  dofLabels?: string[];
 }
 
-export function DofOrderTable({ dofOrder, nodesById }: DofOrderTableProps) {
+export function DofOrderTable({ dofOrder, nodesById, dofLabels }: DofOrderTableProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">
@@ -20,6 +21,7 @@ export function DofOrderTable({ dofOrder, nodesById }: DofOrderTableProps) {
             <TableRow>
               <TableHead>Posición</TableHead>
               <TableHead>Nudo</TableHead>
+              {dofLabels && <TableHead>Eje</TableHead>}
               <TableHead>Restringido</TableHead>
               <TableHead>Incógnita a resolver en esta posición</TableHead>
             </TableRow>
@@ -31,6 +33,7 @@ export function DofOrderTable({ dofOrder, nodesById }: DofOrderTableProps) {
                 <TableRow key={entry.globalIndex}>
                   <TableCell>{entry.globalIndex}</TableCell>
                   <TableCell>{node?.name ?? entry.nodeId}</TableCell>
+                  {dofLabels && <TableCell>{dofLabels[entry.localDof]}</TableCell>}
                   <TableCell>{entry.restrained ? "Sí" : "No"}</TableCell>
                   <TableCell>
                     {entry.restrained ? "Fuerza de reacción" : "Desplazamiento"}

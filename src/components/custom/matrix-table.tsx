@@ -3,7 +3,7 @@
 import { useAtom } from "jotai";
 
 import { cn } from "@/lib/utils";
-import { atomDecimals } from "../store/decimals";
+import { atomDecimals } from "./decimals";
 
 interface MatrixTableProps {
   matrix: number[][];

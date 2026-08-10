@@ -1,6 +1,6 @@
 "use client";
 
-import { DecimalsControl } from "./components/decimals-control";
+import { DecimalsControl } from "@/components/custom/decimals-control";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
 import { NodeTable } from "./components/node-table";

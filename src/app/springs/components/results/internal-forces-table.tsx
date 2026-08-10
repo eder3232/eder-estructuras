@@ -4,7 +4,7 @@ import { useAtom } from "jotai";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SolveResult } from "@/lib/engine";
-import { atomDecimals } from "../../store/decimals";
+import { atomDecimals } from "@/components/custom/decimals";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 

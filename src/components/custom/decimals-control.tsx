@@ -3,7 +3,7 @@
 import { useAtom } from "jotai";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { atomDecimals } from "../store/decimals";
+import { atomDecimals } from "./decimals";
 
 const OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
