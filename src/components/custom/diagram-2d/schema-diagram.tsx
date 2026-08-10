@@ -1,5 +1,5 @@
 import { computeUnitSize } from "./unit-scale";
-import { ForceArrow } from "./force-arrow";
+import { ForceGlyph } from "./force-glyph";
 import { SupportIcon } from "./support-icon";
 import type { DiagramElement, DiagramForce, DiagramNode, DiagramSupport } from "./types";
 import { computeViewBox, projectPoint } from "./viewbox";
@@ -73,20 +73,13 @@ export function SchemaDiagram({ nodes, elements, supports, forces }: SchemaDiagr
           z={support.z}
           restrainedX={support.restrainedX}
           restrainedZ={support.restrainedZ}
+          restrainedRotation={support.restrainedRotation}
           unitSize={unitSize}
         />
       ))}
 
       {forces.map((force, i) => (
-        <ForceArrow
-          key={`${force.nodeId}-${force.axis}-${i}`}
-          x={force.x}
-          z={force.z}
-          axis={force.axis}
-          value={force.value}
-          unitSize={unitSize}
-          variant="force"
-        />
+        <ForceGlyph key={`${force.nodeId}-${force.axis}-${i}`} force={force} unitSize={unitSize} variant="force" />
       ))}
     </SvgCanvas>
   );

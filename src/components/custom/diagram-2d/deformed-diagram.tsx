@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Slider } from "@/components/ui/slider";
-import { ForceArrow } from "./force-arrow";
+import { ForceGlyph } from "./force-glyph";
 import { computeUnitSize } from "./unit-scale";
 import type { DiagramElement, DiagramForce, DiagramNode } from "./types";
 import { computeViewBox, projectPoint, type SvgPoint } from "./viewbox";
@@ -98,12 +98,9 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
         })}
 
         {reactions.map((reaction, i) => (
-          <ForceArrow
+          <ForceGlyph
             key={`${reaction.nodeId}-${reaction.axis}-${i}`}
-            x={reaction.x}
-            z={reaction.z}
-            axis={reaction.axis}
-            value={reaction.value}
+            force={reaction}
             unitSize={unitSize}
             variant="reaction"
           />
