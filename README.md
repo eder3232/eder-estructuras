@@ -53,7 +53,8 @@ src/
 - [`docs/git-workflow.md`](./docs/git-workflow.md) — directriz de control de versiones: fase actual de commits directos a `main`, Conventional Commits, versionado con SemVer y el cambio de flujo a ramas + PR una vez taggeada `v1.0.0`.
 - [`docs/components.md`](./docs/components.md) — convención de organización de componentes: qué queda intocable en `ui/`, cómo forkear a `ui-custom/`, y qué va en `custom/`.
 - [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto anterior (`thesis-structures`) y el orden de fases/trenes propuesto para el refactor: motor de cálculo unificado, patrón de estado, visualización, y la exportación a Excel con fórmulas vivas.
-- [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejó `/springs`, con el checklist concreto para replicarlo (siguiente paso: armaduras 2D).
+- [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejaron `/springs` y `/armaduras-2d`.
+- [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — **léelo antes de tocar visualización**: el patrón de esquema/forma deformada en SVG puro (sin three.js) que dejó `/armaduras-2d`, con qué es genérico (`src/components/custom/diagram-2d/`) y qué falta resolver para sistemas con DOF rotacional (frame2d).
 
 Más guías (arquitectura, convenciones de código, etc.) se irán agregando en `docs/` a medida que el proyecto lo requiera.
 
@@ -67,7 +68,9 @@ Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-ro
 - [x] **Tren 1** — motor de cálculo genérico (`Node`/`Element`/`System`) en `src/lib/engine/`, validado portando `springs` con tests de Vitest.
 - [x] **Tren 2** — armaduras 2D (`TrussElement2D`) portadas al motor sin tocar `System`/`Element`, confirmando que la abstracción generaliza de 1 a 2 DOF/nodo.
 - [x] **Tren A (springs)** — patrón dominio↔estado con Jotai (átomos de datos planos, nunca instancias del motor) y página `/springs` de punta a punta: tablas de entrada, panel de errores y resultados pedagógicos por acordeón (DOF↔nudo, ensamblaje paso a paso con leyendas físicas, partición y solución, fuerzas internas).
-- [ ] **Tren A (armaduras 2D) — siguiente paso**: replicar el mismo patrón para `/armaduras-2d`. Ver el checklist concreto en [`docs/state-pattern.md`](./docs/state-pattern.md).
-- [ ] Trenes B a D (visualización 2D compartida, frame2d/frame2d-seismic, armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
+- [x] **Tren A (armaduras 2D)** — mismo patrón replicado en `/armaduras-2d` (2 DOF/nudo, rigidez axial con transformación geométrica vía `TrussElement2D`). Lo genérico entre ambos sistemas (`matrix-table`, control de decimales, tabla de DOF) se extrajo a `src/components/custom/` para no duplicarlo.
+- [x] **Tren B** — capa de visualización 2D en SVG puro (`src/components/custom/diagram-2d/`, sin three.js): esquema no deformado, forma deformada con slider de escala, barras coloreadas por tracción/compresión y reacciones, conectada a `/armaduras-2d`.
+- [ ] **Tren C — siguiente paso**: `frame2d` completo de punta a punta (motor con flexión, patrón de estado + visualización ya probados), luego `frame2d-seismic`. Ver `docs/refactor-roadmap.md`.
+- [ ] Trenes D (armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
-Ya existe una primera página funcional: [`/springs`](./src/app/springs). Es el modelo a replicar para el resto de los sistemas.
+Ya existen dos páginas funcionales: [`/springs`](./src/app/springs) y [`/armaduras-2d`](./src/app/armaduras-2d). Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización SVG) que se replica para el resto de los sistemas.

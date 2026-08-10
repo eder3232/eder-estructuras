@@ -1,8 +1,8 @@
 # Patrón de estado y resultados (Tren A)
 
-Este documento describe el patrón que dejó `/springs` funcionando de punta a punta, para replicarlo en armaduras 2D y en los sistemas que siguen. Si estás retomando el trabajo después de un `/clear`, este es el punto de partida — junto con [`docs/refactor-roadmap.md`](./refactor-roadmap.md) (por qué este orden de trabajo) y [`docs/components.md`](./components.md) (convención de carpetas de componentes).
+Este documento describe el patrón que dejaron `/springs` y `/armaduras-2d` funcionando de punta a punta (Tren A completo), para replicarlo en los sistemas que siguen (Tren B en adelante: frame2d, frame2d-seismic, armor3d). Si estás retomando el trabajo después de un `/clear`, este es el punto de partida — junto con [`docs/refactor-roadmap.md`](./refactor-roadmap.md) (por qué este orden de trabajo) y [`docs/components.md`](./components.md) (convención de carpetas de componentes).
 
-**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/`. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
+**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/` y `src/app/armaduras-2d/` — dos implementaciones del mismo patrón, útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
 
 ## Por qué existe este patrón
 
@@ -73,17 +73,18 @@ Esto es una **mejora deliberada sobre el original**, no una réplica — ver la 
 
 Acordeón `type="multiple"`, primera sección abierta por defecto. Control de decimales **global** (`atomDecimals`), no por sección como tenía el original.
 
-## Piezas ya genéricas vs. específicas de springs
+## Piezas genéricas vs. específicas de cada sistema
 
-**Genéricas — no dependen de `dofPerNode` ni de qué es un "elemento"**, se pueden reusar tal cual:
+**Genéricas — ya extraídas a `src/components/custom/`, no duplicar por sistema:**
 - `matrix-table.tsx` (ojo: soporta `labels` para matrices cuadradas simétricas, y `rowLabels`/`colLabels` por separado para bloques no cuadrados como `Kfr`/`Krf` — no colapsar ambos en una sola prop, ese fue un bug real que se corrigió antes de commitear).
 - `decimals.ts` (el átomo) y `decimals-control.tsx`.
-- `dof-order-table.tsx` — solo necesita `AssemblyResult["dofOrder"]` y un mapa `id → nombre`, ninguno de los dos es específico de springs.
+- `dof-order-table.tsx` — solo necesita `AssemblyResult["dofOrder"]` y un mapa `id → { name }`; acepta un prop opcional `dofLabels?: string[]` (ej. `["x", "z"]`) para mostrar a qué eje corresponde cada DOF local en sistemas con más de 1 DOF/nudo. Springs no lo pasa, así que esa columna no aparece ahí — armaduras 2D sí.
 
-**Específicas de springs** — hay que adaptarlas (no solo copiarlas) para cada sistema nuevo:
-- `node-table.tsx`/`element-table.tsx` — cambian los campos (armaduras necesita coordenadas, área, elasticidad en vez de `k`).
-- `local-stiffness-list.tsx` — la rigidez local de un resorte es literalmente `[[k,-k],[-k,k]]`, sin transformación geométrica; una barra de armadura sí la tiene.
+**Específicas de cada sistema** — viven en `src/app/<sistema>/`, hay que adaptarlas (no solo copiarlas) para cada sistema nuevo:
+- `node-table.tsx`/`element-table.tsx` — cambian los campos (springs: `k`; armaduras 2D: coordenadas `x`/`z`, `area`, `elasticity`, campos por eje como `forceX`/`forceZ`).
+- `local-stiffness-list.tsx` — la rigidez local de un resorte es literalmente `[[k,-k],[-k,k]]`, sin transformación geométrica; la de una barra de armadura sí la tiene. `src/app/armaduras-2d/components/results/local-stiffness-list.tsx` recalcula `cos`/`sin`/`EA/L` solo para mostrarlos, pero reusa `TrussElement2D.stiffness()` (no reimplementa la multiplicación `T·k·Tᵀ`) para la matriz global 4×4 — patrón a seguir: duplicar fórmulas escalares simples para la narrativa pedagógica, pero nunca el álgebra lineal real.
 - `internal-forces-table.tsx` — la sustitución numérica depende de qué es la "fuerza interna" de cada `Element` concreto.
+- `assembly-steps.tsx`/`partition-and-solution.tsx` — con más de 1 DOF/nudo las etiquetas necesitan el eje además del nombre del nudo (`v1x`/`v1z`, no solo `v1`), y la fuerza/desplazamiento/reacción de cada entrada del DOF order hay que indexarla por `entry.localDof`, no asumir un único valor por nudo (ver cómo lo hace armaduras 2D).
 - `store/*.ts` — los campos y el `Element` concreto que se instancia cambian.
 
 ## Decisiones técnicas a mantener
@@ -100,12 +101,14 @@ Acordeón `type="multiple"`, primera sección abierta por defecto. Control de de
 - Reordenamiento manual de DOF por el usuario (`areDofDefinedByUser`/`isRestrictedAbove` del original) — el motor ya define el orden por inserción; no hay necesidad pedagógica clara de que el usuario lo reordene. Se agrega después si hace falta.
 - Diagramas físicos (nudos/barras dibujados) — Tren B.
 
-## Checklist para portar a armaduras 2D (próximo paso concreto)
+## Checklist ejecutado para portar a armaduras 2D (referencia para el próximo sistema)
 
-1. **Primero, extraer lo genérico** a `src/components/custom/` (por convención de `docs/components.md`: "si se acumulan suficientes componentes relacionados, se organizan en subcarpetas"; con un segundo sistema usándolos, ya es el momento) — `matrix-table.tsx`, `decimals.ts`/`decimals-control.tsx`, y evaluar `dof-order-table.tsx`. Evita terminar con archivos byte-idénticos duplicados entre `springs/` y `armaduras-2d/`, que es exactamente el patrón que el diagnóstico del roadmap marcó como problema en el proyecto original.
-2. Crear `src/app/armaduras-2d/` con la misma estructura de carpetas.
-3. `store/nodes.ts` (o `vertices.ts`): además de `force`/`displacement`/`restrained`, cada nudo necesita **coordenadas** (`x`, `z`) — `TrussElement2D` (`src/lib/engine/trusses-2d/truss-element-2d.ts`, ya construido en el Tren 2) las pide en el constructor. Con `dofPerNode = 2`, `force`/`displacement`/`restrained` pasan a tener un valor por eje (decidir la forma exacta: campos `forceX`/`forceZ` separados, o `force: { x, z }` — cualquiera funciona, lo que importa es que `results.ts` los convierta a los arrays de longitud 2 que pide `System.addNode`).
-4. `store/elements.ts`: en vez de `k`, cada barra necesita `area` y `elasticity` (más `fromNodeId`/`toNodeId` como en springs).
-5. `store/results.ts`: `new System(2)` en vez de `new System(1)`, instanciar `TrussElement2D` en vez de `SpringElement`.
-6. `local-stiffness-list.tsx` e `internal-forces-table.tsx`: adaptar a la rigidez con transformación geométrica y a que la fuerza interna de una barra es axial vía proyección `cos`/`sin` (ver `TrussElement2D.internalForce`).
-7. Verificar con `pnpm test` (ya existe una regresión de armaduras 2D en `src/lib/engine/trusses-2d/system.test.ts` para contrastar valores), `tsc`, `lint`, y sirviendo `/armaduras-2d` con `pnpm dev`.
+Esto es lo que se siguió para dejar `/armaduras-2d` completo — ya hecho. Se deja como referencia concreta de pasos para el próximo sistema que necesite este patrón (frame2d, Tren C), ajustando lo que corresponda: 3 DOF/nudo, y rigidez con flexión (no solo axial) además de la fórmula de rigidez que cambia.
+
+1. ✅ Extraído lo genérico a `src/components/custom/` (por convención de `docs/components.md`: "si se acumulan suficientes componentes relacionados, se organizan en subcarpetas"; con un segundo sistema usándolos, ya era el momento) — `matrix-table.tsx`, `decimals.ts`/`decimals-control.tsx`, y `dof-order-table.tsx` (se le agregó el prop opcional `dofLabels` para el caso de más de 1 DOF/nudo). Evita terminar con archivos byte-idénticos duplicados entre `springs/` y `armaduras-2d/`, que es exactamente el patrón que el diagnóstico del roadmap marcó como problema en el proyecto original.
+2. ✅ Creado `src/app/armaduras-2d/` con la misma estructura de carpetas.
+3. ✅ `store/nodes.ts`: además de `restrained`/`force`/`displacement`, cada nudo tiene **coordenadas** (`x`, `z`) — `TrussElement2D` (`src/lib/engine/trusses-2d/truss-element-2d.ts`, ya construido en el Tren 2) las pide en el constructor. Con `dofPerNode = 2` se usaron campos planos por eje (`forceX`/`forceZ`, `displacementX`/`displacementZ`, `restrainedX`/`restrainedZ`) en vez de objetos anidados — `store/results.ts` los convierte a los arrays de longitud 2 que pide `System.addNode`.
+4. ✅ `store/elements.ts`: en vez de `k`, cada barra tiene `area` y `elasticity` (más `fromNodeId`/`toNodeId` como en springs).
+5. ✅ `store/results.ts`: `new System(2)` en vez de `new System(1)`, instanciando `TrussElement2D` en vez de `SpringElement` (con manejo de error si una barra referencia un nudo inexistente — necesario porque `TrussElement2D` pide las coordenadas del nudo, no solo su id).
+6. ✅ `local-stiffness-list.tsx` e `internal-forces-table.tsx` adaptados a la rigidez con transformación geométrica y a que la fuerza interna de una barra es axial vía proyección `cos`/`sin` (ver `TrussElement2D.internalForce`).
+7. ✅ Verificado con `pnpm test` (la regresión de armaduras 2D en `src/lib/engine/trusses-2d/system.test.ts` se reusó como datos semilla de la página, para poder cotejar visualmente contra valores ya validados), `tsc`, `lint`, y sirviendo `/armaduras-2d` con `pnpm dev`.
