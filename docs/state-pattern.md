@@ -2,7 +2,7 @@
 
 Este documento describe el patrón que dejaron `/springs` y `/armaduras-2d` funcionando de punta a punta (Tren A completo), para replicarlo en los sistemas que siguen (Tren B en adelante: frame2d, frame2d-seismic, armor3d). Si estás retomando el trabajo después de un `/clear`, este es el punto de partida — junto con [`docs/refactor-roadmap.md`](./refactor-roadmap.md) (por qué este orden de trabajo) y [`docs/components.md`](./components.md) (convención de carpetas de componentes).
 
-**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/` y `src/app/armaduras-2d/` — dos implementaciones del mismo patrón, útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
+**Implementación de referencia real**: todo lo que describe este documento ya existe y funciona en `src/app/springs/`, `src/app/armaduras-2d/` y `src/app/frame2d/` — tres implementaciones del mismo patrón con 1, 2 y 3 DOF por nudo, útiles para comparar qué es genérico (ya extraído a `src/components/custom/`) y qué cambia por sistema. Ante la duda, leé el código ahí en vez de confiar solo en este resumen — este documento puede quedar desactualizado, el código no.
 
 ## Por qué existe este patrón
 
@@ -78,6 +78,7 @@ Acordeón `type="multiple"`, primera sección abierta por defecto. Control de de
 **Genéricas — ya extraídas a `src/components/custom/`, no duplicar por sistema:**
 - `matrix-table.tsx` (ojo: soporta `labels` para matrices cuadradas simétricas, y `rowLabels`/`colLabels` por separado para bloques no cuadrados como `Kfr`/`Krf` — no colapsar ambos en una sola prop, ese fue un bug real que se corrigió antes de commitear).
 - `decimals.ts` (el átomo) y `decimals-control.tsx`.
+- `errors-panel.tsx` — el tipo `DomainError` y el render del panel. Era byte-idéntico entre springs y armaduras 2D, y frame2d hubiera sido la tercera copia; se extrajo al llegar ese tercer caso. Lo que queda por sistema es un adaptador de ~8 líneas (`src/app/<sistema>/components/errors-panel.tsx`) que lee su propio `atomResults` y delega, porque el átomo sí es de cada sistema.
 - `dof-order-table.tsx` — solo necesita `AssemblyResult["dofOrder"]` y un mapa `id → { name }`; acepta un prop opcional `dofLabels?: string[]` (ej. `["x", "z"]`) para mostrar a qué eje corresponde cada DOF local en sistemas con más de 1 DOF/nudo. Springs no lo pasa, así que esa columna no aparece ahí — armaduras 2D sí.
 
 **Específicas de cada sistema** — viven en `src/app/<sistema>/`, hay que adaptarlas (no solo copiarlas) para cada sistema nuevo:
@@ -101,9 +102,17 @@ Acordeón `type="multiple"`, primera sección abierta por defecto. Control de de
 - Reordenamiento manual de DOF por el usuario (`areDofDefinedByUser`/`isRestrictedAbove` del original) — el motor ya define el orden por inserción; no hay necesidad pedagógica clara de que el usuario lo reordene. Se agrega después si hace falta.
 - Diagramas físicos (nudos/barras dibujados) — Tren B.
 
+## Lo que agregó frame2d (3 DOF/nudo, Tren C)
+
+El tercer sistema no necesitó tocar el patrón, solo instanciarlo con una diferencia conceptual: **el tercer DOF de cada nudo no es una traslación**. Eso se nota en tres lugares y conviene tenerlo presente al portarlo a otro sistema con rotación:
+
+- En el store, la "fuerza" del DOF rotacional es un **momento** (`momentR`) y su "desplazamiento" es un **giro** (`displacementR`) — misma posición en el vector, magnitud física distinta. Los toggles de restricción se resolvieron con mapas `axis → campo` en vez de un `if` por eje, que con 3 ejes ya no escalaba.
+- `dofLabels = ["x", "z", "θ"]` se exporta desde `store/nodes.ts` y lo consumen `DofOrderTable`, `assembly-steps` y `partition-and-solution`, en vez de repetir el array `AXIS_LABEL` en cada archivo como en armaduras 2D.
+- `internal-forces-table.tsx` es el que más se aleja del original: la fuerza interna ya no es un escalar sino axial + corte + momento **en cada extremo**, así que la tabla tiene dos filas por barra y muestra el paso intermedio `u_local = T·u_global` antes de `f_local = k_local·u_local`.
+
 ## Checklist ejecutado para portar a armaduras 2D (referencia para el próximo sistema)
 
-Esto es lo que se siguió para dejar `/armaduras-2d` completo — ya hecho. Se deja como referencia concreta de pasos para el próximo sistema que necesite este patrón (frame2d, Tren C), ajustando lo que corresponda: 3 DOF/nudo, y rigidez con flexión (no solo axial) además de la fórmula de rigidez que cambia.
+Esto es lo que se siguió para dejar `/armaduras-2d` completo — ya hecho. Sirvió tal cual para `/frame2d` (Tren C), ajustando 3 DOF/nudo y rigidez con flexión. Se deja como referencia concreta de pasos para el próximo sistema que necesite este patrón.
 
 1. ✅ Extraído lo genérico a `src/components/custom/` (por convención de `docs/components.md`: "si se acumulan suficientes componentes relacionados, se organizan en subcarpetas"; con un segundo sistema usándolos, ya era el momento) — `matrix-table.tsx`, `decimals.ts`/`decimals-control.tsx`, y `dof-order-table.tsx` (se le agregó el prop opcional `dofLabels` para el caso de más de 1 DOF/nudo). Evita terminar con archivos byte-idénticos duplicados entre `springs/` y `armaduras-2d/`, que es exactamente el patrón que el diagnóstico del roadmap marcó como problema en el proyecto original.
 2. ✅ Creado `src/app/armaduras-2d/` con la misma estructura de carpetas.

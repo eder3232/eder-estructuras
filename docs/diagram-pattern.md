@@ -16,8 +16,10 @@ src/components/custom/diagram-2d/   # genérico, no depende de qué es un "eleme
   viewbox.ts                        # projectPoint (flip z→-y), computeViewBox, viewBoxAttr
   unit-scale.ts                     # computeUnitSize — longitud de referencia para íconos/fuente
   svg-canvas.tsx                    # contenedor <svg> responsive con el viewBox calculado
-  support-icon.tsx                  # apoyo fijo (2 ejes restringidos) o rodillo (1 eje), rotado según el eje
-  force-arrow.tsx                   # flecha + valor, reusada para fuerza aplicada ("force") y reacción ("reaction")
+  support-icon.tsx                  # empotramiento / articulado / rodillo, rotado según el eje restringido
+  force-arrow.tsx                   # flecha recta + valor, para los DOF de traslación
+  moment-arc.tsx                    # arco + valor, para el DOF rotacional (momento)
+  force-glyph.tsx                   # único punto de decisión entre flecha y arco, según el eje
   schema-diagram.tsx                # vista no deformada: nudos, barras, apoyos, flechas de fuerza
   deformed-diagram.tsx              # forma desplazada (con slider de escala), barras coloreadas por tracción/compresión, reacciones
 
@@ -41,9 +43,19 @@ El eje estructural `z` crece hacia arriba; el eje `y` de SVG crece hacia abajo. 
 
 El adaptador (`src/app/<sistema>/components/schema-diagram.tsx` y `.../results/deformed-shape.tsx`) es lo único que cambia por sistema:
 
-- **`DiagramSupport[]`**: en armaduras 2D sale de `node.restrainedX`/`restrainedZ`. Un sistema con más ejes (frame2d con rotación, armor3d con 3 ejes) va a necesitar decidir cómo se representa un apoyo con un DOF rotacional restringido — no está resuelto por este patrón todavía, es lo primero a diseñar antes de portarlo a frame2d.
-- **`elementForceValue: Map<string, number>`**: en armaduras 2D es directo (`TrussInternalForce.axialForce`, un solo número con signo). Un elemento de pórtico tiene fuerza axial + corte + momento — hay que decidir qué "un solo número con signo" representa para el color antes de reusar `DeformedDiagram` tal cual, o extender el criterio de coloreado.
+- **`DiagramSupport[]`**: en armaduras 2D sale de `node.restrainedX`/`restrainedZ`. Los sistemas con DOF rotacional pasan además `restrainedRotation` (opcional, ver abajo).
+- **`elementForceValue: Map<string, number>`**: en armaduras 2D es directo (`TrussInternalForce.axialForce`, un solo número con signo). En frame2d se usa `internalForce.to.axial` — ver abajo el porqué.
 - **`reactions: DiagramForce[]`**: se arma recorriendo cada nudo y cada eje restringido, sin filtrar por magnitud (el filtro de "no dibujar si es cero" ya lo hace `ForceArrow`).
+
+## El DOF rotacional (resuelto en el Tren C)
+
+Portar el patrón a frame2d obligaba a decidir tres cosas que armaduras 2D no tenía. Las tres se resolvieron extendiendo el módulo genérico de forma **compatible hacia atrás** — `restrainedRotation` es opcional y el eje `"r"` simplemente nunca aparece en los sistemas sin rotación, así que `/armaduras-2d` no cambió:
+
+1. **Apoyo con giro restringido** (`support-icon.tsx`). Ahora hay tres notaciones en vez de dos: empotramiento (ambas traslaciones **y** el giro) se dibuja como muro achurado pegado al nudo, **sin** triángulo — el triángulo queda reservado para los apoyos que sí dejan girar (articulado, con achurado; rodillo, con círculos). Un giro impedido sin ambas traslaciones (apoyo guiado, poco común) se marca con un cuadrado sobre el nudo, para no dibujar un empotramiento que no es. El achurado de suelo se extrajo al subcomponente `Ground` porque ahora lo usan dos glifos distintos.
+2. **Momento aplicado o de reacción** (`moment-arc.tsx`, `force-glyph.tsx`). Un momento no es un vector en el plano: dibujarlo como flecha recta lo confundiría con una fuerza. Se dibuja como arco de 270° alrededor del nudo, antihorario si el valor es positivo — mismo criterio de signo que el DOF rotacional del motor (giro de +x hacia +z). `DiagramForce.axis` acepta ahora `"r"`, y **`ForceGlyph` es el único punto donde se decide** flecha vs. arco, para que `SchemaDiagram` y `DeformedDiagram` no repitan ese `if`. `ForceArrow` quedó intacto y sigue siendo solo la flecha recta.
+3. **Color de la barra deformada**. Se mantiene la **fuerza axial** (`internalForce.to.axial`, positivo = tracción), igual que en armaduras 2D, no el momento: de los tres esfuerzos es el único que es un número con signo constante a lo largo de la barra. El momento varía punto a punto, así que un solo color por barra daría una lectura falsa — el detalle de corte y momento vive en la tabla de fuerzas internas, no en el color. Efecto lateral: la leyenda "verde = tracción / rojo = compresión" significa lo mismo en todos los sistemas.
+
+Lo que **no** se resolvió acá, a propósito: la forma deformada sigue siendo una recta entre nudos desplazados. Con flexión, el tramo entre nudos es en realidad una cúbica de Hermite gobernada por los giros de sus extremos, y el giro de un nudo hoy no se ve en el dibujo (solo en el momento de las barras que concurren). Dibujar esa curva es una mejora pedagógica clara, pero es trabajo aparte: hay que muestrear la deformada con las funciones de forma del elemento, no solo mover los extremos.
 
 ## Decisiones técnicas a mantener
 
@@ -55,5 +67,6 @@ El adaptador (`src/app/<sistema>/components/schema-diagram.tsx` y `.../results/d
 ## Fuera de alcance de este patrón (a propósito)
 
 - Interactividad (hover/click sobre un nudo o barra para resaltarlo en las tablas) — no se pidió, se agrega después si hace falta.
-- Apoyos/elementos con DOF rotacional (frame2d) — el diseño de `SupportIcon`/`elementForceValue` para ese caso queda pendiente hasta portar el Tren C.
+- Deformada curva entre nudos (cúbica de Hermite con los giros de los extremos) — ver la sección del DOF rotacional.
+- Diagramas de corte y momento a lo largo de la barra — el original los tenía (`graphShear`, `graphMoment`) y son contenido pedagógico valioso, pero son otra vista, no una variante de la deformada: se evalúan en el Tren C junto a `frame2d-seismic` o después.
 - Exportar el SVG como imagen — no se pidió.
