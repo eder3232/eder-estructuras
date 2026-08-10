@@ -62,8 +62,10 @@ En desarrollo activo, fase pre-`v1.0.0` (commits directos a `main`, ver [`docs/g
 
 Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md):
 
-- [x] **Fase 0** — shadcn/ui instalado con la paleta de este repo, convenciones de git y de componentes documentadas (`docs/git-workflow.md`, `docs/components.md`), `NumberInput` (Base UI) y `FormulaInput` (input estilo Excel con `mathjs`) implementados en `src/components/custom/`.
-- [ ] **Fase 1 — siguiente paso**: diseñar el motor de cálculo genérico (`Node`, `Element` con matriz de rigidez local enchufable, `System` con ensamblaje/partición/solución) con el vocabulario unificado de `docs/refactor-roadmap.md`, y validarlo portando `springs` (el sistema estructural más simple del proyecto anterior) como primera prueba real. Nada de las fases 2 en adelante debería empezar antes de que esto funcione.
-- [ ] Fases 2 a 7: ver tabla completa en `docs/refactor-roadmap.md`.
+- [x] **Tren 0** — shadcn/ui instalado con la paleta de este repo, convenciones de git y de componentes documentadas (`docs/git-workflow.md`, `docs/components.md`), `NumberInput` (Base UI) y `FormulaInput` (input estilo Excel con `mathjs`) implementados en `src/components/custom/`.
+- [x] **Tren 1** — motor de cálculo genérico (`Node`/`Element`/`System`) en `src/lib/engine/`, validado portando `springs` con tests de Vitest.
+- [x] **Tren 2** — armaduras 2D (`TrussElement2D`) portadas al motor sin tocar `System`/`Element`, confirmando que la abstracción generaliza de 1 a 2 DOF/nodo.
+- [ ] **Tren A — siguiente paso**: estandarizar el patrón dominio↔estado (Jotai) y el patrón de tablas de entrada, y construir las páginas `/springs` y `/armaduras-2d` de punta a punta.
+- [ ] Trenes B a D (visualización 2D compartida, frame2d/frame2d-seismic, armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
-Todavía no existe ninguna página funcional de análisis estructural en este repo — solo la base (shadcn, componentes propios, docs). Eso es exactamente lo que arranca en la Fase 1.
+Todavía no existe ninguna página funcional de análisis estructural en este repo — el motor de cálculo ya está probado (springs y armaduras 2D), pero falta conectarlo a una UI real. Eso es lo que arranca en el Tren A.

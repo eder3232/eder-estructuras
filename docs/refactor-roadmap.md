@@ -77,18 +77,22 @@ Esta tabla es un punto de partida, no un contrato cerrado — se termina de defi
 
 ## Orden de fases propuesto
 
-**Por qué este orden**: la tentación es migrar programa por programa (terminar armor2d, luego armor3d, etc.), pero eso repetiría el error original — cada programa reconstruiría su propia versión del motor antes de que exista una versión compartida probada. En vez de eso, el orden va de abajo hacia arriba: motor genérico primero, validado contra el caso más simple, luego un segundo caso para confirmar que la abstracción generaliza, y recién ahí se despliega al resto.
+**Fase 0-2 (hechas)**: la tentación era migrar programa por programa completo (terminar armor2d de punta a punta, luego armor3d, etc.), pero eso repetiría el error original — cada programa reconstruiría su propia versión del motor antes de que exista una versión compartida probada. Por eso se arrancó de abajo hacia arriba: motor genérico primero, validado contra el caso más simple (springs), luego un segundo caso (armaduras 2D) para confirmar que la abstracción generaliza antes de tocar UI.
 
-| Fase | Qué | Por qué en este orden |
+**De acá en adelante: trenes por sistema, no por capa.** Se evaluó — y se descartó — hacer "toda la lógica de los 5 programas primero, después todo el UI de los 5": frame2d agrega flexión (un DOF rotacional que es una cantidad físicamente distinta mezclada en el mismo vector, y una matriz de rigidez que depende del momento de inercia, no solo del área) y armor3d es un caso 3D real con three.js — una tecnología de visualización que no comparte con el resto (principio 4). Escribir esa lógica más compleja antes de haber probado el patrón de estado/UI ni una sola vez arriesga tener que retocar 3 sistemas de lógica a la vez si el patrón no encaja. En cambio, cada tren deja un sistema (o grupo chico) **completo de punta a punta** — lógica, estado, UI, resultados — antes de pasar al siguiente, reusando lo ya probado. Los sistemas "plus" (temperatura, defectos de fabricación) quedan bloqueados hasta que los 4 trenes de sistemas base terminen — ver "Fuera de alcance por ahora".
+
+| Tren | Qué | Estado / por qué en este orden |
 |---|---|---|
-| 0 | ✅ Hecho: setup de shadcn, convenciones de git/componentes, `NumberInput`/`FormulaInput` | Base para todo lo demás |
-| 1 | Motor de cálculo genérico (`Node`, `Element` con matriz de rigidez local enchufable, `System` con ensamblaje/partición/solución) + vocabulario unificado. Validar de inmediato portando **springs** (el caso más simple: 1 DOF/nodo, sin necesidad de visualización) | Springs es el caso trivial — si el diseño del motor no sirve ni para el caso más simple, mejor descubrirlo aquí y no después de comprometerse con 5 programas |
-| 2 | Portar **armaduras 2D** (armor2d) al motor: 2 DOF/nodo, rigidez axial con transformación por ángulo | Segundo caso, con más complejidad real (rotación, más DOF). Si el motor generaliza de springs a esto, es señal fuerte de que el diseño es correcto |
-| 3 | Estandarizar el patrón dominio↔estado (Jotai) y el patrón de tablas de entrada (usando `FormulaInput`/`NumberInput` ya construidos) como plantilla única | Con 2 sistemas migrados ya se ve el patrón real de uso, no uno hipotético |
-| 4 | Capa de visualización 2D compartida (SVG/Canvas2D), reemplazando three.js en los casos 2D. Conectarla primero a armor2d (ya migrado en Fase 2) | Separada del motor a propósito — el motor no debería saber cómo se dibuja nada |
-| 5 | Portar **frame2d** (3 DOF/nodo, rigidez con flexión — la fórmula de elemento más compleja), luego **frame2d-seismic** como extensión real sobre frame2d (no como fork copiado), luego **armor3d** (3 DOF/nodo, mantiene three.js) | Frame2d-seismic explícitamente no debe repetir el bug de duplicación encontrado en el diagnóstico |
-| 6 | Feature nueva: exportación a Excel con fórmulas vivas (ver sección dedicada abajo) | Depende de que el motor tenga una estructura de ensamblaje estable y única — generar el exportador contra 5 clases inconsistentes hubiera significado escribirlo 5 veces |
-| 7 | Migración de contenido educativo (`src/content`, sección `learn`/`thesis`) | Bajo riesgo, sin dependencias técnicas fuertes, se hace cuando convenga sin bloquear nada |
+| 0 | Setup de shadcn, convenciones de git/componentes, `NumberInput`/`FormulaInput` | ✅ Hecho — base para todo lo demás |
+| 1 | Motor de cálculo genérico (`Node`, `Element` con matriz de rigidez local enchufable, `System` con ensamblaje/partición/solución) + vocabulario unificado, validado portando **springs** (1 DOF/nodo, sin geometría) | ✅ Hecho (commit `3b4a7e5`) |
+| 2 | Portar **armaduras 2D** (`TrussElement2D`) al motor: 2 DOF/nodo, rigidez axial con transformación por ángulo, sin tocar `System`/`Element` | ✅ Hecho (commit `11251b0`) — confirma que el motor generaliza de springs a esto |
+| A | Completar **springs** y **armaduras 2D** de punta a punta: patrón dominio↔estado (Jotai) y patrón de tablas de entrada (`FormulaInput`/`NumberInput` ya construidos), como plantilla única para el resto de los trenes | Próximo paso — con 2 sistemas ya migrados en el motor se ve el patrón real de uso, no uno hipotético |
+| B | Capa de visualización 2D compartida (SVG/Canvas2D), reemplazando three.js en los casos 2D. Conectarla primero a armaduras 2D (ya migrada en el Tren 2/A) | Separada del motor a propósito — el motor no debería saber cómo se dibuja nada. Reusable después por frame2d/frame2d-seismic |
+| C | **frame2d** completo de punta a punta (motor con flexión + patrón de estado del Tren A + visualización del Tren B), luego **frame2d-seismic** como extensión real sobre un frame2d ya funcionando (no un fork copiado) | Frame2d-seismic explícitamente no debe repetir el bug de duplicación encontrado en el diagnóstico — solo se puede extender bien algo que ya está probado de punta a punta, no solo como lógica aislada |
+| D | **armor3d** completo (motor con 3 DOF/nodo + three.js) | Su propio tren: no comparte tecnología de visualización con B/C, así que no gana nada por ir empaquetado con ellos |
+| 6 | **Armaduras plus** y **frame plus**: variación por temperatura y defectos de fabricación, vía el hook `equivalentLoad` ya reservado en `Element` (ver "Fuera de alcance por ahora") | Bloqueado hasta que A–D estén completos |
+| 7 | Feature nueva: exportación a Excel con fórmulas vivas (ver sección dedicada abajo) | Depende de que el motor tenga una estructura de ensamblaje estable y única — generar el exportador contra 5 clases inconsistentes hubiera significado escribirlo 5 veces |
+| 8 | Migración de contenido educativo (`src/content`, sección `learn`/`thesis`) | Bajo riesgo, sin dependencias técnicas fuertes, se hace cuando convenga sin bloquear nada |
 
 ## La exportación a Excel con fórmulas vivas
 
@@ -109,8 +113,9 @@ Riesgos técnicos a resolver antes de comprometerse con esto como feature:
 ## Fuera de alcance por ahora
 
 - `src/db` (usuarios, suscripciones, pagos): no se migra sin una decisión de producto explícita.
-- Contenido educativo (`src/content`): se migra en la Fase 7, no bloquea nada antes.
+- Contenido educativo (`src/content`): se migra en el Tren 8, no bloquea nada antes.
+- **Armaduras plus / frame plus** (temperatura, defectos de fabricación): en el método matricial ambos efectos se modelan como una carga nodal equivalente (`F = K·u + F0`, y la fuerza interna pasa de `f = k·u` a `f = k·(u − δ0)`), no como un cambio en la rigidez. Por eso `Element` ya expone un hook opcional `equivalentLoad()` (default cero, sin usar todavía) — para no tener que romper la interfaz del motor cuando llegue esta fase. La *implementación* de temperatura/defectos queda bloqueada hasta que los Trenes A–D (los 5 sistemas base, completos de punta a punta) terminen, para no diversificar antes de tener una base consistente.
 
 ## Próximo paso inmediato
 
-Diseñar la Fase 1: la forma concreta de `Node`, `Element` y `System` genéricos (incluyendo cómo representar un número variable de DOF por nodo entre 1 y 3), y portar `springs` como primera prueba real del diseño.
+Tren A: estandarizar el patrón dominio↔estado (Jotai) y el patrón de tablas de entrada (`FormulaInput`/`NumberInput`), y construir las páginas `/springs` y `/armaduras-2d` de punta a punta sobre el motor ya validado (Trenes 1 y 2, hechos).
