@@ -11,5 +11,13 @@ export type {
 } from "./system";
 export { TrussElement2D } from "./trusses-2d/truss-element-2d";
 export type { TrussPoint, TrussInternalForce } from "./trusses-2d/truss-element-2d";
+export { FrameElement2D } from "./frame2d/frame-element-2d";
+export type {
+  FramePoint,
+  FrameEndForces,
+  FrameEndForcePair,
+  FrameFixedEndForces,
+  FrameInternalForce,
+} from "./frame2d/frame-element-2d";
 export { SpringElement } from "./springs/spring-element";
 export type { SpringInternalForce } from "./springs/spring-element";
