@@ -22,7 +22,7 @@ describe("System — regresión red de 5 nodos / 4 resortes", () => {
     system.addElement(new SpringElement("e3", ["v3", "v5"], 3));
     system.addElement(new SpringElement("e4", ["v2", "v1"], 8));
 
-    const { displacements, reactions, internalForces, assembly } = system.solve();
+    const { displacements, reactions, internalForces } = system.solve();
 
     expect(displacements.get("v1")![0]).toBeCloseTo(1.393293, 5);
     expect(displacements.get("v2")![0]).toBeCloseTo(0.768293, 5);
