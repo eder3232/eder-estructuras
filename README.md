@@ -65,7 +65,8 @@ Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-ro
 - [x] **Tren 0** — shadcn/ui instalado con la paleta de este repo, convenciones de git y de componentes documentadas (`docs/git-workflow.md`, `docs/components.md`), `NumberInput` (Base UI) y `FormulaInput` (input estilo Excel con `mathjs`) implementados en `src/components/custom/`.
 - [x] **Tren 1** — motor de cálculo genérico (`Node`/`Element`/`System`) en `src/lib/engine/`, validado portando `springs` con tests de Vitest.
 - [x] **Tren 2** — armaduras 2D (`TrussElement2D`) portadas al motor sin tocar `System`/`Element`, confirmando que la abstracción generaliza de 1 a 2 DOF/nodo.
-- [ ] **Tren A — siguiente paso**: estandarizar el patrón dominio↔estado (Jotai) y el patrón de tablas de entrada, y construir las páginas `/springs` y `/armaduras-2d` de punta a punta.
+- [x] **Tren A (springs)** — patrón dominio↔estado con Jotai (átomos de datos planos, nunca instancias del motor) y página `/springs` de punta a punta: tablas de entrada, panel de errores y resultados pedagógicos por acordeón (DOF↔nudo, ensamblaje paso a paso con leyendas físicas, partición y solución, fuerzas internas).
+- [ ] **Tren A (armaduras 2D) — siguiente paso**: replicar el mismo patrón para `/armaduras-2d`.
 - [ ] Trenes B a D (visualización 2D compartida, frame2d/frame2d-seismic, armor3d) y fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
-Todavía no existe ninguna página funcional de análisis estructural en este repo — el motor de cálculo ya está probado (springs y armaduras 2D), pero falta conectarlo a una UI real. Eso es lo que arranca en el Tren A.
+Ya existe una primera página funcional: [`/springs`](./src/app/springs). Es el modelo a replicar para el resto de los sistemas.
