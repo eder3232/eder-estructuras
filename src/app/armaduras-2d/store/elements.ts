@@ -1,5 +1,7 @@
 import { atom } from "jotai";
 import { produce } from "immer";
+
+import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
 
 export interface ElementRow {
@@ -27,13 +29,17 @@ const atomElementsBase = atom<ElementRow[]>(initialElements);
 
 export const atomElements = atom((get) => get(atomElementsBase));
 
-export const atomAddElement = atom(null, (get, set) => {
+/** Ver `atomAddNode`: sin argumento agrega al final, con `afterId` inserta debajo de esa fila. */
+export const atomAddElement = atom(null, (get, set, afterId?: string) => {
   set(
     atomElementsBase,
     produce((draft: ElementRow[]) => {
-      draft.push({
+      draft.splice(insertIndex(draft, afterId), 0, {
         id: crypto.randomUUID(),
-        name: `e${draft.length + 1}`,
+        name: nextRowName(
+          "e",
+          draft.map((e) => e.name),
+        ),
         fromNodeId: "",
         toNodeId: "",
         area: 0,

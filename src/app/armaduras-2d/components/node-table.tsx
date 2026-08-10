@@ -29,10 +29,11 @@ export function NodeTable() {
         <TableHeader>
           <TableRow>
             <TableHead className="w-10">
-              <Button size="icon" variant="outline" onClick={() => addNode()}>
+              <Button size="icon" variant="outline" onClick={() => addNode()} aria-label="Agregar un nudo al final">
                 <PlusCircle className="m-auto" />
               </Button>
             </TableHead>
+            <TableHead className="w-10" />
             <TableHead>Nombre</TableHead>
             <TableHead>X</TableHead>
             <TableHead>Z</TableHead>
@@ -48,7 +49,22 @@ export function NodeTable() {
           {nodes.map((node) => (
             <TableRow key={node.id}>
               <TableCell>
-                <Button size="icon" variant="outline" onClick={() => removeNode(node.id)}>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => addNode(node.id)}
+                  aria-label={`Insertar un nudo debajo de ${node.name}`}
+                >
+                  <PlusCircle className="m-auto" />
+                </Button>
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => removeNode(node.id)}
+                  aria-label={`Eliminar ${node.name}`}
+                >
                   <MinusCircle className="m-auto" />
                 </Button>
               </TableCell>

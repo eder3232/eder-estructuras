@@ -1,6 +1,8 @@
 import { atom } from "jotai";
 import { produce } from "immer";
 
+import { insertIndex, nextRowName } from "@/lib/row-names";
+
 export interface NodeRow {
   /** Identificador estable, nunca editable — lo referencian los elementos. */
   id: string;
@@ -78,13 +80,22 @@ const atomNodesBase = atom<NodeRow[]>(initialNodes);
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
-export const atomAddNode = atom(null, (get, set) => {
+/**
+ * Sin argumento agrega al final (botón del encabezado); con `afterId` inserta
+ * justo debajo de esa fila, para poder meter un nudo intermedio sin rehacer la
+ * tabla. El orden de las filas es el orden de los DOF, así que insertar en el
+ * medio es una operación con sentido, no solo cosmética.
+ */
+export const atomAddNode = atom(null, (get, set, afterId?: string) => {
   set(
     atomNodesBase,
     produce((draft: NodeRow[]) => {
-      draft.push({
+      draft.splice(insertIndex(draft, afterId), 0, {
         id: crypto.randomUUID(),
-        name: `v${draft.length + 1}`,
+        name: nextRowName(
+          "v",
+          draft.map((n) => n.name),
+        ),
         x: 0,
         z: 0,
         forceX: 0,

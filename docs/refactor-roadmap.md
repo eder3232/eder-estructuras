@@ -201,10 +201,11 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | # | Qué | Dónde | Tamaño |
 |---|---|---|---|
 | D1 | Cuando `Kff` no tiene inversa —el caso normal de agregar un nudo antes de conectarlo— el usuario ve el mensaje de mathjs en inglés: *"Cannot calculate inverse, determinant is zero"*. Pasa igual en los 4 sistemas | `System.solve()` en `src/lib/engine/system.ts`, un solo lugar | chico |
-| D2 | `element-table.tsx` de `/armaduras-2d` y `/armaduras-3d` son **byte-idénticos** salvo el import del store (una barra espacial pide los mismos datos que una plana). Se dejaron duplicados a propósito, con el mismo criterio con que se extrajo `errors-panel`: **el tercer caso dispara la extracción** a `src/components/custom/` | `src/app/armaduras-{2d,3d}/components/element-table.tsx` | chico |
+| D2 | `element-table.tsx` de `/armaduras-2d` y `/armaduras-3d` **eran** byte-idénticos salvo el import del store, y se dejaron duplicados a propósito (el tercer caso dispara la extracción a `src/components/custom/`). Divergieron el 2026-08-10: la de 2D recibió el botón de insertar por fila. Al propagar **D7** vuelven a coincidir, y ahí conviene decidir si se extraen | `src/app/armaduras-{2d,3d}/components/element-table.tsx` | chico |
 | D3 | La forma deformada de `frame2d` es una recta entre nudos. Con flexión el tramo real es una cúbica de Hermite gobernada por los giros de los extremos — mejora pedagógica clara, pero hay que muestrear con las funciones de forma del elemento, no solo mover los extremos | `diagram-2d/deformed-diagram.tsx` | mediano |
 | D4 | Los diagramas de corte y momento a lo largo de la barra (`graphShear`/`graphMoment` del original) no se portaron. Son otra vista, no una variante de la deformada | — | mediano |
 | D5 | Verificación visual pendiente — ver punto 5. Ya no es "todo": `/armaduras-2d` y el esquema de `/frame2d` se miraron; falta la deformada de `/frame2d`, `/armaduras-3d` y el modo oscuro | — | chico |
+| D7 | El botón de **insertar una fila en el medio** (`+` por fila) solo está en `/armaduras-2d`. `/springs`, `/frame2d` y `/armaduras-3d` siguen con el `+` del encabezado nada más, o sea solo se puede agregar al final. Es una regresión del port, no una decisión. La lógica ya está lista y probada en `src/lib/row-names.ts`: falta pasar el `afterId` en cada `atomAdd*` y sumar la columna en cada tabla | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
 | D6 | Las etiquetas de valor de las flechas (`force-arrow.tsx`) se dibujan a una distancia fija de la punta y **se superponen con las barras y entre sí** cuando el nudo tiene carga en x y en z a la vez (visible en el nudo `v3` del esquema semilla de `/armaduras-2d`). Se detectó mirando, no calculando. Arreglo posible: correr la etiqueta perpendicular al eje de la flecha, o darle un `paint-order: stroke` con halo del color de fondo | `diagram-2d/force-arrow.tsx` | chico |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
@@ -214,7 +215,7 @@ Para no re-verificar de cero ni asumir de más.
 **Pasa limpio hoy** (`main`, después del Tren D):
 
 ```
-pnpm test          # 35 tests, 11 archivos
+pnpm test          # 47 tests, 13 archivos
 npx tsc --noEmit   # sin salida
 pnpm build         # prerrenderiza las 4 rutas + home
 ```
