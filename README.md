@@ -1,6 +1,8 @@
 # Thesis Refactor 2026
 
-Refactor de **thesis-structures**, una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero aplicando mejores prácticas de desarrollo — arquitectura, convenciones y flujo de trabajo — que no existían (o el autor no conocía) en la versión original.
+Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero aplicando mejores prácticas de desarrollo — arquitectura, convenciones y flujo de trabajo — que no existían (o el autor no conocía) en la versión original.
+
+El diagnóstico completo del proyecto anterior y el plan de fases del refactor están en [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — **léelo antes de escribir código de dominio o de visualización**, ahí está el porqué del orden de trabajo.
 
 La app original incluye módulos interactivos de análisis estructural (armaduras 2D/3D, pórticos 2D, pórticos 2D con análisis sísmico, resortes) junto con contenido educativo que explica la teoría detrás del método. El objetivo de este refactor es conservar y mejorar esa funcionalidad sobre una base técnica más sólida.
 
@@ -50,9 +52,18 @@ src/
 
 - [`docs/git-workflow.md`](./docs/git-workflow.md) — directriz de control de versiones: fase actual de commits directos a `main`, Conventional Commits, versionado con SemVer y el cambio de flujo a ramas + PR una vez taggeada `v1.0.0`.
 - [`docs/components.md`](./docs/components.md) — convención de organización de componentes: qué queda intocable en `ui/`, cómo forkear a `ui-custom/`, y qué va en `custom/`.
+- [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto anterior (`thesis-structures`) y el orden de fases propuesto para el refactor: motor de cálculo unificado, visualización, y la exportación a Excel con fórmulas vivas.
 
 Más guías (arquitectura, convenciones de código, etc.) se irán agregando en `docs/` a medida que el proyecto lo requiera.
 
 ## Estado del proyecto
 
-En desarrollo activo, fase pre-`v1.0.0`. Ver [`docs/git-workflow.md`](./docs/git-workflow.md) para las reglas de contribución vigentes en esta fase.
+En desarrollo activo, fase pre-`v1.0.0` (commits directos a `main`, ver [`docs/git-workflow.md`](./docs/git-workflow.md)).
+
+Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md):
+
+- [x] **Fase 0** — shadcn/ui instalado con la paleta de este repo, convenciones de git y de componentes documentadas (`docs/git-workflow.md`, `docs/components.md`), `NumberInput` (Base UI) y `FormulaInput` (input estilo Excel con `mathjs`) implementados en `src/components/custom/`.
+- [ ] **Fase 1 — siguiente paso**: diseñar el motor de cálculo genérico (`Node`, `Element` con matriz de rigidez local enchufable, `System` con ensamblaje/partición/solución) con el vocabulario unificado de `docs/refactor-roadmap.md`, y validarlo portando `springs` (el sistema estructural más simple del proyecto anterior) como primera prueba real. Nada de las fases 2 en adelante debería empezar antes de que esto funcione.
+- [ ] Fases 2 a 7: ver tabla completa en `docs/refactor-roadmap.md`.
+
+Todavía no existe ninguna página funcional de análisis estructural en este repo — solo la base (shadcn, componentes propios, docs). Eso es exactamente lo que arranca en la Fase 1.
