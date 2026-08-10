@@ -207,14 +207,15 @@ export class System {
     const ur = this.gatherVector(prescribedDisplacement, restrained).map((v) => [v]);
     const f0r = this.gatherVector(f0, restrained).map((v) => [v]);
 
-    const kfrUr = restrained.length > 0 ? (multiply(kfr, ur) as number[][]) : free.map(() => [0]);
-    const netFf = subtract(ff, kfrUr) as number[][];
-
-    let uf: number[][];
+    // Sin DOF libres no hay nada que resolver, y además `kfr`/`kff` quedan sin
+    // filas: mathjs no multiplica matrices vacías. Es un caso real, no teórico
+    // — una barra con los dos extremos empotrados y carga repartida a lo largo
+    // (el ejemplo clásico de empotramiento perfecto) no tiene ningún DOF libre.
+    let uf: number[][] = [];
     if (free.length > 0) {
+      const kfrUr = restrained.length > 0 ? (multiply(kfr, ur) as number[][]) : free.map(() => [0]);
+      const netFf = subtract(ff, kfrUr) as number[][];
       uf = multiply(inv(kff), netFf) as number[][];
-    } else {
-      uf = [];
     }
 
     const krfUf = free.length > 0 ? (multiply(krf, uf) as number[][]) : restrained.map(() => [0]);
