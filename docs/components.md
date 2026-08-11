@@ -66,6 +66,20 @@ Usar este componente para cualquier campo numérico del dominio de la app (pará
 
 > Base UI y mathjs pueden cambiar de API entre versiones — revisar `node_modules/@base-ui/react/number-field` y la documentación de mathjs antes de extender estos componentes, no asumir la API de memoria.
 
+## Trampa conocida: `<p>` dentro de `AccordionContent` (y de `Alert`)
+
+Los dos traen esta clase del estilo `radix-sera`:
+
+```
+[&_p:not(:last-child)]:mb-4
+```
+
+O sea: **todo `<p>` que no sea el último hijo de su contenedor se lleva 16 px de margen inferior**, aunque el `<p>` esté dentro de una fila flex. Eso infla la fila y clava el texto arriba, y el control que vaya al lado queda visualmente colgado hacia abajo. Cuesta de diagnosticar porque el margen no se ve: lo que se ve es un control desalineado, y el `items-center` de la fila parece no funcionar.
+
+Pasó de verdad al agregar el selector de decimales al lado de cada título de tabla: el `<p>` dejó de ser `:last-child` y todas las filas pasaron de 20 a 36 px.
+
+Regla práctica: **si vas a poner un control al lado de una etiqueta, la etiqueta va en `<span>`, no en `<p>`** — es una etiqueta, no un párrafo. Si de verdad es un párrafo y necesita un hermano al lado, ponele `mb-0` explícito y dejá un comentario diciendo por qué.
+
 ## Resumen rápido
 
 | Carpeta      | Origen                        | ¿Se edita a mano? | ¿Se puede sobrescribir con `shadcn add`? |

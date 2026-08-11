@@ -1,5 +1,5 @@
 import { TrussElement2D } from "@/lib/engine";
-import { DecimalsScope, ScopeDecimalsControl, useDecimals } from "@/components/custom/decimals-scope";
+import { DecimalsScope, ScopeDecimalsStepper, useDecimals } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -10,17 +10,10 @@ interface LocalStiffnessListProps {
 }
 
 /**
- * A diferencia de un resorte, una barra de armadura tiene rigidez axial en
- * ejes locales (EA/L·[[1,-1],[-1,1]]) que se transforma a ejes globales vía
- * T·k·Tᵀ, con T dependiente de cos/sin del ángulo de la barra. La rigidez
- * axial local se recalcula acá solo para mostrarla (no cambia el resultado);
- * la rigidez global 4×4 se obtiene de `TrussElement2D.stiffness()`, la misma
- * que usa `System`, para no reimplementar la multiplicación de matrices.
- */
-/**
- * Componente aparte solo para poder leer los decimales del ámbito de la barra:
- * estos escalares estaban con `toFixed(4)` hardcodeado, o sea que el selector
- * global nunca los tocó. Ahora siguen la misma cascada que las matrices.
+ * Componente aparte solo para poder leer los decimales del ámbito: estos
+ * escalares estaban con `toFixed(4)` hardcodeado, o sea que el selector global
+ * nunca los tocó. Ahora siguen a la sección, como las matrices que no tienen
+ * número propio.
  */
 function ScalarSummary({
   name,
@@ -48,6 +41,14 @@ function ScalarSummary({
   );
 }
 
+/**
+ * A diferencia de un resorte, una barra de armadura tiene rigidez axial en
+ * ejes locales (EA/L·[[1,-1],[-1,1]]) que se transforma a ejes globales vía
+ * T·k·Tᵀ, con T dependiente de cos/sin del ángulo de la barra. La rigidez
+ * axial local se recalcula acá solo para mostrarla (no cambia el resultado);
+ * la rigidez global 4×4 se obtiene de `TrussElement2D.stiffness()`, la misma
+ * que usa `System`, para no reimplementar la multiplicación de matrices.
+ */
 export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -78,51 +79,50 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
           ).stiffness();
 
           return (
-            <DecimalsScope key={element.id} id={element.id}>
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <ScalarSummary
-                    name={element.name}
-                    from={from.name}
-                    to={to.name}
-                    length={length}
-                    cos={cos}
-                    sin={sin}
-                    eaOverL={eaOverL}
-                  />
-                  <ScopeDecimalsControl />
-                </div>
-                <div className="flex flex-wrap items-end gap-6">
-                  <DecimalsScope id="axial">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground">Rigidez axial local</p>
-                        <ScopeDecimalsControl />
-                      </div>
-                      <MatrixTable
-                        matrix={[
-                          [eaOverL, -eaOverL],
-                          [-eaOverL, eaOverL],
-                        ]}
-                        labels={["axial " + from.name, "axial " + to.name]}
-                      />
+            // Sin ámbito propio por barra: la línea de escalares sigue a la
+            // sección y solo las dos matrices se pueden ajustar sueltas. Un
+            // nivel intermedio "todas las matrices de e4" agregaba un control
+            // por barra sin resolver ningún caso real.
+            <div key={element.id} className="flex flex-col gap-2">
+              <ScalarSummary
+                name={element.name}
+                from={from.name}
+                to={to.name}
+                length={length}
+                cos={cos}
+                sin={sin}
+                eaOverL={eaOverL}
+              />
+              <div className="flex flex-wrap items-end gap-6">
+                <DecimalsScope id={`${element.id}-axial`}>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-muted-foreground">Rigidez axial local</span>
+                      <ScopeDecimalsStepper />
                     </div>
-                  </DecimalsScope>
-                  <DecimalsScope id="global">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</p>
-                        <ScopeDecimalsControl />
-                      </div>
-                      <MatrixTable
-                        matrix={globalStiffness}
-                        labels={[`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`]}
-                      />
+                    <MatrixTable
+                      matrix={[
+                        [eaOverL, -eaOverL],
+                        [-eaOverL, eaOverL],
+                      ]}
+                      labels={["axial " + from.name, "axial " + to.name]}
+                    />
+                  </div>
+                </DecimalsScope>
+                <DecimalsScope id={`${element.id}-global`}>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</span>
+                      <ScopeDecimalsStepper />
                     </div>
-                  </DecimalsScope>
-                </div>
+                    <MatrixTable
+                      matrix={globalStiffness}
+                      labels={[`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`]}
+                    />
+                  </div>
+                </DecimalsScope>
               </div>
-            </DecimalsScope>
+            </div>
           );
         })}
       </div>

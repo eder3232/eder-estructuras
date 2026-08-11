@@ -1,5 +1,5 @@
 import type { AssemblyResult, SolveResult } from "@/lib/engine";
-import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
+import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { NodeRow } from "../../store/nodes";
 
@@ -96,9 +96,9 @@ function LabeledMatrix({
   return (
     <DecimalsScope id={scopeId}>
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium">{title}</p>
-          <ScopeDecimalsControl />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">{title}</span>
+          <ScopeDecimalsStepper />
         </div>
         <MatrixTable matrix={matrix} labels={labels} rowLabels={rowLabels} colLabels={colLabels} />
       </div>

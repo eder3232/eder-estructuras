@@ -73,7 +73,7 @@ Esto es una **mejora deliberada sobre el original**, no una réplica — ver la 
 3. **Partición y solución**: las 4 submatrices (`kff/kfr/krf/krr` — vocabulario libre/restringido, equivalente directo al `kuu/kur/kru/krr` del original) y la ecuación `Uf = Kff⁻¹·(Ff − Kfr·Ur)` con sustitución numérica.
 4. **Fuerzas internas**: sustitución numérica por elemento.
 
-Acordeón `type="multiple"`, primera sección abierta por defecto. Control de decimales **global** (`atomDecimals`), no por sección como tenía el original.
+Acordeón `type="multiple"`, primera sección abierta por defecto. La precisión ya no es un único número global: es una cascada página → bloque → tabla, descrita más abajo en "La cascada de decimales".
 
 ## Piezas genéricas vs. específicas de cada sistema
 
@@ -117,6 +117,10 @@ Cómo trabajarla:
 - La clave del override es la **ruta completa** (`armaduras-2d/partition/kff`), que `DecimalsScope` arma sola concatenando los ids de los ancestros. Por eso la raíz lleva el nombre del sistema: sin eso, dos sistemas con los mismos ids de bloque —o dos barras con el mismo id semilla— se pisarían la configuración.
 
 El punto de enganche es `matrix-table.tsx`: es el renderer compartido de casi todas las tablas, así que entra a la cascada con una sola línea. Lo que hay que tocar aparte es lo que formatea números por su cuenta (`internal-forces-table.tsx` de cada sistema y las etiquetas de los diagramas).
+
+Sobre los controles: el bloque usa un desplegable con etiqueta y un `↺ Restablecer` que limpia la sección y sus tablas; cada tabla usa un stepper `− n +`. La palabra "heredar" se descartó a propósito — nombraba el mecanismo (el árbol de ámbitos) y no el efecto; el desplegable dice "Automático — igual que la página" y el stepper muestra el número **en gris mientras sigue a la sección** y **resaltado, con `↺` al lado, cuando tiene valor propio**, que es la única forma de ver de un vistazo cuáles se despegaron.
+
+Ojo con una trampa al montar estos controles: `AccordionContent` le aplica `mb-4` a todo `<p>` que no sea `:last-child`, así que una etiqueta en `<p>` con el control al lado desalinea la fila entera. Ver la sección correspondiente de [`docs/components.md`](./components.md).
 
 En el original cada tabla tenía su propio selector con `useState` local y default 2, sin nada global ni por bloque; esto es un superconjunto de aquello.
 

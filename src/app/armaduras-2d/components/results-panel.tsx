@@ -15,6 +15,30 @@ import { PartitionAndSolution } from "./results/partition-and-solution";
 
 const DOF_LABELS = ["x", "z"];
 
+/**
+ * Encabezado de precisión de una sección. La leyenda va una sola vez por
+ * bloque, y no repetida en cada tabla: explicar la cascada veintipico de veces
+ * era justamente lo que hacía ilegible la pantalla.
+ */
+function SectionDecimals({
+  label = "Decimales de esta sección:",
+  hint = true,
+}: {
+  label?: string;
+  hint?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <ScopeDecimalsControl label={label} inheritsFrom="la página" />
+      {hint && (
+        <p className="text-xs text-muted-foreground">
+          Cada tabla sigue a la sección salvo que le fijes un número con − / +. El ↺ la vuelve a soltar.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ResultsPanel() {
   const [results] = useAtom(atomResults);
   const [elements] = useAtom(atomElements);
@@ -34,7 +58,7 @@ export function ResultsPanel() {
           <AccordionContent>
             <DecimalsScope id="local">
               <div className="flex flex-col gap-6">
-                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <SectionDecimals />
                 <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={DOF_LABELS} />
                 <LocalStiffnessList elements={elements} nodesById={nodesById} />
               </div>
@@ -47,7 +71,7 @@ export function ResultsPanel() {
           <AccordionContent>
             <DecimalsScope id="assembly">
               <div className="flex flex-col gap-6">
-                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <SectionDecimals />
                 <AssemblySteps
                   steps={assembly.steps}
                   dofOrder={assembly.dofOrder}
@@ -64,7 +88,7 @@ export function ResultsPanel() {
           <AccordionContent>
             <DecimalsScope id="partition">
               <div className="flex flex-col gap-6">
-                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <SectionDecimals />
                 <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
               </div>
             </DecimalsScope>
@@ -76,7 +100,7 @@ export function ResultsPanel() {
           <AccordionContent>
             <DecimalsScope id="internal">
               <div className="flex flex-col gap-6">
-                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <SectionDecimals />
                 <InternalForcesTable
                   elements={elements}
                   internalForces={solved.internalForces}
@@ -93,7 +117,7 @@ export function ResultsPanel() {
           <AccordionContent>
             <DecimalsScope id="deformed">
               <div className="flex flex-col gap-6">
-                <ScopeDecimalsControl label="Decimales de las etiquetas:" />
+                <SectionDecimals label="Decimales de las etiquetas:" hint={false} />
                 <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
               </div>
             </DecimalsScope>

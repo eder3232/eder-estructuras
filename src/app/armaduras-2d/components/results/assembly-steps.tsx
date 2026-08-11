@@ -1,5 +1,5 @@
 import type { AssemblyResult } from "@/lib/engine";
-import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
+import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -45,13 +45,15 @@ export function AssemblySteps({ steps, dofOrder, elements, nodesById }: Assembly
         return (
           <DecimalsScope key={step.elementId} id={step.elementId}>
             <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm">
+              <div className="flex items-start justify-between gap-3">
+                {/* `mb-0`: AccordionContent le mete `mb-4` a todo `p` que no
+                    sea `:last-child`, y acá el stepper viene después. */}
+                <p className="mb-0 text-sm">
                   <span className="font-medium">Paso {i + 1}:</span> barra {element?.name ?? step.elementId}
                   {element ? ` (área=${element.area}, E=${element.elasticity})` : ""} conecta {from}↔{to} → aporta en
                   las posiciones x/z de {from} y {to}.
                 </p>
-                <ScopeDecimalsControl />
+                <ScopeDecimalsStepper className="shrink-0" />
               </div>
               <MatrixTable
                 matrix={step.globalStiffnessAfter}

@@ -18,6 +18,9 @@ export const atomDecimals = atom(4);
  */
 export const atomDecimalsByScope = atom<Record<string, number>>({});
 
+export const MIN_DECIMALS = 0;
+export const MAX_DECIMALS = 8;
+
 export const atomSetScopeDecimals = atom(
   null,
   (get, set, { path, value }: { path: string; value: number | null }) => {
@@ -25,8 +28,29 @@ export const atomSetScopeDecimals = atom(
       atomDecimalsByScope,
       produce((draft: Record<string, number>) => {
         if (value === null) delete draft[path];
-        else draft[path] = value;
+        else draft[path] = Math.min(MAX_DECIMALS, Math.max(MIN_DECIMALS, value));
       }),
     );
   },
 );
+
+/**
+ * Devuelve el ámbito y todo lo que cuelga de él a "automático". Sin esto no hay
+ * forma de deshacer un override de una tabla que quedó fuera de pantalla: se
+ * vería una sección configurada en 2 con una tabla en 6 sin saber por qué.
+ */
+export const atomResetScopeDecimals = atom(null, (get, set, { path }: { path: string }) => {
+  set(
+    atomDecimalsByScope,
+    produce((draft: Record<string, number>) => {
+      for (const key of Object.keys(draft)) {
+        if (key === path || key.startsWith(`${path}/`)) delete draft[key];
+      }
+    }),
+  );
+});
+
+/** Si el ámbito o alguno de sus descendientes tiene un número fijado a mano. */
+export function hasOverrides(byScope: Record<string, number>, path: string): boolean {
+  return Object.keys(byScope).some((key) => key === path || key.startsWith(`${path}/`));
+}

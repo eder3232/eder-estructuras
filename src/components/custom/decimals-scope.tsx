@@ -2,13 +2,24 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useAtom, useSetAtom } from "jotai";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { atomDecimals, atomDecimalsByScope, atomSetScopeDecimals } from "./decimals";
+import { cn } from "@/lib/utils";
+import {
+  MAX_DECIMALS,
+  MIN_DECIMALS,
+  atomDecimals,
+  atomDecimalsByScope,
+  atomResetScopeDecimals,
+  atomSetScopeDecimals,
+  hasOverrides,
+} from "./decimals";
 
 /**
  * Cascada de precisión: página → bloque → tabla. Cada nivel puede fijar su
- * número de decimales o heredar del de arriba.
+ * número de decimales o quedarse en automático, siguiendo al de arriba.
  *
  * La herencia no necesita lógica de resolución propia: anidar providers *es* la
  * resolución, y `useDecimals()` devuelve el valor del ancestro más cercano. Lo
@@ -45,35 +56,47 @@ export function useDecimals(): number {
 }
 
 const OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const INHERIT = "inherit";
+const AUTO = "auto";
 
 /**
- * Selector del ámbito en el que está montado — hay que ponerlo **dentro** del
- * `DecimalsScope` que controla. Cuando no hay override propio muestra "heredar"
- * con el valor que está recibiendo, para que se vea de dónde sale el número.
+ * Control de bloque: un desplegable con etiqueta, más un botón para devolver la
+ * sección y sus tablas a automático.
+ *
+ * La opción de herencia dice el efecto ("igual que la página") en vez del
+ * mecanismo: "heredar" nombraba el árbol de ámbitos, que es un detalle de
+ * implementación que nadie quiere tener en la cabeza mirando una matriz.
  */
-export function ScopeDecimalsControl({ label, className }: { label?: string; className?: string }) {
+export function ScopeDecimalsControl({
+  label,
+  /** De quién se copia el valor cuando está en automático, para poder decirlo. */
+  inheritsFrom = "arriba",
+}: {
+  label?: string;
+  inheritsFrom?: string;
+}) {
   const scope = useContext(ScopeContext);
   const [byScope] = useAtom(atomDecimalsByScope);
   const setScopeDecimals = useSetAtom(atomSetScopeDecimals);
+  const resetScope = useSetAtom(atomResetScopeDecimals);
 
   if (!scope) return null;
   const override = byScope[scope.path];
+  const canReset = hasOverrides(byScope, scope.path);
 
   return (
-    <div className={className ?? "flex items-center gap-2 text-sm"}>
+    <div className="flex flex-wrap items-center gap-2 text-sm">
       {label && <span className="text-muted-foreground">{label}</span>}
       <Select
-        value={override === undefined ? INHERIT : String(override)}
+        value={override === undefined ? AUTO : String(override)}
         onValueChange={(next) =>
-          setScopeDecimals({ path: scope.path, value: next === INHERIT ? null : Number(next) })
+          setScopeDecimals({ path: scope.path, value: next === AUTO ? null : Number(next) })
         }
       >
-        <SelectTrigger size="sm" className="w-32">
+        <SelectTrigger size="sm" className="w-14">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={INHERIT}>heredar ({scope.value})</SelectItem>
+          <SelectItem value={AUTO}>Automático — igual que {inheritsFrom} ({scope.value})</SelectItem>
           {OPTIONS.map((option) => (
             <SelectItem key={option} value={String(option)}>
               {option}
@@ -81,6 +104,84 @@ export function ScopeDecimalsControl({ label, className }: { label?: string; cla
           ))}
         </SelectContent>
       </Select>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+        disabled={!canReset}
+        onClick={() => resetScope({ path: scope.path })}
+        title="Devuelve esta sección y todas sus tablas a automático"
+      >
+        <RotateCcw className="size-3" />
+        Restablecer
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Control de tabla: `− n +`, del alto de una línea de texto.
+ *
+ * Es un stepper y no un desplegable por dos razones. Una es de uso: ajustar
+ * precisión es tantear de a un decimal, no elegir un valor de una lista. La
+ * otra es de peso visual — hay una tabla por barra y por paso de ensamblaje, y
+ * con veintipico de desplegables idénticos en pantalla no se distinguía cuál
+ * estaba tocado. Acá el número va en gris mientras sigue a la sección, y recién
+ * cuando tiene valor propio se resalta y aparece el ↺ para soltarlo.
+ */
+export function ScopeDecimalsStepper({ className }: { className?: string }) {
+  const scope = useContext(ScopeContext);
+  const [byScope] = useAtom(atomDecimalsByScope);
+  const setScopeDecimals = useSetAtom(atomSetScopeDecimals);
+
+  if (!scope) return null;
+  const isAuto = byScope[scope.path] === undefined;
+  const title = isAuto
+    ? `Automático: sigue a la sección (${scope.value} decimales)`
+    : `Fijado en ${scope.value} decimales, independiente de la sección`;
+
+  return (
+    <div className={cn("flex items-center", className)} title={title}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-5 text-muted-foreground"
+        disabled={scope.value <= MIN_DECIMALS}
+        onClick={() => setScopeDecimals({ path: scope.path, value: scope.value - 1 })}
+        aria-label="Un decimal menos en esta tabla"
+      >
+        <Minus className="size-3" />
+      </Button>
+      <span
+        className={cn(
+          "w-4 text-center text-xs tabular-nums",
+          isAuto ? "text-muted-foreground" : "font-semibold text-foreground",
+        )}
+      >
+        {scope.value}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-5 text-muted-foreground"
+        disabled={scope.value >= MAX_DECIMALS}
+        onClick={() => setScopeDecimals({ path: scope.path, value: scope.value + 1 })}
+        aria-label="Un decimal más en esta tabla"
+      >
+        <Plus className="size-3" />
+      </Button>
+      {!isAuto && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-5 text-muted-foreground"
+          onClick={() => setScopeDecimals({ path: scope.path, value: null })}
+          aria-label="Volver a seguir a la sección"
+          title="Volver a seguir a la sección"
+        >
+          <RotateCcw className="size-3" />
+        </Button>
+      )}
     </div>
   );
 }
