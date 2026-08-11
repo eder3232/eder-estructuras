@@ -1,4 +1,5 @@
 import { TrussElement2D } from "@/lib/engine";
+import { DecimalsScope, ScopeDecimalsControl, useDecimals } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -16,6 +17,37 @@ interface LocalStiffnessListProps {
  * la rigidez global 4×4 se obtiene de `TrussElement2D.stiffness()`, la misma
  * que usa `System`, para no reimplementar la multiplicación de matrices.
  */
+/**
+ * Componente aparte solo para poder leer los decimales del ámbito de la barra:
+ * estos escalares estaban con `toFixed(4)` hardcodeado, o sea que el selector
+ * global nunca los tocó. Ahora siguen la misma cascada que las matrices.
+ */
+function ScalarSummary({
+  name,
+  from,
+  to,
+  length,
+  cos,
+  sin,
+  eaOverL,
+}: {
+  name: string;
+  from: string;
+  to: string;
+  length: number;
+  cos: number;
+  sin: number;
+  eaOverL: number;
+}) {
+  const decimals = useDecimals();
+  return (
+    <p className="text-sm font-medium">
+      {name} ({from}↔{to}): L={length.toFixed(decimals)}, cos={cos.toFixed(decimals)}, sin=
+      {sin.toFixed(decimals)}, EA/L={eaOverL.toFixed(decimals)}
+    </p>
+  );
+}
+
 export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -46,31 +78,51 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
           ).stiffness();
 
           return (
-            <div key={element.id} className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                {element.name} ({from.name}↔{to.name}): L={length.toFixed(4)}, cos={cos.toFixed(4)}, sin=
-                {sin.toFixed(4)}, EA/L={eaOverL.toFixed(4)}
-              </p>
-              <div className="flex flex-wrap items-end gap-6">
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs text-muted-foreground">Rigidez axial local</p>
-                  <MatrixTable
-                    matrix={[
-                      [eaOverL, -eaOverL],
-                      [-eaOverL, eaOverL],
-                    ]}
-                    labels={["axial " + from.name, "axial " + to.name]}
+            <DecimalsScope key={element.id} id={element.id}>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ScalarSummary
+                    name={element.name}
+                    from={from.name}
+                    to={to.name}
+                    length={length}
+                    cos={cos}
+                    sin={sin}
+                    eaOverL={eaOverL}
                   />
+                  <ScopeDecimalsControl />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</p>
-                  <MatrixTable
-                    matrix={globalStiffness}
-                    labels={[`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`]}
-                  />
+                <div className="flex flex-wrap items-end gap-6">
+                  <DecimalsScope id="axial">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">Rigidez axial local</p>
+                        <ScopeDecimalsControl />
+                      </div>
+                      <MatrixTable
+                        matrix={[
+                          [eaOverL, -eaOverL],
+                          [-eaOverL, eaOverL],
+                        ]}
+                        labels={["axial " + from.name, "axial " + to.name]}
+                      />
+                    </div>
+                  </DecimalsScope>
+                  <DecimalsScope id="global">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</p>
+                        <ScopeDecimalsControl />
+                      </div>
+                      <MatrixTable
+                        matrix={globalStiffness}
+                        labels={[`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`]}
+                      />
+                    </div>
+                  </DecimalsScope>
                 </div>
               </div>
-            </div>
+            </DecimalsScope>
           );
         })}
       </div>

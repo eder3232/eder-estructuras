@@ -1,4 +1,5 @@
 import type { AssemblyResult } from "@/lib/engine";
+import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -42,18 +43,23 @@ export function AssemblySteps({ steps, dofOrder, elements, nodesById }: Assembly
         const previous = i > 0 ? steps[i - 1].globalStiffnessAfter : null;
 
         return (
-          <div key={step.elementId} className="flex flex-col gap-2">
-            <p className="text-sm">
-              <span className="font-medium">Paso {i + 1}:</span> barra {element?.name ?? step.elementId}
-              {element ? ` (área=${element.area}, E=${element.elasticity})` : ""} conecta {from}↔{to} → aporta en
-              las posiciones x/z de {from} y {to}.
-            </p>
-            <MatrixTable
-              matrix={step.globalStiffnessAfter}
-              labels={labels}
-              highlight={diffPositions(previous, step.globalStiffnessAfter)}
-            />
-          </div>
+          <DecimalsScope key={step.elementId} id={step.elementId}>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm">
+                  <span className="font-medium">Paso {i + 1}:</span> barra {element?.name ?? step.elementId}
+                  {element ? ` (área=${element.area}, E=${element.elasticity})` : ""} conecta {from}↔{to} → aporta en
+                  las posiciones x/z de {from} y {to}.
+                </p>
+                <ScopeDecimalsControl />
+              </div>
+              <MatrixTable
+                matrix={step.globalStiffnessAfter}
+                labels={labels}
+                highlight={diffPositions(previous, step.globalStiffnessAfter)}
+              />
+            </div>
+          </DecimalsScope>
         );
       })}
     </div>

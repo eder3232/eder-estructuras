@@ -1,10 +1,8 @@
 "use client";
 
-import { useAtom } from "jotai";
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SolveResult, TrussInternalForce } from "@/lib/engine";
-import { atomDecimals } from "@/components/custom/decimals";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 
@@ -16,7 +14,7 @@ interface InternalForcesTableProps {
 }
 
 export function InternalForcesTable({ elements, internalForces, displacements, nodesById }: InternalForcesTableProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
 
   return (
     <div className="flex flex-col gap-4">

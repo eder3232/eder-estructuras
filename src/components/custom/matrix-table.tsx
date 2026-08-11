@@ -1,9 +1,7 @@
 "use client";
 
-import { useAtom } from "jotai";
-
 import { cn } from "@/lib/utils";
-import { atomDecimals } from "./decimals";
+import { useDecimals } from "./decimals-scope";
 
 interface MatrixTableProps {
   matrix: number[][];
@@ -18,7 +16,7 @@ interface MatrixTableProps {
 }
 
 export function MatrixTable({ matrix, labels, rowLabels, colLabels, highlight, className }: MatrixTableProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
   const highlighted = new Set(highlight?.map(([r, c]) => `${r}-${c}`));
   const rows = rowLabels ?? labels;
   const cols = colLabels ?? labels;

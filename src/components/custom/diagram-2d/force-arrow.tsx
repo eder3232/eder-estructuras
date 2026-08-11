@@ -1,8 +1,6 @@
 "use client";
 
-import { useAtom } from "jotai";
-
-import { atomDecimals } from "@/components/custom/decimals";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import { projectPoint } from "./viewbox";
 
 interface ForceArrowProps {
@@ -21,7 +19,7 @@ const COLOR_CLASS = {
 } as const;
 
 export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
   if (value === 0) return null;
 
   const { x: tailX, y: tailY } = projectPoint({ x, z });

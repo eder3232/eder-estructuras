@@ -3,6 +3,7 @@
 import { useAtom } from "jotai";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
 import { DofOrderTable } from "@/components/custom/dof-order-table";
 import { atomElements } from "../store/elements";
 import { atomResults } from "../store/results";
@@ -24,47 +25,81 @@ export function ResultsPanel() {
   const { assembly } = solved;
 
   return (
-    <Accordion type="multiple" defaultValue={["dof"]}>
-      <AccordionItem value="dof">
-        <AccordionTrigger>1. Grados de libertad y matrices locales</AccordionTrigger>
-        <AccordionContent className="flex flex-col gap-6">
-          <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={DOF_LABELS} />
-          <LocalStiffnessList elements={elements} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+    // El id de la raíz entra en la ruta de cada ámbito, así que la configuración
+    // de un sistema no se pisa con la de otro que tenga los mismos bloques.
+    <DecimalsScope id="armaduras-2d">
+      <Accordion type="multiple" defaultValue={["dof"]}>
+        <AccordionItem value="dof">
+          <AccordionTrigger>1. Grados de libertad y matrices locales</AccordionTrigger>
+          <AccordionContent>
+            <DecimalsScope id="local">
+              <div className="flex flex-col gap-6">
+                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={DOF_LABELS} />
+                <LocalStiffnessList elements={elements} nodesById={nodesById} />
+              </div>
+            </DecimalsScope>
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="assembly">
-        <AccordionTrigger>2. Ensamblaje de la matriz global</AccordionTrigger>
-        <AccordionContent>
-          <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="assembly">
+          <AccordionTrigger>2. Ensamblaje de la matriz global</AccordionTrigger>
+          <AccordionContent>
+            <DecimalsScope id="assembly">
+              <div className="flex flex-col gap-6">
+                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <AssemblySteps
+                  steps={assembly.steps}
+                  dofOrder={assembly.dofOrder}
+                  elements={elements}
+                  nodesById={nodesById}
+                />
+              </div>
+            </DecimalsScope>
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="partition">
-        <AccordionTrigger>3. Partición y solución</AccordionTrigger>
-        <AccordionContent>
-          <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="partition">
+          <AccordionTrigger>3. Partición y solución</AccordionTrigger>
+          <AccordionContent>
+            <DecimalsScope id="partition">
+              <div className="flex flex-col gap-6">
+                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
+              </div>
+            </DecimalsScope>
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="internal">
-        <AccordionTrigger>4. Fuerzas internas</AccordionTrigger>
-        <AccordionContent>
-          <InternalForcesTable
-            elements={elements}
-            internalForces={solved.internalForces}
-            displacements={solved.displacements}
-            nodesById={nodesById}
-          />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="internal">
+          <AccordionTrigger>4. Fuerzas internas</AccordionTrigger>
+          <AccordionContent>
+            <DecimalsScope id="internal">
+              <div className="flex flex-col gap-6">
+                <ScopeDecimalsControl label="Decimales de esta sección:" />
+                <InternalForcesTable
+                  elements={elements}
+                  internalForces={solved.internalForces}
+                  displacements={solved.displacements}
+                  nodesById={nodesById}
+                />
+              </div>
+            </DecimalsScope>
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="deformed">
-        <AccordionTrigger>5. Forma deformada</AccordionTrigger>
-        <AccordionContent>
-          <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+        <AccordionItem value="deformed">
+          <AccordionTrigger>5. Forma deformada</AccordionTrigger>
+          <AccordionContent>
+            <DecimalsScope id="deformed">
+              <div className="flex flex-col gap-6">
+                <ScopeDecimalsControl label="Decimales de las etiquetas:" />
+                <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
+              </div>
+            </DecimalsScope>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </DecimalsScope>
   );
 }

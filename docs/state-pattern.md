@@ -98,6 +98,28 @@ Acordeón `type="multiple"`, primera sección abierta por defecto. Control de de
 - Alert de errores → `ui-custom/alert.tsx` (tiene la variante `destructive` igual que el original, más `warning`/`info` si hacen falta), según la convención de `docs/components.md`.
 - Sin KaTeX/LaTeX — las fórmulas se muestran como texto plano formateado (`tabular-nums`), no se agregó esa dependencia. Si en algún momento se decide agregarla, es una decisión aparte a discutir, no algo a colar de paso.
 
+## La cascada de decimales (página → bloque → tabla)
+
+Los resultados no se leen todos con la misma precisión: en "Partición y solución" conviven `Kff` (~10⁶) y `Uf` (~10⁻³), y un único número de decimales deja a una ilegible por ruido o a la otra en puros ceros. Por eso la precisión es una **cascada de tres niveles**, en `src/components/custom/decimals-scope.tsx`:
+
+```
+página          atomDecimals                      ← <DecimalsControl />, arriba de "Resultados"
+  └ bloque        <DecimalsScope id="partition">  ← una por AccordionItem
+      └ tabla       <DecimalsScope id="kff">      ← override puntual
+```
+
+Cómo trabajarla:
+
+- **`useDecimals()`** devuelve el valor del ámbito más cercano. Un componente que no esté dentro de ningún `DecimalsScope` cae en el valor de la página, así que **los sistemas todavía no migrados siguen funcionando sin tocarlos**.
+- **`<ScopeDecimalsControl />` se monta *dentro* del scope que controla** — de ahí saca la ruta y el valor vigente. Fuera de un scope no renderiza nada.
+- No hay lógica de resolución escrita: anidar providers *es* la resolución. Un nivel sin override no guarda el valor heredado, lo hereda de verdad — si después cambia el bloque, la tabla lo sigue.
+- **Los overrides viven en `atomDecimalsByScope`, no en `useState`.** El acordeón es Radix sin `forceMount`: cerrar una sección desmonta sus tablas, y con estado local se perdería lo configurado.
+- La clave del override es la **ruta completa** (`armaduras-2d/partition/kff`), que `DecimalsScope` arma sola concatenando los ids de los ancestros. Por eso la raíz lleva el nombre del sistema: sin eso, dos sistemas con los mismos ids de bloque —o dos barras con el mismo id semilla— se pisarían la configuración.
+
+El punto de enganche es `matrix-table.tsx`: es el renderer compartido de casi todas las tablas, así que entra a la cascada con una sola línea. Lo que hay que tocar aparte es lo que formatea números por su cuenta (`internal-forces-table.tsx` de cada sistema y las etiquetas de los diagramas).
+
+En el original cada tabla tenía su propio selector con `useState` local y default 2, sin nada global ni por bloque; esto es un superconjunto de aquello.
+
 ## Fuera de alcance de este patrón (a propósito)
 
 - Resaltado interactivo de celdas (hover/click) — Tren B, junto a la visualización.

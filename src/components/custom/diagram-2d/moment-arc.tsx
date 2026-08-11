@@ -1,8 +1,6 @@
 "use client";
 
-import { useAtom } from "jotai";
-
-import { atomDecimals } from "@/components/custom/decimals";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import { projectPoint } from "./viewbox";
 
 interface MomentArcProps {
@@ -31,7 +29,7 @@ function pointAt(cx: number, cy: number, radius: number, degrees: number) {
  * el DOF rotacional del motor: giro de +x hacia +z).
  */
 export function MomentArc({ x, z, value, unitSize, variant }: MomentArcProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
   if (value === 0) return null;
 
   const { x: cx, y: cy } = projectPoint({ x, z });

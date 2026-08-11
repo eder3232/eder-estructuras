@@ -1,9 +1,8 @@
 "use client";
 
-import { useAtom } from "jotai";
 import { Html } from "@react-three/drei";
 
-import { atomDecimals } from "@/components/custom/decimals";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import { rotationForAxis, translate, unitVector } from "./orientation";
 import type { Diagram3DAxis, Point3 } from "./types";
 
@@ -24,7 +23,7 @@ interface ForceArrow3DProps {
  * reacciones nulas.
  */
 export function ForceArrow3D({ origin, axis, value, unitSize, variant, color }: ForceArrow3DProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
   if (value === 0) return null;
 
   const sign: 1 | -1 = value >= 0 ? 1 : -1;

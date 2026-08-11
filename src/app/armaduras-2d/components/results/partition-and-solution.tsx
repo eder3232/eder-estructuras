@@ -1,4 +1,5 @@
 import type { AssemblyResult, SolveResult } from "@/lib/engine";
+import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { NodeRow } from "../../store/nodes";
 
@@ -43,10 +44,10 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
           Separando la matriz global en las posiciones libres (f) y restringidas (r):
         </p>
         <div className="flex flex-wrap gap-6">
-          <LabeledMatrix title="Kff" matrix={partition.kff} labels={freeLabels} />
-          <LabeledMatrix title="Kfr" matrix={partition.kfr} rowLabels={freeLabels} colLabels={restrainedLabels} />
-          <LabeledMatrix title="Krf" matrix={partition.krf} rowLabels={restrainedLabels} colLabels={freeLabels} />
-          <LabeledMatrix title="Krr" matrix={partition.krr} labels={restrainedLabels} />
+          <LabeledMatrix scopeId="kff" title="Kff" matrix={partition.kff} labels={freeLabels} />
+          <LabeledMatrix scopeId="kfr" title="Kfr" matrix={partition.kfr} rowLabels={freeLabels} colLabels={restrainedLabels} />
+          <LabeledMatrix scopeId="krf" title="Krf" matrix={partition.krf} rowLabels={restrainedLabels} colLabels={freeLabels} />
+          <LabeledMatrix scopeId="krr" title="Krr" matrix={partition.krr} labels={restrainedLabels} />
         </div>
       </div>
 
@@ -55,9 +56,9 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
           Resolviendo los desplazamientos libres: Uf = Kff⁻¹ · (Ff − Kfr · Ur)
         </p>
         <div className="flex flex-wrap items-end gap-6">
-          <LabeledMatrix title="Ff (conocida)" matrix={ff} rowLabels={freeLabels} />
-          <LabeledMatrix title="Ur (conocida)" matrix={ur} rowLabels={restrainedLabels} />
-          <LabeledMatrix title="Uf (resuelta)" matrix={uf} rowLabels={freeLabels} />
+          <LabeledMatrix scopeId="ff" title="Ff (conocida)" matrix={ff} rowLabels={freeLabels} />
+          <LabeledMatrix scopeId="ur" title="Ur (conocida)" matrix={ur} rowLabels={restrainedLabels} />
+          <LabeledMatrix scopeId="uf" title="Uf (resuelta)" matrix={uf} rowLabels={freeLabels} />
         </div>
       </div>
 
@@ -65,19 +66,27 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
         <p className="text-sm text-muted-foreground">
           Reacciones en los nudos restringidos: Rr = Krf · Uf + Krr · Ur
         </p>
-        <LabeledMatrix title="Rr (resuelta)" matrix={rr} rowLabels={restrainedLabels} />
+        <LabeledMatrix scopeId="rr" title="Rr (resuelta)" matrix={rr} rowLabels={restrainedLabels} />
       </div>
     </div>
   );
 }
 
+/**
+ * Es el bloque donde el override por tabla más se justifica: Kff maneja
+ * magnitudes de rigidez (~10⁶) y Uf desplazamientos (~10⁻³), y están una al lado
+ * de la otra. Un único número de decimales deja a una ilegible por ruido o a la
+ * otra en puros ceros.
+ */
 function LabeledMatrix({
+  scopeId,
   title,
   matrix,
   labels,
   rowLabels,
   colLabels,
 }: {
+  scopeId: string;
   title: string;
   matrix: number[][];
   labels?: string[];
@@ -85,9 +94,14 @@ function LabeledMatrix({
   colLabels?: string[];
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-medium">{title}</p>
-      <MatrixTable matrix={matrix} labels={labels} rowLabels={rowLabels} colLabels={colLabels} />
-    </div>
+    <DecimalsScope id={scopeId}>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">{title}</p>
+          <ScopeDecimalsControl />
+        </div>
+        <MatrixTable matrix={matrix} labels={labels} rowLabels={rowLabels} colLabels={colLabels} />
+      </div>
+    </DecimalsScope>
   );
 }
