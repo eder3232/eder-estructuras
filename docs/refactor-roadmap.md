@@ -152,6 +152,14 @@ Riesgos técnicos a resolver antes de comprometerse con esto como feature:
 
 `/armaduras-3d` cierra el **Tren D**: `TrussElement3D` en `src/lib/engine/trusses-3d/` (la misma barra axial del caso plano, con un coseno director más), página con el patrón de estado, y visualización con three.js documentada en [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md). Se hizo **antes** que `frame2d-seismic` por decisión explícita: los dos hilos eran independientes y el orden no tenía costo.
 
+**Sesión de UI sobre `/armaduras-2d`** (2026-08-10, fuera de los trenes). Tres cosas, todas disparadas por mirar la app por primera vez:
+
+- **Arreglo del render de los apoyos** en `diagram-2d/` — alcanza también a `/frame2d`, que comparte el módulo.
+- **Botón de insertar una fila en el medio**, que el original tenía (`splice(index + 1, 0, …)`) y el port había perdido sin que nadie lo decidiera. De paso se corrigió un bug que el original también tenía: el nombre de la fila nueva salía de `filas.length + 1`, que repite nombres apenas se borra una fila del medio.
+- **Precisión configurable en cascada** (página → bloque → tabla) en vez de un único selector global. El original tenía un selector por tabla con estado local; esto es un superconjunto. Está descrito en [`docs/state-pattern.md`](./state-pattern.md).
+
+Las tres quedaron **solo en `/armaduras-2d`** a propósito: propagarlas es el hilo C del punto 3 de la sección de retomada, y estaba pendiente de que el usuario validara la UX.
+
 Dos cosas que el port mejora respecto del original, además del motor compartido:
 
 - **Fuerzas internas**: `armor3d` nunca las calculaba. Su store declaraba un `internalForces` que quedaba siempre vacío, y la UI no las mostraba. Acá salen de `TrussElement3D.internalForce()` como en cualquier otro sistema. Efecto lateral: los valores de fuerza interna de la regresión **no se pueden cotejar contra la app vieja** — salen de un script Node independiente que además verifica equilibrio nudo por nudo.
@@ -159,7 +167,13 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **arreglo del render de los apoyos** en los diagramas 2D (2026-08-10), después del cierre del Tren D (`/armaduras-3d` completo). El estado de los trenes no cambió; sí cambió el punto 5, que ahora explica cómo mirar la app sin la extensión de Chrome.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-10, sesión de UI sobre `/armaduras-2d`** (commits `0813f5d`, `9f9eaa2`, `c906e4b`, `74f9d17`).
+
+Esa sesión **no movió ningún tren** — los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Lo que hizo fue arreglar y mejorar la UI de `/armaduras-2d`, y de ahí salieron tres cosas que sí cambian cómo trabajar de acá en adelante:
+
+1. **Se descubrió cómo mirar la app sin la extensión de Chrome** (headless por línea de comandos, punto 5). Apenas se usó aparecieron **dos bugs de render** que ninguna verificación numérica iba a encontrar, los dos por reglas de CSS que el markup no deja ver.
+2. **`/armaduras-2d` quedó adelante de los otros tres en UI** — ver el punto 1.b, es lo primero que sorprende si abrís otro sistema y lo ves distinto.
+3. Quedaron **tres deudas nuevas** (D6, D7, D8) y una **validación pendiente del usuario**, en el punto 5.
 
 ### 1. Dónde está parado el proyecto
 
@@ -176,6 +190,19 @@ Trenes 0, 1, 2, A, B, D ✅ · Tren C a la mitad (falta `frame2d-seismic`) · Fa
 
 **Dato útil**: la página de cada sistema arranca con los mismos datos semilla que su test de regresión, así que los números en pantalla se pueden cotejar contra valores ya validados sin calcular nada a mano.
 
+### 1.b Ojo: `/armaduras-2d` ya no es igual a los otros tres
+
+Los cuatro sistemas comparten motor, patrón de estado y estructura de resultados, pero **la UI de `/armaduras-2d` tiene dos cosas que los demás no**. Es a propósito: se hicieron ahí primero para poder mirarlas antes de replicarlas cuatro veces.
+
+| | `/armaduras-2d` | `/springs`, `/frame2d`, `/armaduras-3d` |
+|---|---|---|
+| Agregar filas | `+` en el encabezado (al final) **y `+` por fila** (inserta debajo) | solo el `+` del encabezado |
+| Decimales | cascada **página → bloque → tabla** | un único selector de página |
+
+Los otros tres **no están rotos**: `useDecimals()` cae en `atomDecimals` fuera de todo scope, así que se comportan igual que siempre. Simplemente les falta la función. Propagarlo es la deuda **D7** + **D8**, y conviene hacerlo de una sola pasada por sistema.
+
+Consecuencia práctica: **si vas a tocar la UI de otro sistema, mirá primero cómo quedó `/armaduras-2d`** — es la referencia, no `/springs`.
+
 ### 2. Qué leer antes de escribir código (en este orden)
 
 1. Este documento — el porqué del orden de trabajo y el diagnóstico del proyecto original.
@@ -186,13 +213,22 @@ Trenes 0, 1, 2, A, B, D ✅ · Tren C a la mitad (falta `frame2d-seismic`) · Fa
 
 Regla general: **ante una discrepancia, gana el código**. Estos documentos pueden quedar desactualizados; `src/app/<sistema>/` y `src/lib/engine/` no.
 
-### 3. Los dos hilos grandes pendientes
+### 3. Los hilos pendientes
 
-No dependen entre sí, se pueden tomar en cualquier orden. La recomendación es **arrancar por el A**, porque cierra el Tren C y deja los 5 sistemas base completos.
+Ninguno depende de otro. **Si el usuario ya dio el visto bueno a la UI de decimales de `/armaduras-2d`, arrancá por el C**, que es corto y cierra una asimetría molesta. Si no, arrancá por el **A**, que cierra el Tren C y deja los 5 sistemas base completos.
 
 **Hilo A — `frame2d-seismic` (segunda mitad del Tren C).** Como extensión real sobre `frame2d`, **no un fork copiado**: ese fue el bug de duplicación diagnosticado en el original, donde `frame2D.ts` de ambos programas era casi idéntico letra por letra. Antes de escribir nada: revisar `D:\programming\repos_clonados\thesis-structures\src\programs\frame2d-seismic\` y **diffearlo contra `frame2d`** para aislar qué agrega de verdad el caso sísmico. Lo que quede en común no se copia — se reusa. El orden probado sigue siendo: motor primero, validado con un test de regresión, antes de tocar estado/UI.
 
 **Hilo B — tablas de carga que calculen los FEM.** El mecanismo de momentos de empotramiento perfecto ya está portado y funcionando (ver la sección "Los momentos de empotramiento perfecto (FEM) y el bug de transformación", más arriba en este mismo documento), pero **hoy los 6 valores se cargan a mano por barra**. Falta la UI que los calcule a partir de la carga: distribuida, puntual, momento y distribuida intermedia. Es la UI más grande del frame2d original (`components/edgesTable/fem/`, con imágenes explicativas por tipo de carga). Leer esa sección antes de tocarlo — ahí está la convención de signo y por qué el original transformaba mal. Ojo con el pendiente que ya está anotado ahí: la tabla de carga distribuida debería ofrecer "perpendicular a la barra" vs. "vertical (gravedad)" y hacer la descomposición sola.
+
+**Hilo C — propagar la UI de `/armaduras-2d` a los otros tres sistemas** (deudas **D7** y **D8** juntas). Es el hilo más corto y el que el usuario dejó explícitamente en la puerta: quedó pendiente de que mirara la UI de decimales antes de replicarla. La lógica ya está hecha y probada, falta solo el cableado por sistema:
+
+- **D7 (insertar filas)**: en `store/nodes.ts` y `store/elements.ts` de cada sistema, hacer que `atomAdd*` tome un `afterId` opcional y use `insertIndex`/`nextRowName` de [`src/lib/row-names.ts`](../src/lib/row-names.ts) — copiar el cuerpo de `src/app/armaduras-2d/store/nodes.ts`. En las tablas, agregar la columna del `+` por fila.
+- **D8 (cascada de decimales)**: en `results-panel.tsx` de cada sistema, envolver todo en `<DecimalsScope id="<sistema>">` y cada `AccordionItem` en su propio scope con el control; en `results/*.tsx`, cambiar `useAtom(atomDecimals)` por `useDecimals()` y sumar `<ScopeDecimalsStepper />` por tabla. Está descrito en la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md).
+
+Al terminar D7 en `/armaduras-3d`, su `element-table.tsx` vuelve a quedar idéntico al de `/armaduras-2d` — ahí es el momento de decidir si se extraen a `src/components/custom/` (ver **D2**).
+
+**Trampa que ya costó una vez**: `AccordionContent` aplica `[&_p:not(:last-child)]:mb-4`, así que poner un control al lado de una etiqueta en `<p>` desalinea la fila entera. Las etiquetas van en `<span>`. Está explicado en [`docs/components.md`](./components.md).
 
 ### 4. Deudas chicas anotadas al pasar
 
@@ -205,9 +241,9 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D3 | La forma deformada de `frame2d` es una recta entre nudos. Con flexión el tramo real es una cúbica de Hermite gobernada por los giros de los extremos — mejora pedagógica clara, pero hay que muestrear con las funciones de forma del elemento, no solo mover los extremos | `diagram-2d/deformed-diagram.tsx` | mediano |
 | D4 | Los diagramas de corte y momento a lo largo de la barra (`graphShear`/`graphMoment` del original) no se portaron. Son otra vista, no una variante de la deformada | — | mediano |
 | D5 | Verificación visual pendiente — ver punto 5. Ya no es "todo": `/armaduras-2d` y el esquema de `/frame2d` se miraron; falta la deformada de `/frame2d`, `/armaduras-3d` y el modo oscuro | — | chico |
-| D8 | La **cascada de decimales** (página → bloque → tabla) solo está cableada en `/armaduras-2d`. Los otros 3 sistemas siguen con el selector único de página: funcionan igual que antes porque `useDecimals()` cae en `atomDecimals` fuera de todo scope, pero no tienen control por bloque ni por tabla. Se propaga envolviendo cada `AccordionItem` de su `results-panel.tsx` y cambiando su `internal-forces-table.tsx` — ver la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md) | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
-| D7 | El botón de **insertar una fila en el medio** (`+` por fila) solo está en `/armaduras-2d`. `/springs`, `/frame2d` y `/armaduras-3d` siguen con el `+` del encabezado nada más, o sea solo se puede agregar al final. Es una regresión del port, no una decisión. La lógica ya está lista y probada en `src/lib/row-names.ts`: falta pasar el `afterId` en cada `atomAdd*` y sumar la columna en cada tabla | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
 | D6 | Las etiquetas de valor de las flechas (`force-arrow.tsx`) se dibujan a una distancia fija de la punta y **se superponen con las barras y entre sí** cuando el nudo tiene carga en x y en z a la vez (visible en el nudo `v3` del esquema semilla de `/armaduras-2d`). Se detectó mirando, no calculando. Arreglo posible: correr la etiqueta perpendicular al eje de la flecha, o darle un `paint-order: stroke` con halo del color de fondo | `diagram-2d/force-arrow.tsx` | chico |
+| D7 | El botón de **insertar una fila en el medio** (`+` por fila) solo está en `/armaduras-2d`. `/springs`, `/frame2d` y `/armaduras-3d` siguen con el `+` del encabezado nada más, o sea solo se puede agregar al final. Es una regresión del port, no una decisión. La lógica ya está lista y probada en `src/lib/row-names.ts`: falta pasar el `afterId` en cada `atomAdd*` y sumar la columna en cada tabla | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
+| D8 | La **cascada de decimales** (página → bloque → tabla) solo está cableada en `/armaduras-2d`. Los otros 3 sistemas siguen con el selector único de página: funcionan igual que antes porque `useDecimals()` cae en `atomDecimals` fuera de todo scope, pero no tienen control por bloque ni por tabla. Se propaga envolviendo cada `AccordionItem` de su `results-panel.tsx` y cambiando su `internal-forces-table.tsx` — ver la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md) | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
 
@@ -234,14 +270,33 @@ pnpm build         # prerrenderiza las 4 rutas + home
 
 Dos detalles que cuestan tiempo si no se saben: el `--screenshot` necesita **ruta absoluta de Windows** y un `--user-data-dir` propio (si no, "Acceso denegado"), y `--window-size` alto captura la página entera de una (no hay scroll). Lo que **no** se puede es clickear: para ver una sección del acordeón que arranca cerrada (la forma deformada es la número 5), hay que tocar `defaultValue` del `<Accordion>` en `results-panel.tsx`, sacar la captura y revertir.
 
-**Lo que ya se miró** (2026-08-10, por headless): el esquema y la deformada de `/armaduras-2d`, y el esquema de `/frame2d`. Ahí apareció el bug de `vector-effect` descrito en [`docs/diagram-pattern.md`](./diagram-pattern.md) ("Decisiones técnicas a mantener"): los apoyos se dibujaban con un trazo de ~144 px y tapaban el diagrama. **La lección importa más que el bug**: el markup SVG era correcto atributo por atributo y la geometría daba bien: lo que fallaba era el modelo de herencia de CSS, y eso solo se ve mirando.
+**Lo que ya se miró** (2026-08-10, por headless): de `/armaduras-2d`, el esquema, la forma deformada, las dos tablas de entrada y los controles de decimales; de `/frame2d`, el esquema. Aparecieron dos bugs que **ninguna verificación numérica iba a encontrar**, y las dos lecciones valen más que los bugs:
+
+- El trazo de los apoyos se dibujaba de ~144 px y tapaba el diagrama. El markup SVG era correcto atributo por atributo y la geometría daba bien; lo que fallaba era que **`vector-effect` no es heredable**. Ver [`docs/diagram-pattern.md`](./diagram-pattern.md), "Decisiones técnicas a mantener".
+- Los controles de decimales colgaban debajo de su etiqueta. No era la alineación de la fila: **`AccordionContent` le mete `mb-4` a todo `<p>` que no sea `:last-child`**, y al ponerle un control al lado el título dejó de serlo. Ver [`docs/components.md`](./components.md).
+
+Método que funcionó para diagnosticar el segundo: **pintar las cajas con `bg-red-200`/`bg-blue-200`/`bg-green-100` y medir los píxeles sobre la captura**. Con un margen invisible metido en el medio, razonar sobre el CSS lleva a conclusiones equivocadas; medir, no.
 
 **Lo que sigue sin mirarse:**
 
 - **`/frame2d`**, sección "5. Forma deformada": el arco de momento (`moment-arc.tsx`) sobre las reacciones de los empotramientos. El esquema de esa ruta sí se vio.
 - **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
 - **Modo oscuro, en ningún sistema**: el repo define los tokens `.dark` en `globals.css` pero no monta ningún switch de tema, así que nunca se activó. Para la escena 3D esto importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS.
+- **Ningún click, en ninguna parte.** Headless saca capturas pero no interactúa, y el repo **no tiene entorno DOM** para tests de componentes (no hay `jsdom`/`happy-dom` ni testing-library). O sea: de toda la UI nueva de `/armaduras-2d` se verificó *el resultado del estado*, nunca *el evento que lo cambia*. Sin probar quedaron: los botones `+`/`−` de las tablas de entrada, y los `− / +`, el `↺` y el desplegable de los decimales. La forma de probarlos hoy es sembrar el estado a mano (ver abajo); la forma de probarlos de verdad es agregar un entorno DOM, que es una decisión aparte y no se tomó.
 
-Un `pnpm dev` y mirar esas tres cosas es media hora bien gastada apenas haya navegador.
+**Truco para verificar sin poder clickear**: sembrar temporalmente el estado inicial del átomo, sacar la captura y revertir. Con `atomDecimalsByScope` en `src/components/custom/decimals.ts`, por ejemplo:
+
+```ts
+export const atomDecimalsByScope = atom<Record<string, number>>({
+  "armaduras-2d/partition": 2,        // toda la sección en 2
+  "armaduras-2d/partition/uf": 6,     // salvo Uf, fijada en 6
+});
+```
+
+Eso alcanzó para confirmar que la herencia resuelve bien y que se distingue a simple vista una tabla en automático de una fijada. **Acordate de revertirlo antes de commitear.**
+
+**Pendiente de validación del usuario**: la UX de los controles de decimales de `/armaduras-2d` se rehízo el 2026-08-10 (rótulo "Automático" en vez de "heredar", stepper `− n +` por tabla, `↺ Restablecer` por bloque) y el usuario iba a mirarla. **No la propagues a los otros tres sistemas sin preguntar** — si algo no le cierra, cambiarlo en un sistema es barato y en cuatro no.
+
+Un `pnpm dev` y mirar lo de arriba es media hora bien gastada apenas haya navegador de verdad.
 
 **Si hace falta regenerar valores esperados de una regresión**: los de armaduras 2D y 3D salieron de scripts Node aislados, escritos aparte y **sin reutilizar código del repo** (ensamblaje y eliminación gaussiana propios), que además verifican equilibrio nudo por nudo. Esos scripts fueron temporales y no están versionados a propósito: el valor está en el test, no en el script. Si necesitás otros, escribí uno nuevo con el mismo criterio — reusar el motor para generar los valores que validan al motor no probaría nada.
