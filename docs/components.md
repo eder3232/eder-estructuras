@@ -94,6 +94,16 @@ Pasó de verdad con el control de decimales por sección: el item de automático
 
 Regla práctica: **cuando la opción de la lista sea más larga que el trigger, pasale children explícitos al `SelectValue`** con una forma corta. Eso desacopla las dos cosas: el trigger dice `Auto (4)`, la lista mantiene la frase que explica. Y si el trigger tiene ancho fijo, conviene que **todos** los estados midan parecido (`Auto (4)` / `Fijo (4)`, no `Auto (4)` / `4`): con el `justify-between` del trigger, un contenido corto deja el chevron flotando lejos del texto.
 
+## Trampa conocida: `text-transform` reescribe los símbolos de KaTeX
+
+`custom/math.tsx` renderiza las fórmulas a HTML, y KaTeX emite cada símbolo como **texto**, no como imagen ni como glifo vectorial. O sea que cualquier `text-transform` heredado de un ancestro se los aplica.
+
+Pasó de verdad: los `TableHead` del estilo `radix-sera` van en `uppercase`, y una fórmula con `\delta` dentro de un encabezado de tabla se veía **Δ** mientras la misma cantidad, dos párrafos más arriba, se veía **δ**. Dos símbolos distintos para lo mismo, en una app cuyo objetivo es explicar un método — y ningún error en consola, ningún test rojo, el DOM impecable. Solo se ve mirando la página.
+
+Ya está resuelto en el componente: `Math` y `MathBlock` se aplican `normal-case` a sí mismos, así que **no hace falta acordarse en cada call site**. La trampa queda documentada porque el día que alguien escriba otro componente que renderice TeX a mano —o que quite ese `normal-case` por parecer redundante— vuelve.
+
+Regla general: si un componente genera texto que representa símbolos, tiene que ser inmune a las transformaciones tipográficas del contenedor. Es lo mismo que ya pasó con `vector-effect` en los SVG (ver [`docs/diagram-pattern.md`](./diagram-pattern.md)): una propiedad heredada que rompe algo que el markup muestra correcto.
+
 ## Resumen rápido
 
 | Carpeta      | Origen                        | ¿Se edita a mano? | ¿Se puede sobrescribir con `shadcn add`? |

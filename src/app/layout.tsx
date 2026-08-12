@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
+// Estilos de las fórmulas (`src/components/custom/math.tsx`). Va en la raíz por
+// la recomendación de Next para stylesheets externos, y una sola vez: KaTeX trae
+// sus fuentes referenciadas con `url()` relativo desde este mismo archivo.
+import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
