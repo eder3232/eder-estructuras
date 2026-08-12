@@ -1,5 +1,7 @@
 import { TrussElement2D } from "@/lib/engine";
 import { DecimalsScope, ScopeDecimalsStepper, useDecimals } from "@/components/custom/decimals-scope";
+import { Math, MathBlock, texText } from "@/components/custom/math";
+import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -34,99 +36,122 @@ function ScalarSummary({
 }) {
   const decimals = useDecimals();
   return (
-    <p className="text-sm font-medium">
-      {name} ({from}↔{to}): L={length.toFixed(decimals)}, cos={cos.toFixed(decimals)}, sin=
-      {sin.toFixed(decimals)}, EA/L={eaOverL.toFixed(decimals)}
-    </p>
+    // `span` y no `p`: al lado va el stepper, y `AccordionContent` le mete
+    // `mb-4` a todo `p` que no sea `:last-child` (ver docs/components.md).
+    <span className="text-sm">
+      <span className="font-medium">
+        {name} ({from}↔{to})
+      </span>
+      : <Math tex="L" />={length.toFixed(decimals)}, <Math tex="C_x" />={cos.toFixed(decimals)},{" "}
+      <Math tex="C_z" />={sin.toFixed(decimals)}, <Math tex="\frac{EA}{L}" />={eaOverL.toFixed(decimals)}
+    </span>
   );
 }
 
 /**
- * A diferencia de un resorte, una barra de armadura tiene rigidez axial en
- * ejes locales (EA/L·[[1,-1],[-1,1]]) que se transforma a ejes globales vía
- * T·k·Tᵀ, con T dependiente de cos/sin del ángulo de la barra. La rigidez
- * axial local se recalcula acá solo para mostrarla (no cambia el resultado);
- * la rigidez global 4×4 se obtiene de `TrussElement2D.stiffness()`, la misma
- * que usa `System`, para no reimplementar la multiplicación de matrices.
+ * A diferencia de un resorte, una barra de armadura tiene rigidez axial en ejes
+ * locales que se transforma a ejes globales según el ángulo de la barra. **Ese
+ * es el único paso que distingue una armadura de un resorte**, así que se
+ * muestra entero: `A`, `k` y `Aᵀ` como operandos, no solo el resultado.
+ *
+ * Todas las matrices salen de `TrussElement2D.breakdown()` —la misma que usa
+ * `System` para ensamblar—, no de recalcular la geometría acá. Antes esta página
+ * y la de fuerzas internas tenían cada una su copia de `cos`/`sin`/`EA/L`.
+ *
+ * Las formas simbólicas van **una sola vez** arriba y no repetidas por barra:
+ * son idénticas para todas, que es justamente lo que las hace fórmulas. El
+ * original las repetía en cada barra.
  */
 export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Cada barra aporta una rigidez axial local de 2×2 (EA/L·[[1,-1],[-1,1]]), que se transforma a ejes globales
-        según el ángulo de la barra:
-      </p>
-      <div className="flex flex-wrap gap-6">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-muted-foreground">
+          Cada barra aporta una rigidez axial de 2×2 en sus ejes locales, que depende solo de <Math tex="EA/L" />:
+        </p>
+        <MathBlock tex="k = \frac{EA}{L}\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}" />
+        <p className="text-sm text-muted-foreground">
+          Para poder sumarlas entre sí hay que llevarlas a ejes globales. La matriz de transformación{" "}
+          <Math tex="A" /> se arma con los cosenos directores de la barra, y reparte cada extremo axial en sus dos
+          componentes <Math tex="x" /> y <Math tex="z" />:
+        </p>
+        <MathBlock tex="A = \begin{bmatrix} C_x & 0 \\ C_z & 0 \\ 0 & C_x \\ 0 & C_z \end{bmatrix} \qquad C_x = \frac{\Delta x}{L},\quad C_z = \frac{\Delta z}{L}" />
+        <p className="text-sm text-muted-foreground">
+          Con eso, la rigidez de la barra en ejes globales es:
+        </p>
+        <MathBlock tex="K = A \cdot k \cdot A^{T}" />
+      </div>
+
+      <div className="flex flex-col gap-8">
         {elements.map((element) => {
           const from = nodesById.get(element.fromNodeId);
           const to = nodesById.get(element.toNodeId);
           if (!from || !to) return null;
 
-          const dx = to.x - from.x;
-          const dz = to.z - from.z;
-          const length = Math.hypot(dx, dz);
-          if (length === 0) return null;
-          const cos = dx / length;
-          const sin = dz / length;
-          const eaOverL = (element.elasticity * element.area) / length;
+          // Se construye el mismo elemento que usa el motor y se le piden los
+          // pasos intermedios, en vez de rehacer la geometría con las
+          // coordenadas. Si la fórmula del motor cambia, esto cambia con ella.
+          let breakdown;
+          try {
+            breakdown = new TrussElement2D(
+              element.id,
+              { id: from.id, x: from.x, z: from.z },
+              { id: to.id, x: to.x, z: to.z },
+              element.area,
+              element.elasticity,
+            ).breakdown();
+          } catch {
+            // Área o longitud inválidas: el panel de errores ya lo está diciendo.
+            return null;
+          }
 
-          const globalStiffness = new TrussElement2D(
-            element.id,
-            { id: from.id, x: from.x, z: from.z },
-            { id: to.id, x: to.x, z: to.z },
-            element.area,
-            element.elasticity,
-          ).stiffness();
+          const { length, cos, sin, eaOverL, transform, transformTransposed, localStiffness, globalStiffness } =
+            breakdown;
+          const globalLabels = [`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`];
+          const axialLabels = [`ax. ${from.name}`, `ax. ${to.name}`];
+          const barTex = texText(element.name);
 
           return (
-            // Sin ámbito propio por barra: la línea de escalares sigue a la
-            // sección y solo las dos matrices se pueden ajustar sueltas. Un
-            // nivel intermedio "todas las matrices de e4" agregaba un control
-            // por barra sin resolver ningún caso real.
-            <div key={element.id} className="flex flex-col gap-2">
-              <ScalarSummary
-                name={element.name}
-                from={from.name}
-                to={to.name}
-                length={length}
-                cos={cos}
-                sin={sin}
-                eaOverL={eaOverL}
-              />
-              <div className="flex flex-wrap items-end gap-6">
-                <DecimalsScope id={`${element.id}-axial`}>
-                  <div className="flex flex-col gap-1">
-                    {/* Sin `justify-between`: este bloque mide lo que mide la
-                        tabla, así que pegar el stepper al borde derecho lo hacía
-                        correrse solo al subir decimales — ver el comentario de
-                        `ScopeDecimalsStepper`. */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Rigidez axial local</span>
-                      <ScopeDecimalsStepper />
-                    </div>
-                    <MatrixTable
-                      matrix={[
-                        [eaOverL, -eaOverL],
-                        [-eaOverL, eaOverL],
-                      ]}
-                      labels={["axial " + from.name, "axial " + to.name]}
-                    />
-                  </div>
-                </DecimalsScope>
-                <DecimalsScope id={`${element.id}-global`}>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</span>
-                      <ScopeDecimalsStepper />
-                    </div>
-                    <MatrixTable
-                      matrix={globalStiffness}
-                      labels={[`${from.name}x`, `${from.name}z`, `${to.name}x`, `${to.name}z`]}
-                    />
-                  </div>
-                </DecimalsScope>
+            // Un ámbito de decimales por barra: la cadena entera se mueve junta.
+            // Un stepper por matriz serían cuatro por barra, y con seis barras la
+            // pantalla se vuelve una grilla de controles indistinguibles.
+            <DecimalsScope key={element.id} id={element.id}>
+              <div className="flex flex-col gap-2">
+                {/* Sin `justify-between`: el stepper va pegado a su etiqueta, si
+                    no se corre solo al ensanchar las tablas (ver
+                    `ScopeDecimalsStepper`). */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <ScalarSummary
+                    name={element.name}
+                    from={from.name}
+                    to={to.name}
+                    length={length}
+                    cos={cos}
+                    sin={sin}
+                    eaOverL={eaOverL}
+                  />
+                  <ScopeDecimalsStepper />
+                </div>
+
+                <MatrixEquation>
+                  <EquationTerm tex={`K_{${barTex}}`}>
+                    <MatrixTable matrix={globalStiffness} labels={globalLabels} />
+                  </EquationTerm>
+                  <MathOp tex="=" />
+                  <EquationTerm tex={`A_{${barTex}}`}>
+                    <MatrixTable matrix={transform} rowLabels={globalLabels} colLabels={axialLabels} />
+                  </EquationTerm>
+                  <MathOp tex="\cdot" />
+                  <EquationTerm tex={`k_{${barTex}}`}>
+                    <MatrixTable matrix={localStiffness} labels={axialLabels} />
+                  </EquationTerm>
+                  <MathOp tex="\cdot" />
+                  <EquationTerm tex={`A^{T}_{${barTex}}`}>
+                    <MatrixTable matrix={transformTransposed} rowLabels={axialLabels} colLabels={globalLabels} />
+                  </EquationTerm>
+                </MatrixEquation>
               </div>
-            </div>
+            </DecimalsScope>
           );
         })}
       </div>
