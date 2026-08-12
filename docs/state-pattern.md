@@ -26,7 +26,7 @@ src/app/<sistema>/
     errors-panel.tsx                # muestra los errores que tira System, sin reimplementar códigos de error
     decimals-control.tsx            # selector de decimales (0-8)
     matrix-table.tsx                # tabla genérica para number[][], con soporte de labels y resaltado
-    results-panel.tsx               # Accordion que orquesta las 4 secciones de abajo
+    results-panel.tsx               # Accordion que orquesta las 5 secciones de abajo
     results/
       dof-order-table.tsx           # posición ↔ nudo ↔ incógnita a resolver
       local-stiffness-list.tsx      # rigidez local por elemento (fórmula general + valores)
@@ -64,16 +64,27 @@ export const atomResults = atom<SpringsResults>((get) => {
 
 Si hay errores de validación (capturados por fila, sin romper la página) no se llama `.solve()`. Si no hay errores, `solved` trae `displacements`, `reactions`, `internalForces` y — clave para la sección de resultados — `assembly` (`dofOrder`, `globalStiffness`, `steps`, `partition`), que `System.solve()` expone justamente para esto.
 
-## El diseño pedagógico de resultados (las 4 secciones del acordeón)
+## El diseño pedagógico de resultados (las 5 secciones del acordeón)
 
 Esto es una **mejora deliberada sobre el original**, no una réplica — ver la discusión completa en el historial de commits (`960a38e`, `932f9e2`) si hace falta el porqué completo. El estándar a mantener en todos los sistemas:
 
-1. **DOF y matrices locales**: tabla explícita "posición ↔ nudo ↔ qué incógnita se resuelve ahí" **antes** de mostrar cualquier matriz — la posición numérica tiene que tener significado desde el principio. Después, la rigidez local de cada elemento (fórmula general + valores).
-2. **Ensamblaje de la matriz global**: un paso por elemento, cada uno con una leyenda física ("Barra e1 (k=10) conecta v4↔v2 → aporta en las posiciones de v4 y v2") y las celdas que cambiaron resaltadas (diff entre el paso anterior y el actual — sin lógica de interacción, eso es Tren B).
-3. **Partición y solución**: las 4 submatrices (`kff/kfr/krf/krr` — vocabulario libre/restringido, equivalente directo al `kuu/kur/kru/krr` del original) y la ecuación `Uf = Kff⁻¹·(Ff − Kfr·Ur)` con sustitución numérica.
+1. **DOF y matrices locales**: tabla explícita "posición ↔ nudo ↔ qué incógnita se resuelve ahí" **antes** de mostrar cualquier matriz — la posición numérica tiene que tener significado desde el principio. Después, la rigidez local de cada elemento: la fórmula general una sola vez arriba (es la misma para todos), y por elemento la **cadena completa** con sus operandos, no solo el resultado.
+2. **Ensamblaje de la matriz global**: un paso por elemento, cada uno con una leyenda física ("Barra e1 (k=10) conecta v4↔v2 → aporta en las posiciones de v4 y v2") y las celdas que cambiaron resaltadas (diff entre el paso anterior y el actual — sin lógica de interacción, eso es Tren B). Cierra con la ecuación global `F = K·U`, **con las incógnitas resaltadas**: eso es lo que motiva la partición del paso siguiente.
+3. **Partición y solución**: la matriz global **reordenada** (libres primero) con las cuatro zonas coloreadas y el corte dibujado —la partición se entiende viendo el corte, no cuatro tablas sueltas—, después cada bloque por separado, y las ecuaciones `Uf = Kff⁻¹·(Ff − Kfr·Ur)` y `Rr = Krf·Uf + Krr·Ur` con **todos los operandos a la vista** antes del resultado.
 4. **Fuerzas internas**: sustitución numérica por elemento.
+5. **Forma deformada**: el diagrama del Tren B (no aplica a `springs`, que no tiene geometría).
 
 Acordeón `type="multiple"`, primera sección abierta por defecto. La precisión ya no es un único número global: es una cascada página → bloque → tabla, descrita más abajo en "La cascada de decimales".
+
+> **Ojo: este estándar solo está cumplido en `/armaduras-2d`.** Los puntos 1, 2 y 3 se completaron ahí el 2026-08-12; `/springs`, `/frame2d` y `/armaduras-3d` siguen mostrando el álgebra en texto plano y sin esos pasos. Es la deuda **D11** del roadmap. El porqué de cada decisión está en [`docs/armaduras-2d-plan.md`](./armaduras-2d-plan.md) — leerlo antes de replicar.
+
+### Las piezas para escribir álgebra
+
+Tres componentes compartidos, todos usables por cualquier sistema:
+
+- **`custom/math.tsx`** — `<Math>` (en línea) y `<MathBlock>` (en bloque), sobre KaTeX. `texText()` escapa un nombre editable por el usuario antes de interpolarlo en una fórmula. **No escribir símbolos en ASCII**: `Kff⁻¹` y `Tᵀ` a mano se ven peor que en el proyecto original, que sí usaba KaTeX.
+- **`custom/matrix-equation.tsx`** — `<MatrixEquation>` con `<EquationTerm>` y `<MathOp>` adentro: operandos en fila con operadores en el medio. Nunca envuelve; si no entra, scrollea.
+- **`cellClass` de `MatrixTable`** — clase por celda, para cuando el resaltado no es binario (las cuatro zonas de la partición). `highlight` sigue existiendo para el caso binario del ensamblaje.
 
 ## Piezas genéricas vs. específicas de cada sistema
 
@@ -81,11 +92,16 @@ Acordeón `type="multiple"`, primera sección abierta por defecto. La precisión
 - `matrix-table.tsx` (ojo: soporta `labels` para matrices cuadradas simétricas, y `rowLabels`/`colLabels` por separado para bloques no cuadrados como `Kfr`/`Krf` — no colapsar ambos en una sola prop, ese fue un bug real que se corrigió antes de commitear).
 - `decimals.ts` (el átomo) y `decimals-control.tsx`.
 - `errors-panel.tsx` — el tipo `DomainError` y el render del panel. Era byte-idéntico entre springs y armaduras 2D, y frame2d hubiera sido la tercera copia; se extrajo al llegar ese tercer caso. Lo que queda por sistema es un adaptador de ~8 líneas (`src/app/<sistema>/components/errors-panel.tsx`) que lee su propio `atomResults` y delega, porque el átomo sí es de cada sistema.
+- `math.tsx` y `matrix-equation.tsx` — ver "Las piezas para escribir álgebra", más arriba.
 - `dof-order-table.tsx` — solo necesita `AssemblyResult["dofOrder"]` y un mapa `id → { name }`; acepta un prop opcional `dofLabels?: string[]` (ej. `["x", "z"]`) para mostrar a qué eje corresponde cada DOF local en sistemas con más de 1 DOF/nudo. Springs no lo pasa, así que esa columna no aparece ahí — armaduras 2D sí.
 
 **Específicas de cada sistema** — viven en `src/app/<sistema>/`, hay que adaptarlas (no solo copiarlas) para cada sistema nuevo:
 - `node-table.tsx`/`element-table.tsx` — cambian los campos (springs: `k`; armaduras 2D: coordenadas `x`/`z`, `area`, `elasticity`, campos por eje como `forceX`/`forceZ`). Lo que **no** cambia es la forma de la tabla: dos columnas de acción al principio, `+` (insertar debajo de esta fila) y `−` (borrar esta fila), más un `+` en el encabezado que agrega al final. Viene del proyecto original y hay que portarlo — el orden de las filas es el orden de los DOF, así que meter un nudo intermedio sin rehacer la tabla es una operación real, no un lujo. Los átomos `atomAdd*` toman un `afterId` opcional y se apoyan en `insertIndex`/`nextRowName` de [`src/lib/row-names.ts`](../src/lib/row-names.ts); el nombre nuevo **no** se saca de `filas.length + 1`, que repite nombres apenas se borra una fila del medio.
-- `local-stiffness-list.tsx` — la rigidez local de un resorte es literalmente `[[k,-k],[-k,k]]`, sin transformación geométrica; la de una barra de armadura sí la tiene. `src/app/armaduras-2d/components/results/local-stiffness-list.tsx` recalcula `cos`/`sin`/`EA/L` solo para mostrarlos, pero reusa `TrussElement2D.stiffness()` (no reimplementa la multiplicación `T·k·Tᵀ`) para la matriz global 4×4 — patrón a seguir: duplicar fórmulas escalares simples para la narrativa pedagógica, pero nunca el álgebra lineal real.
+- `local-stiffness-list.tsx` — la rigidez local de un resorte es literalmente `[[k,-k],[-k,k]]`, sin transformación geométrica; la de una barra de armadura sí la tiene.
+
+  > **Esta regla cambió el 2026-08-12.** Antes decía que estaba bien duplicar las fórmulas escalares simples (`cos`, `sin`, `EA/L`) en la UI para la narrativa, y reusar del motor solo el álgebra lineal. **No funcionó**: terminaron existiendo tres copias de la misma fórmula —la del motor y una en cada uno de `local-stiffness-list.tsx` e `internal-forces-table.tsx`—, y nada garantizaba que la matriz dibujada fuera la aplicada.
+  >
+  > La regla nueva es más simple: **si la UI necesita un intermedio del cálculo, el elemento lo expone**. `TrussElement2D.breakdown()` devuelve geometría y matrices, y `stiffness()` lee de ahí. Al portar esto a otro sistema, agregarle al `Element` concreto el `breakdown()` que su narrativa necesite en vez de recalcular en la página.
 - `internal-forces-table.tsx` — la sustitución numérica depende de qué es la "fuerza interna" de cada `Element` concreto.
 - `assembly-steps.tsx`/`partition-and-solution.tsx` — con más de 1 DOF/nudo las etiquetas necesitan el eje además del nombre del nudo (`v1x`/`v1z`, no solo `v1`), y la fuerza/desplazamiento/reacción de cada entrada del DOF order hay que indexarla por `entry.localDof`, no asumir un único valor por nudo (ver cómo lo hace armaduras 2D).
 - `store/*.ts` — los campos y el `Element` concreto que se instancia cambian.

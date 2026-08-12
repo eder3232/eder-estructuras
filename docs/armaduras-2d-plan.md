@@ -33,7 +33,7 @@ Igual de importante, para no "arreglar" hacia atrás:
 
 ### Lo que queda explícitamente afuera
 
-Este plan es **solo `/armaduras-2d`**. Todo lo que toca el shell de la app o el motor compartido —y el resto de las mejoras de usabilidad que salieron de la misma comparación— está anotado en el [README](../README.md#lo-que-la-comparación-dejó-pendiente), agrupado por qué lo excluye. No se pierde; se afronta después y aparte.
+Este plan es **solo `/armaduras-2d`**. Todo lo que toca el shell de la app o el motor compartido —y el resto de las mejoras de usabilidad que salieron de la misma comparación— está documentado aparte en [`docs/pendientes-comparacion.md`](./pendientes-comparacion.md), agrupado por qué lo excluye y con la decisión abierta de cada punto. No se pierde; se afronta después.
 
 ## 2. Habilitadores (van primero y no se ven)
 
@@ -126,7 +126,7 @@ Barrer los `Kff⁻¹`, `Tᵀ`, `δ` y demás sueltos de `partition-and-solution.
 
 **Verificación**, con las reglas ya escritas en la sección 5 del [roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no):
 
-- `pnpm test` (47 tests hoy) más el nuevo de `breakdown()`; `npx tsc --noEmit`; `pnpm build`.
+- `pnpm test` (51 tests, incluidos los cuatro de `breakdown()`); `npx tsc --noEmit`; `pnpm build`.
 - `pnpm lint` da **2 errores preexistentes** en `ui/`. Un tercero sí sería nuevo.
 - Captura por **Chrome headless** con la receta del roadmap. Las secciones 2 a 5 del acordeón arrancan cerradas: hay que tocar el `defaultValue` del `<Accordion>` en `results-panel.tsx`, capturar y revertir.
 - **KaTeX hay que mirarlo, no leerlo.** Si el CSS o las fuentes no resuelven, el HTML sale perfecto y en pantalla se ve tipografía del sistema. Es exactamente el tipo de bug que las dos sesiones anteriores encontraron mirando y no calculando.

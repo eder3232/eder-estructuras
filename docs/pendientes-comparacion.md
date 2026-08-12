@@ -128,14 +128,14 @@ De toda la lista, esta es la que más enseña por unidad de trabajo, y **casi to
 - `assembly.steps` ya sabe qué barra tocó qué celdas — es lo que alimenta el resaltado de "celdas que cambiaron en este paso".
 - El plan P0 agrega `cellClass` a `MatrixTable`, que es el gancho de estilo que esto necesita.
 
-O sea que después del P0 esto es sobre todo cablear un `onMouseEnter`. Y lo que responde —*¿por qué aparece un número en esta celda y no en la de al lado?*— es exactamente lo que no se entiende del método matricial.
+O sea que hoy esto es sobre todo cablear un `onMouseEnter`. Y lo que responde —*¿por qué aparece un número en esta celda y no en la de al lado?*— es exactamente lo que no se entiende del método matricial.
 
-**Conviene revisitar N4 apenas termine el P0**, cuando `cellClass` ya exista.
+> **El P0 ya se hizo** (2026-08-12), así que `cellClass` existe y las tres piezas están puestas. **N4 es, de toda esta lista, lo que está más cerca de poder empezarse.**
 
 ---
 
 ## Cuándo volver a este documento
 
-- **Al terminar el P0**: N4 queda a un paso, y U4 se puede evaluar junto con D6.
+- **Ahora mismo** (el P0 se terminó el 2026-08-12): **N4** quedó a un paso —tiene todas sus piezas puestas— y **U4** se puede evaluar junto con la deuda D6.
 - **Antes de arrancar la Fase 8** (contenido educativo): S2 y N6 se condicionan mutuamente.
 - **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para los grupos S y M, que alcanzan a todos.
