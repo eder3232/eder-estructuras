@@ -12,10 +12,25 @@ interface MatrixTableProps {
   colLabels?: string[];
   /** Posiciones [fila, columna] a resaltar (ej. celdas que cambiaron en este paso). */
   highlight?: [number, number][];
+  /**
+   * Clase por celda, para cuando el resaltado no es binario sino que distingue
+   * zonas — el caso de la partición, donde las cuatro zonas (Kff, Kfr, Krf, Krr)
+   * conviven en una misma matriz y hay que poder decir cuál es cuál. `highlight`
+   * no alcanza ahí porque solo tiene dos estados.
+   */
+  cellClass?: (row: number, col: number) => string | undefined;
   className?: string;
 }
 
-export function MatrixTable({ matrix, labels, rowLabels, colLabels, highlight, className }: MatrixTableProps) {
+export function MatrixTable({
+  matrix,
+  labels,
+  rowLabels,
+  colLabels,
+  highlight,
+  cellClass,
+  className,
+}: MatrixTableProps) {
   const decimals = useDecimals();
   const highlighted = new Set(highlight?.map(([r, c]) => `${r}-${c}`));
   const rows = rowLabels ?? labels;
@@ -47,6 +62,7 @@ export function MatrixTable({ matrix, labels, rowLabels, colLabels, highlight, c
                 className={cn(
                   "border px-2 py-1 text-right tabular-nums",
                   highlighted.has(`${i}-${j}`) && "bg-primary/15 font-semibold",
+                  cellClass?.(i, j),
                 )}
               >
                 {value.toFixed(decimals)}
