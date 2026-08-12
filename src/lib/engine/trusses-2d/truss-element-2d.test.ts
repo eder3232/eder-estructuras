@@ -41,3 +41,64 @@ describe("TrussElement2D + System — sanity de 1 barra horizontal", () => {
     expect(() => new TrussElement2D("e1", p, { ...p, id: "b" }, 1, 10)).toThrow(/longitud cero/);
   });
 });
+
+/**
+ * `breakdown()` existe para que la página pueda mostrar el paso de
+ * transformación. Lo que estos tests fijan es justamente eso: que lo que se
+ * muestra sea lo que se calcula, y no una segunda implementación que puede
+ * divergir sin que nadie se entere.
+ */
+describe("TrussElement2D.breakdown", () => {
+  // Barra a 3-4-5: longitud 5, cos 0.6, sin 0.8. Ningún valor redondo por
+  // casualidad, así que un eje cruzado se nota.
+  const element = new TrussElement2D("e1", { id: "a", x: 0, z: 0 }, { id: "b", x: 3, z: 4 }, 2, 100);
+
+  it("expone la geometría que usa para calcular", () => {
+    const { length, cos, sin, eaOverL } = element.breakdown();
+    expect(length).toBeCloseTo(5, 12);
+    expect(cos).toBeCloseTo(0.6, 12);
+    expect(sin).toBeCloseTo(0.8, 12);
+    expect(eaOverL).toBeCloseTo((100 * 2) / 5, 12);
+  });
+
+  it("es la fuente de `stiffness()`, no una copia", () => {
+    expect(element.breakdown().globalStiffness).toEqual(element.stiffness());
+  });
+
+  it("multiplicar A · k · Aᵀ a mano reproduce la matriz global", () => {
+    const { transform, localStiffness, globalStiffness } = element.breakdown();
+
+    const manual = transform.map((rowA) =>
+      transform.map((rowB) =>
+        // (A · k · Aᵀ)[i][j] = Σ_p Σ_q A[i][p] · k[p][q] · A[j][q]
+        localStiffness.reduce(
+          (total, kRow, p) =>
+            total + kRow.reduce((inner, kValue, q) => inner + rowA[p] * kValue * rowB[q], 0),
+          0,
+        ),
+      ),
+    );
+
+    manual.forEach((row, i) => row.forEach((value, j) => expect(globalStiffness[i][j]).toBeCloseTo(value, 10)));
+  });
+
+  it("la rigidez local es EA/L·[[1,−1],[−1,1]] y A tiene los cosenos directores", () => {
+    const { transform, transformTransposed, localStiffness, eaOverL, cos, sin } = element.breakdown();
+
+    expect(transformTransposed).toEqual([
+      [cos, sin, 0, 0],
+      [0, 0, cos, sin],
+    ]);
+
+    expect(localStiffness).toEqual([
+      [eaOverL, -eaOverL],
+      [-eaOverL, eaOverL],
+    ]);
+    expect(transform).toEqual([
+      [cos, 0],
+      [sin, 0],
+      [0, cos],
+      [0, sin],
+    ]);
+  });
+});
