@@ -7,6 +7,8 @@ import './globals.css'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import { siteConfig } from '@/lib/site-config'
+import { SiteNavbar } from '@/components/custom/site-navbar'
+import { ThemeProvider } from '@/components/custom/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -44,8 +46,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
+    // `suppressHydrationWarning` es requisito de `next-themes`: su script inline
+    // escribe la clase del tema en <html> antes de que React hidrate, así que el
+    // DOM no coincide con lo que renderizó el servidor. Le dice a React que en
+    // este elemento gana el DOM. Sin esto, React trata la diferencia como error
+    // de hidratación y re-renderiza desde el cliente, que es exactamente el
+    // parpadeo que el script inline existe para evitar.
     <html
       lang="es"
+      suppressHydrationWarning
       className={cn(
         'h-full',
         'antialiased',
@@ -57,8 +66,13 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       )}
     >
       <body className="min-h-full flex flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <TooltipProvider>
+            <SiteNavbar />
+            {children}
+          </TooltipProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
