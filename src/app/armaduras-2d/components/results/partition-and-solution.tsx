@@ -96,7 +96,10 @@ function LabeledMatrix({
   return (
     <DecimalsScope id={scopeId}>
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-3">
+        {/* Sin `justify-between`: cada `LabeledMatrix` vive en un `flex-wrap` y
+            mide lo que mide su tabla, así que el stepper pegado al borde derecho
+            se corría al subir decimales — ver `ScopeDecimalsStepper`. */}
+        <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{title}</span>
           <ScopeDecimalsStepper />
         </div>

@@ -96,7 +96,11 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
               <div className="flex flex-wrap items-end gap-6">
                 <DecimalsScope id={`${element.id}-axial`}>
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-3">
+                    {/* Sin `justify-between`: este bloque mide lo que mide la
+                        tabla, así que pegar el stepper al borde derecho lo hacía
+                        correrse solo al subir decimales — ver el comentario de
+                        `ScopeDecimalsStepper`. */}
+                    <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Rigidez axial local</span>
                       <ScopeDecimalsStepper />
                     </div>
@@ -111,7 +115,7 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
                 </DecimalsScope>
                 <DecimalsScope id={`${element.id}-global`}>
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Rigidez global (T·k·Tᵀ)</span>
                       <ScopeDecimalsStepper />
                     </div>

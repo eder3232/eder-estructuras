@@ -92,8 +92,24 @@ export function ScopeDecimalsControl({
           setScopeDecimals({ path: scope.path, value: next === AUTO ? null : Number(next) })
         }
       >
-        <SelectTrigger size="sm" className="w-14">
-          <SelectValue />
+        {/*
+          El trigger no muestra el texto del item elegido, sino una forma corta.
+          `SelectValue` sin children rinde el contenido del `SelectItem`
+          seleccionado, y el de automático es una frase entera: entraba cortada a
+          la mitad por el `line-clamp-1` del trigger y parecía la UI rota. La
+          frase larga sirve en la lista abierta, no acá.
+
+          Los dos estados se rotulan ("Auto (4)" / "Fijo (4)") y no se deja el
+          dígito solo, por tres razones que van juntas: miden casi lo mismo, así
+          que el ancho puede ser fijo y el ↺ de al lado no salta al elegir; con
+          `justify-between` un dígito suelto dejaría el chevron flotando a 60 px;
+          y el rótulo dice si la sección sigue a la página o está pinchada, que
+          es justo lo que hay que saber sin abrir la lista.
+        */}
+        <SelectTrigger size="sm" className="w-22">
+          <SelectValue>
+            {override === undefined ? `Auto (${scope.value})` : `Fijo (${override})`}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={AUTO}>Automático — igual que {inheritsFrom} ({scope.value})</SelectItem>
@@ -128,6 +144,15 @@ export function ScopeDecimalsControl({
  * con veintipico de desplegables idénticos en pantalla no se distinguía cuál
  * estaba tocado. Acá el número va en gris mientras sigue a la sección, y recién
  * cuando tiene valor propio se resalta y aparece el ↺ para soltarlo.
+ *
+ * **Al montarlo, no lo empujes al borde derecho de la tabla con
+ * `justify-between`.** Subir decimales ensancha la tabla, y si el encabezado mide
+ * lo que mide la tabla —el caso de todo bloque dentro de un `flex-wrap`—, el `+`
+ * se corre solo y hay que reapuntar el mouse en cada click. Va pegado a su
+ * etiqueta (`flex items-center gap-2`): así su posición depende del rótulo, que
+ * no cambia. El orden interno `− n +` sigue esa misma regla — el ↺ aparece
+ * después del `+`, y el número tiene ancho fijo (`w-4`), así que ni el `−` ni el
+ * `+` se mueven al cambiar de valor.
  */
 export function ScopeDecimalsStepper({ className }: { className?: string }) {
   const scope = useContext(ScopeContext);
