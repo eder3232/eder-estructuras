@@ -80,6 +80,20 @@ Pasó de verdad al agregar el selector de decimales al lado de cada título de t
 
 Regla práctica: **si vas a poner un control al lado de una etiqueta, la etiqueta va en `<span>`, no en `<p>`** — es una etiqueta, no un párrafo. Si de verdad es un párrafo y necesita un hermano al lado, ponele `mb-0` explícito y dejá un comentario diciendo por qué.
 
+## Trampa conocida: `SelectValue` muestra el texto del item, no una etiqueta corta
+
+`SelectValue` sin children **no muestra el `value` del `Select`: muestra el contenido del `SelectItem` seleccionado**, entero. Y `SelectTrigger` le aplica al slot `select-value`:
+
+```
+line-clamp-1   (+ whitespace-nowrap y overflow oculto en el trigger)
+```
+
+O sea que si el item elegido tiene un texto largo y el trigger es angosto, el texto **se corta a la mitad sin puntos suspensivos** y la UI parece mal construida. No hay error de CSS ni de ancho: el ancho estaba bien para lo que se creía que iba a mostrar, y el contenido era otro.
+
+Pasó de verdad con el control de decimales por sección: el item de automático dice `Automático — igual que la página (4)` —una frase que en la lista abierta se lee perfecto— y esa frase entraba en un trigger de `w-14` (56 px).
+
+Regla práctica: **cuando la opción de la lista sea más larga que el trigger, pasale children explícitos al `SelectValue`** con una forma corta. Eso desacopla las dos cosas: el trigger dice `Auto (4)`, la lista mantiene la frase que explica. Y si el trigger tiene ancho fijo, conviene que **todos** los estados midan parecido (`Auto (4)` / `Fijo (4)`, no `Auto (4)` / `4`): con el `justify-between` del trigger, un contenido corto deja el chevron flotando lejos del texto.
+
 ## Resumen rápido
 
 | Carpeta      | Origen                        | ¿Se edita a mano? | ¿Se puede sobrescribir con `shadcn add`? |

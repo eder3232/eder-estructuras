@@ -167,13 +167,24 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-10, sesión de UI sobre `/armaduras-2d`** (commits `0813f5d`, `9f9eaa2`, `c906e4b`, `74f9d17`).
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-12, segunda sesión de UI sobre los controles de decimales de `/armaduras-2d`**.
 
-Esa sesión **no movió ningún tren** — los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Lo que hizo fue arreglar y mejorar la UI de `/armaduras-2d`, y de ahí salieron tres cosas que sí cambian cómo trabajar de acá en adelante:
+Ninguna de las dos sesiones de UI **movió un tren** — los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar.
+
+La del **2026-08-10** (commits `0813f5d`, `9f9eaa2`, `c906e4b`, `74f9d17`) arregló y mejoró la UI de `/armaduras-2d`, y de ahí salieron tres cosas que cambian cómo trabajar de acá en adelante:
 
 1. **Se descubrió cómo mirar la app sin la extensión de Chrome** (headless por línea de comandos, punto 5). Apenas se usó aparecieron **dos bugs de render** que ninguna verificación numérica iba a encontrar, los dos por reglas de CSS que el markup no deja ver.
 2. **`/armaduras-2d` quedó adelante de los otros tres en UI** — ver el punto 1.b, es lo primero que sorprende si abrís otro sistema y lo ves distinto.
 3. Quedaron **tres deudas nuevas** (D6, D7, D8) y una **validación pendiente del usuario**, en el punto 5.
+
+La del **2026-08-12** salió de que el usuario finalmente miró esos controles y encontró **dos problemas de UX, los dos arreglados**. Confirma el patrón de la sesión anterior: aparecieron mirando y usando, no leyendo código ni corriendo tests.
+
+1. **El desplegable de sección mostraba la frase larga cortada por la mitad.** `SelectValue` sin children rinde el texto entero del `SelectItem` elegido —`Automático — igual que la página (4)`— y eso entraba en un trigger de `w-14`. Arreglo: children explícitos con una forma corta (`Auto (n)` / `Fijo (n)`), la frase se queda en la lista abierta. Trampa nueva documentada en [`docs/components.md`](./components.md).
+2. **El stepper `− n +` de cada tabla se corría de abajo del cursor en cada click.** Estaba montado con `justify-between`, o sea pegado al borde derecho de un bloque que mide lo que mide su tabla; subir un decimal ensancha la tabla y arrastra el `+`. Para subir tres decimales había que reapuntar el mouse tres veces. Arreglo: el stepper va pegado a su etiqueta. Las tres reglas de montaje están en la sección "Tres trampas al montar estos controles" de [`docs/state-pattern.md`](./state-pattern.md).
+
+Dejó una deuda nueva (**D9**, el residual del punto 2) y **la validación del usuario sigue abierta**: encontró y aprobó el arreglo de estos dos problemas, pero no dio el visto bueno al conjunto, así que el hilo C sigue trabado. Ver el punto 5.
+
+> Los dos arreglos (commit `412bb76`) viven en `src/components/custom/decimals-scope.tsx` —compartido, así que el del desplegable ya cubre a los cuatro sistemas— y en los call sites de `/armaduras-2d`. El del stepper **no** queda cubierto para los otros tres: vive en el call site de cada uno, y por eso la regla está escrita en el componente y en [`docs/state-pattern.md`](./state-pattern.md).
 
 ### 1. Dónde está parado el proyecto
 
@@ -244,6 +255,7 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D6 | Las etiquetas de valor de las flechas (`force-arrow.tsx`) se dibujan a una distancia fija de la punta y **se superponen con las barras y entre sí** cuando el nudo tiene carga en x y en z a la vez (visible en el nudo `v3` del esquema semilla de `/armaduras-2d`). Se detectó mirando, no calculando. Arreglo posible: correr la etiqueta perpendicular al eje de la flecha, o darle un `paint-order: stroke` con halo del color de fondo | `diagram-2d/force-arrow.tsx` | chico |
 | D7 | El botón de **insertar una fila en el medio** (`+` por fila) solo está en `/armaduras-2d`. `/springs`, `/frame2d` y `/armaduras-3d` siguen con el `+` del encabezado nada más, o sea solo se puede agregar al final. Es una regresión del port, no una decisión. La lógica ya está lista y probada en `src/lib/row-names.ts`: falta pasar el `afterId` en cada `atomAdd*` y sumar la columna en cada tabla | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
 | D8 | La **cascada de decimales** (página → bloque → tabla) solo está cableada en `/armaduras-2d`. Los otros 3 sistemas siguen con el selector único de página: funcionan igual que antes porque `useDecimals()` cae en `atomDecimals` fuera de todo scope, pero no tienen control por bloque ni por tabla. Se propaga envolviendo cada `AccordionItem` de su `results-panel.tsx` y cambiando su `internal-forces-table.tsx` — ver la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md) | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
+| D9 | El stepper de decimales de una tabla puede **saltar de renglón** al subir decimales: las matrices viven en un `flex flex-wrap` y en la partición ya entran dos por fila a 1400 px, así que ensanchar una que no es la primera de su fila la manda al renglón siguiente y el control se mueve en vertical bajo el cursor. No es el bug de corrimiento horizontal que se arregló el 2026-08-12 (ese pasaba en **cada** click y ya no pasa): esto es un salto único al cruzar el umbral de ancho. Las dos salidas evaluadas: pasar esas filas a una grilla de columnas de ancho fijo (posición 100% estable, pero una matriz 2×2 ocupa la misma columna que una 4×4), o dejarlas en una sola fila con scroll horizontal (nunca rewrapea, pero en pantalla angosta se scrollea en vez de apilarse). Se dejó como deuda a propósito: cualquiera de las dos cambia el layout responsive de todo el panel de resultados | `results/partition-and-solution.tsx` y `results/local-stiffness-list.tsx` (los `flex flex-wrap`) | mediano |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
 
@@ -277,12 +289,18 @@ Dos detalles que cuestan tiempo si no se saben: el `--screenshot` necesita **rut
 
 Método que funcionó para diagnosticar el segundo: **pintar las cajas con `bg-red-200`/`bg-blue-200`/`bg-green-100` y medir los píxeles sobre la captura**. Con un margen invisible metido en el medio, razonar sobre el CSS lleva a conclusiones equivocadas; medir, no.
 
+**Lo que se miró el 2026-08-12** (también por headless, y esta vez el usuario además lo usó a mano): el desplegable de decimales de sección en estado automático, y los steppers `− n +` de las matrices locales y de las 7 tablas de partición. Los dos arreglos de ese día se confirmaron por captura. Dos detalles del método que sirven para la próxima:
+
+- **Recortar y ampliar la captura con PIL** (`Image.crop` + `resize(..., LANCZOS)`) para leer un control chico. La captura entera a 1400×5200 no deja ver si un texto está cortado; el recorte ×2 sí.
+- **No usar `--force-device-scale-factor=2` para ampliar**: cambia el viewport CSS (a 700 px de ancho), el layout se reacomoda y las coordenadas del recorte dejan de valer. Ampliar es cosa del recorte, no del navegador.
+
 **Lo que sigue sin mirarse:**
 
 - **`/frame2d`**, sección "5. Forma deformada": el arco de momento (`moment-arc.tsx`) sobre las reacciones de los empotramientos. El esquema de esa ruta sí se vio.
 - **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
 - **Modo oscuro, en ningún sistema**: el repo define los tokens `.dark` en `globals.css` pero no monta ningún switch de tema, así que nunca se activó. Para la escena 3D esto importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS.
-- **Ningún click, en ninguna parte.** Headless saca capturas pero no interactúa, y el repo **no tiene entorno DOM** para tests de componentes (no hay `jsdom`/`happy-dom` ni testing-library). O sea: de toda la UI nueva de `/armaduras-2d` se verificó *el resultado del estado*, nunca *el evento que lo cambia*. Sin probar quedaron: los botones `+`/`−` de las tablas de entrada, y los `− / +`, el `↺` y el desplegable de los decimales. La forma de probarlos hoy es sembrar el estado a mano (ver abajo); la forma de probarlos de verdad es agregar un entorno DOM, que es una decisión aparte y no se tomó.
+- **El desplegable de sección en estado `Fijo (n)`.** Se vio en `Auto (n)`, que era el estado roto. La rama fijada es el mismo camino de código con un rótulo de largo equivalente en una caja de ancho fijo, pero por construcción, no por captura: verla requiere sembrar `atomDecimalsByScope` (ver el truco más abajo).
+- **Ningún click, en ninguna parte.** Headless saca capturas pero no interactúa, y el repo **no tiene entorno DOM** para tests de componentes (no hay `jsdom`/`happy-dom` ni testing-library). O sea: de toda la UI nueva de `/armaduras-2d` se verificó *el resultado del estado*, nunca *el evento que lo cambia*. Sin probar quedaron: los botones `+`/`−` de las tablas de entrada, y los `− / +`, el `↺` y el desplegable de los decimales. Ojo con lo que esto implica para los arreglos del 2026-08-12: que el `+` ya **no** se corra del cursor se sigue del layout (el stepper depende del ancho del rótulo, no de la tabla) y se vio en captura, pero **la secuencia de tres clicks seguidos no se ejercitó nunca**. La forma de probarlos hoy es sembrar el estado a mano (ver abajo); la forma de probarlos de verdad es agregar un entorno DOM, que es una decisión aparte y no se tomó.
 
 **Truco para verificar sin poder clickear**: sembrar temporalmente el estado inicial del átomo, sacar la captura y revertir. Con `atomDecimalsByScope` en `src/components/custom/decimals.ts`, por ejemplo:
 
@@ -295,7 +313,7 @@ export const atomDecimalsByScope = atom<Record<string, number>>({
 
 Eso alcanzó para confirmar que la herencia resuelve bien y que se distingue a simple vista una tabla en automático de una fijada. **Acordate de revertirlo antes de commitear.**
 
-**Pendiente de validación del usuario**: la UX de los controles de decimales de `/armaduras-2d` se rehízo el 2026-08-10 (rótulo "Automático" en vez de "heredar", stepper `− n +` por tabla, `↺ Restablecer` por bloque) y el usuario iba a mirarla. **No la propagues a los otros tres sistemas sin preguntar** — si algo no le cierra, cambiarlo en un sistema es barato y en cuatro no.
+**Pendiente de validación del usuario**: la UX de los controles de decimales de `/armaduras-2d` se rehízo el 2026-08-10 (rótulo "Automático" en vez de "heredar", stepper `− n +` por tabla, `↺ Restablecer` por bloque). El usuario la miró el **2026-08-12** y encontró dos problemas, los dos arreglados ese día (el texto cortado del desplegable y el stepper que se corría del cursor — ver el detalle al principio de esta sección de retomada). **Eso no es el visto bueno al conjunto: sigue sin darlo, así que no propagues nada a los otros tres sistemas sin preguntar.** El argumento es el mismo de antes y ahora tiene evidencia: dos revisiones visuales dieron dos problemas cada una, y cambiar algo en un sistema es barato mientras que en cuatro no. Preguntá primero; si dice que sí, el hilo C se destraba y son D7 + D8 juntas.
 
 Un `pnpm dev` y mirar lo de arriba es media hora bien gastada apenas haya navegador de verdad.
 

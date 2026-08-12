@@ -118,9 +118,15 @@ Cómo trabajarla:
 
 El punto de enganche es `matrix-table.tsx`: es el renderer compartido de casi todas las tablas, así que entra a la cascada con una sola línea. Lo que hay que tocar aparte es lo que formatea números por su cuenta (`internal-forces-table.tsx` de cada sistema y las etiquetas de los diagramas).
 
-Sobre los controles: el bloque usa un desplegable con etiqueta y un `↺ Restablecer` que limpia la sección y sus tablas; cada tabla usa un stepper `− n +`. La palabra "heredar" se descartó a propósito — nombraba el mecanismo (el árbol de ámbitos) y no el efecto; el desplegable dice "Automático — igual que la página" y el stepper muestra el número **en gris mientras sigue a la sección** y **resaltado, con `↺` al lado, cuando tiene valor propio**, que es la única forma de ver de un vistazo cuáles se despegaron.
+Sobre los controles: el bloque usa un desplegable con etiqueta y un `↺ Restablecer` que limpia la sección y sus tablas; cada tabla usa un stepper `− n +`. La palabra "heredar" se descartó a propósito — nombraba el mecanismo (el árbol de ámbitos) y no el efecto; el desplegable dice "Automático — igual que la página" y el stepper muestra el número **en gris mientras sigue a la sección** y **resaltado, con `↺` al lado, cuando tiene valor propio**, que es la única forma de ver de un vistazo cuáles se despegaron. En el desplegable, esa frase larga vive **solo en la lista abierta**: el trigger muestra `Auto (n)` / `Fijo (n)` vía children explícitos del `SelectValue`, porque sin eso rinde el texto completo del item y lo corta por la mitad (ver la trampa de `SelectValue` en [`docs/components.md`](./components.md)).
 
-Ojo con una trampa al montar estos controles: `AccordionContent` le aplica `mb-4` a todo `<p>` que no sea `:last-child`, así que una etiqueta en `<p>` con el control al lado desalinea la fila entera. Ver la sección correspondiente de [`docs/components.md`](./components.md).
+### Tres trampas al montar estos controles
+
+Las tres ya costaron una sesión cada una; las dos primeras se ven mirando la app, no leyendo el markup.
+
+1. **La etiqueta va en `<span>`, no en `<p>`.** `AccordionContent` le aplica `mb-4` a todo `<p>` que no sea `:last-child`, así que una etiqueta en `<p>` con el control al lado desalinea la fila entera. Ver [`docs/components.md`](./components.md).
+2. **El stepper de tabla no se empuja al borde derecho con `justify-between`.** Va pegado a su etiqueta (`flex items-center gap-2`). Subir decimales ensancha la tabla, y casi todos estos bloques miden **lo que mide su tabla** (viven dentro de un `flex flex-wrap`), así que anclado al borde derecho el `+` se corre solo y hay que reapuntar el mouse en cada click — para subir tres decimales, tres clicks con tres reposicionamientos. Pegado al rótulo, su posición depende del ancho del rótulo, que no cambia. Queda un residual anotado como **D9** en el roadmap: el bloque todavía puede saltar de renglón si su propio ensanche rewrapea el `flex-wrap`.
+3. **El orden interno del stepper es `− n +` y el `↺` va al final**, después del `+`, y el número tiene ancho fijo (`w-4`). Así ni el `−` ni el `+` se mueven al cambiar de valor ni al aparecer el `↺`. Si se reordena, vuelve el problema del punto 2 en chico.
 
 En el original cada tabla tenía su propio selector con `useState` local y default 2, sin nada global ni por bloque; esto es un superconjunto de aquello.
 
