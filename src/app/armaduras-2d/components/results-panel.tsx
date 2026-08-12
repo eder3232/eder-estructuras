@@ -9,6 +9,7 @@ import { atomElements } from "../store/elements";
 import { atomResults } from "../store/results";
 import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
+import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { PartitionAndSolution } from "./results/partition-and-solution";
@@ -78,6 +79,7 @@ export function ResultsPanel() {
                   elements={elements}
                   nodesById={nodesById}
                 />
+                <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} />
               </div>
             </DecimalsScope>
           </AccordionContent>
