@@ -114,18 +114,21 @@ Esto es lo que en la comparación se llamó **P1**: mejoras reales de uso que no
 | **U2** | Combobox buscable en "Desde" / "Hacia". El original lo tenía; acá es un `Select` plano | `cmdk` ya está en dependencias, así que `Command` + `Popover` es directo. La decisión es **cuándo**: con 4 nudos el `Select` está perfecto y el problema recién aparece a los 15. Sumar de paso el rechazo de "Desde = Hacia", que hoy solo se entera el motor (longitud cero) | chico |
 | **U3** | Estado vacío del panel de resultados: `ResultsPanel` devuelve `null` si hay error, y queda el título "Resultados" con el selector de decimales al lado y nada debajo | ¿Un mensaje en el lugar de los resultados, o esconder la sección entera incluido el título? Lo segundo es más limpio pero hace saltar el layout | chico |
 | ~~**U4**~~ | ✅ **Hecho el 2026-08-12**, junto con D6 como estaba previsto. El número va sobre cada barra de la forma deformada, al 25% del recorrido y corrido hacia afuera de la figura, del mismo color que la barra. Alcanza también a `/frame2d`, que comparte el módulo de diagramas. Ver [`diagram-pattern.md`](./diagram-pattern.md), "Dónde van los números" | — | — |
-| **U5** | **Unidades.** No las tiene ninguna de las dos versiones | Ver abajo | mediano |
+| ~~**U5**~~ | ✅ **Resuelto el 2026-08-13, y al revés de como estaba planteado.** La app **no lleva unidades, a propósito**; lo que faltaba era decirlo. Ver abajo | — | — |
 
-### U5 · Unidades: rotular es barato, convertir no
+### U5 · No hay unidades, y es una decisión
 
-Que una app de análisis estructural no diga en ninguna parte si esos `20000000` son kN/m² o kgf/cm² es raro, y para un contexto académico es peor que raro: es justo lo que un profesor marca.
+> **Este punto estaba mal planteado, y el usuario lo corrigió el 2026-08-13.** Se deja el razonamiento entero porque el error es instructivo y para que nadie vuelva a proponerlo dentro de seis meses.
 
-Hay dos alcances muy distintos:
+**Lo que decía**: que una app de análisis estructural no diga si esos `20000000` son kN/m² o kgf/cm² es raro, y en un contexto académico es lo que un profesor marca — así que había que **rotular con un sistema fijo** (kN, m, kN/m²), dejando la conversión para más adelante.
 
-- **Rotular con un sistema fijo y documentado** (kN, m, kN/m²): son etiquetas en los encabezados de las tablas y en los resultados. Barato, sin estado nuevo, y resuelve el 90% del problema.
-- **Selector de sistema de unidades con conversión**: estado nuevo, factores de conversión, y la pregunta de si convierte los valores o solo cambia el rótulo (las dos cosas confunden a alguien).
+**Por qué está mal.** Ese argumento **asume que la app debería elegir un sistema**, y eso contradice el diseño: en estructuras se trabaja en muchos sistemas —tonf/cm², kgf/cm², kN/m²— y ninguno es el correcto. El método matricial es **dimensionalmente homogéneo**: si los datos están en un sistema coherente, los resultados salen en ese sistema, y el programa nunca necesita saber cuál es.
 
-**Recomendación: lo primero, y dejar la conversión para cuando alguien la pida.** Alcanza a los cuatro sistemas, así que aplica la regla de orden del principio.
+Y hay algo peor que "no aporta": **un rótulo fijo sería activamente falso**. Un encabezado que dice "kN/m²" sobre un dato cargado en kgf/cm² es una afirmación equivocada, y un rótulo se lee como una afirmación. Eso es peor que no decir nada. La conversión es peor todavía: implicaría que la app sabe qué significan los números.
+
+**Lo que sí faltaba**, y es lo que se hizo: la regla de coherencia estaba **implícita**. `custom/units-note.tsx` la dice una vez, arriba de la página, con la correspondencia entrada→salida (la unidad de longitud sale en los desplazamientos; la de fuerza, en reacciones y esfuerzos) y con el error que el alumno realmente comete, que no es elegir mal el sistema sino **mezclar** — `E` en kgf/cm² con las coordenadas en metros, que da resultados errados por 10⁴ y que **el programa no puede detectar**.
+
+**Descartado y anotado**: un campo de texto libre donde el alumno declare "trabajo en tonf, cm" y la app lo repita en los encabezados. Compra un eco y se desactualiza sola en cuanto cambien los datos y no el rótulo — o sea, vuelve a ser un rótulo que puede mentir.
 
 ---
 

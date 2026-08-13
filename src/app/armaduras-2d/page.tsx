@@ -1,5 +1,6 @@
 "use client";
 
+import { UnitsNote } from "@/components/custom/units-note";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
 import { NodeTable } from "./components/node-table";
@@ -31,12 +32,18 @@ export default function Armaduras2DPage() {
       lectura para el texto.
     */
     <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-bold">Armaduras 2D</h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de la
-          rigidez axial de cada barra según su ángulo.
-        </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Armaduras 2D</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de la
+            rigidez axial de cada barra según su ángulo.
+          </p>
+        </div>
+        {/* Arriba de todo y no al lado de una tabla: la regla vale para lo que
+            se carga **y** para lo que sale, así que no pertenece a ninguna de
+            las dos mitades. */}
+        <UnitsNote />
       </div>
 
       <div className="flex flex-col gap-4">

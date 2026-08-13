@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **6 puntos**, ordenados abajo, y el siguiente es **U5**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **5 puntos**, ordenados abajo, y el siguiente es **N4**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a y M1b. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b y U5. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -24,7 +24,7 @@ Para no volver a discutirlo:
 - **Grupo M** (M1 numeración de DOF por el usuario, M2 nombres duplicados). Alcanzan a los cuatro sistemas y tocan motor/store, no la UI de uno. Se deciden al cerrar el Tren C, como ya decía `pendientes-comparacion.md`.
 - **S2**, la navegación definitiva. Hoy hay una navbar **provisional** (ver abajo). La decisión de fondo —si los sistemas y el contenido educativo comparten layout— se toma antes de la Fase 8.
 - **N6**, contenido teórico enlazado: es la Fase 8.
-- **Conversión de unidades**. U5 entra solo como rótulo (ver su punto).
+- **Unidades y su conversión.** La app **no lleva unidades a propósito** (decisión del usuario, 2026-08-13): el método es dimensionalmente homogéneo y un rótulo fijo sería falso para quien trabaje en otro sistema. Lo único que se hizo fue **decir la regla** — ver U5 en «Hecho».
 
 ## Hecho
 
@@ -339,6 +339,18 @@ Entonces: **si el alumno numeró, el alumno manda.** Se respeta tal cual, aunque
 
 Tests: el orden que sale es exactamente el pedido **aunque intercale los grupos**, los resultados no cambian al numerar, y el aviso aparece sin bloquear. **182 tests.**
 
+### ✅ U5 · No hay unidades, y es una decisión
+
+**El punto estaba mal planteado y el usuario lo corrigió.** Decía "rotular con un sistema fijo y documentado (kN, m, kN/m²)". Ese alcance **asume que la app debería elegir un sistema**, y contradice el diseño: en estructuras se trabaja en muchos —tonf/cm², kgf/cm², kN/m²— y ninguno es el correcto. El método es dimensionalmente homogéneo, así que la app no necesita saber en cuál está el alumno.
+
+Y un rótulo fijo sería **activamente falso**: un encabezado que dice "kN/m²" sobre un dato cargado en kgf/cm² es una afirmación equivocada, y un rótulo se lee como una afirmación. Peor que no decir nada. La conversión, peor todavía.
+
+**Lo que sí faltaba era decir la regla**, que hasta acá era implícita. `custom/units-note.tsx`, arriba de la página: la coherencia, la correspondencia entrada→salida (la unidad de longitud sale en los desplazamientos; la de fuerza, en reacciones y esfuerzos) y el error que el alumno **sí** comete — no elegir mal el sistema, sino **mezclar**, que da resultados errados por 10⁴ y que el programa no puede detectar.
+
+Es genérico porque la regla vale para los cuatro sistemas, pero se cableó solo acá. **`/frame2d` va a querer sumarle una línea al propagarlo**: sus momentos van en fuerza × longitud y sus giros en radianes, que no siguen la misma correspondencia.
+
+Se descartó, y queda anotado: un campo libre donde el alumno declare sus unidades y la app las repita. Compra un eco y se desactualiza sola — vuelve a ser un rótulo que puede mentir.
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -352,8 +364,8 @@ Tests: el orden que sale es exactamente el pedido **aunque intercale los grupos*
 
 | Bloque | Puntos |
 |---|---|
-| Lo que se lee | 1 · **U5** — 2 · **N4** — 3 · **N3** — 4 · **N5** |
-| Estado persistente | 5 · **N1** — 6 · **N2** |
+| Lo que se lee | 1 · **N4** — 2 · **N3** — 3 · **N5** |
+| Estado persistente | 4 · **N1** — 5 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -365,29 +377,25 @@ Tests: el orden que sale es exactamente el pedido **aunque intercale los grupos*
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · U5 · Unidades rotuladas ⬅️ **acá se retoma**
-
-Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
-
-### 2 · N4 · Vincular matriz ↔ modelo
+### 1 · N4 · Vincular matriz ↔ modelo ⬅️ **acá se retoma**
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
 **Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
 
-### 3 · N3 · Vincular tabla ↔ diagrama
+### 2 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-### 4 · N5 · Verificación de equilibrio
+### 3 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 5 · N1 · Persistencia en `localStorage`
+### 4 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 6 · N2 · Ejemplos precargados
+### 5 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
