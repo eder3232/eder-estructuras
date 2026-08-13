@@ -87,7 +87,12 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
               <ScopeDecimalsStepper />
             </div>
             <div className="max-w-full overflow-x-auto">
-              <MatrixTable matrix={permuted} labels={permutedLabels} cellClass={zoneClass} />
+              <MatrixTable
+                matrix={permuted}
+                labels={permutedLabels}
+                cellClass={zoneClass}
+                stickyLabels
+              />
             </div>
           </div>
         </DecimalsScope>
@@ -260,7 +265,18 @@ function LabeledMatrix({
           <span className="text-sm font-medium">{title}</span>
           <ScopeDecimalsStepper />
         </div>
-        <MatrixTable matrix={matrix} labels={labels} rowLabels={rowLabels} colLabels={colLabels} />
+        {/* Igual que la global: cada bloque crece con los nudos, así que va con
+            su propio scroll —si no lo recorta el `overflow-hidden` del
+            acordeón— y con las etiquetas fijas. */}
+        <div className="max-w-full overflow-x-auto">
+          <MatrixTable
+            matrix={matrix}
+            labels={labels}
+            rowLabels={rowLabels}
+            colLabels={colLabels}
+            stickyLabels
+          />
+        </div>
       </div>
     </DecimalsScope>
   );

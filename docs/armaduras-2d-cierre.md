@@ -109,6 +109,28 @@ O sea que **la salida "bajar los decimales por defecto de esa sección" que esta
 
 Efecto lateral que **no** se propagó: `/frame2d` tiene el mismo problema y peor (su `A` es de 6×6), pero sigue en `max-w-5xl`. Eso es hilo C, y hay que preguntar antes.
 
+### ✅ Matrices que crecen: notación compacta y etiquetas fijas
+
+**No estaba en esta lista**: salió de una pregunta del usuario después de D10 — *las ecuaciones largas van a crecer mucho más con más nudos y en pórticos/3D, ¿cómo hacemos una UI decente para eso?*, seguida de *¿y el scroll horizontal de la versión anterior no era viable?*.
+
+La segunda pregunta corrigió el diagnóstico, y conviene dejarlo escrito: **el scroll horizontal no es una alternativa a lo que hay, es lo que hay**. El original envolvía cada matriz en `overflow-x-auto` y este repo también. Entonces el problema nunca fue "falta scroll" sino dos cosas que el scroll no arregla: que scrollear te deja **sin las etiquetas** de fila y columna, y que hay **demasiado que scrollear**.
+
+Se hicieron las dos capas que atacan eso, las dos dentro de `MatrixTable`, o sea que **alcanzan a los cuatro sistemas**:
+
+1. **Notación compacta** (`number-scale.ts`): un `×10³` por matriz en vez de repetir la magnitud en cada celda. La celda baja de ~92 a ~58 px. Encendida por defecto y **con interruptor** (`<CompactNumbersControl />`, al lado del de decimales) porque el usuario pidió poder apagarla: el caso es cotejar contra un ejercicio resuelto a mano.
+2. **Etiquetas fijas** al scrollear, opt-in por matriz (ver el porqué en [`state-pattern.md`](./state-pattern.md)).
+
+Y un bug que apareció buscando dónde ponerlas: **los pasos de ensamblaje y los bloques de la partición no tenían contenedor de scroll**. Con el modelo semilla de 4 nudos no se nota; con uno más grande no se desbordan, **se recortan**, porque `AccordionContent` lleva `overflow-hidden`.
+
+**Cómo se verificó**, que es la parte que costó:
+
+- Se sembró temporalmente una armadura de **8 nudos y 13 barras** (global de 16×16) para ver el problema real en vez del semilla.
+- Headless no scrollea, así que para ver una matriz *scrolleada* hubo que forzarla: el `#fragmento` no movió nada (las dos capturas salieron idénticas), y lo que sí funcionó fue **`dir="rtl"` en el contenedor de scroll**, que lo hace arrancar en el extremo derecho. Con eso se vio la columna de etiquetas efectivamente fijada — y de paso que el contenido pasa por debajo con el signo menos cortado, que es por lo que la columna lleva sombra.
+- **Una predicción salió mal y la medición la desmintió**: se anticipó que con la notación compacta la cadena `K = A·k·Aᵀ` volvería a entrar en `max-w-5xl` y se podría revertir el ensanche de D10. Midiendo, la cadena bajó de ~1220 a **1115 px** —los operandos `A` y `Aᵀ` no encogen, porque sus valores ya son 0 y 1— contra 976 disponibles. **El ensanche sigue haciendo falta.**
+- La global de 16×16, en cambio, **entra entera** con la página ancha y la notación compacta, donde antes scrolleaba.
+
+**Lo que se decidió no hacer** y quedó anotado como deudas **D12**, **D13** y **D14** en el roadmap: el layout escalonado de la ecuación (que es también la respuesta responsive), la vista de mapa para matrices muy grandes, y el techo en los pasos de ensamblaje.
+
 ## Pendiente, en orden
 
 ### 1 · D1 · El error de matriz singular, en inglés ⬅️ **acá se retoma**

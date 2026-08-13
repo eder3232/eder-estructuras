@@ -55,11 +55,20 @@ export function AssemblySteps({ steps, dofOrder, elements, nodesById }: Assembly
                 </p>
                 <ScopeDecimalsStepper className="shrink-0" />
               </div>
-              <MatrixTable
-                matrix={step.globalStiffnessAfter}
-                labels={labels}
-                highlight={diffPositions(previous, step.globalStiffnessAfter)}
-              />
+              {/* La matriz global crece con la cantidad de nudos (2N×2N), así
+                  que necesita su propio contenedor de scroll: sin él no se
+                  desborda, se **recorta**, porque `AccordionContent` lleva
+                  `overflow-hidden`. Y como es de las que crecen, las etiquetas
+                  van fijas: scrollear una de 40×40 sin ellas es leer números
+                  sin saber de qué grado de libertad son. */}
+              <div className="max-w-full overflow-x-auto">
+                <MatrixTable
+                  matrix={step.globalStiffnessAfter}
+                  labels={labels}
+                  highlight={diffPositions(previous, step.globalStiffnessAfter)}
+                  stickyLabels
+                />
+              </div>
             </div>
           </DecimalsScope>
         );

@@ -146,6 +146,16 @@ Las tres ya costaron una sesión cada una; las dos primeras se ven mirando la ap
 
 En el original cada tabla tenía su propio selector con `useState` local y default 2, sin nada global ni por bloque; esto es un superconjunto de aquello.
 
+## Notación compacta y etiquetas fijas (matrices que crecen)
+
+Los decimales resuelven *cuántos dígitos*; esto resuelve el otro lado del mismo problema, que es **cuánto ancho ocupa una matriz que crece con el modelo**. La global es de `DOF × DOF`: en armaduras 2D son `2N`, en pórticos y 3D `3N`. Con 20 nudos son 40 columnas — a ~92 px cada una, unos 3700 px. Ningún layout muestra eso; lo único que se puede hacer es que scrollear sea barato y que haya menos que scrollear.
+
+- **Notación compacta** (`number-scale.ts`, `atomCompactNumbers`, encendida por defecto): un factor común por matriz (`×10³`) en vez de repetir la magnitud en cada celda. La celda pasa de ~92 a ~58 px, que es **casi la mitad del ancho a cualquier tamaño**. El factor sale de la matriz entera y no de cada celda: si cada una eligiera el suyo, la columna dejaría de ser comparable de un vistazo, que es para lo que sirve una matriz. Solo se aplica fuera de la banda `[0.01, 1000)`, donde los números ya se leen de corrido, y es múltiplo de 3 para que caiga en una unidad que alguien nombra. **Se puede apagar** con `<CompactNumbersControl />`, al lado del de decimales, por un caso de uso concreto de esta app: cotejar contra un ejercicio resuelto a mano.
+- **Etiquetas fijas** (`stickyLabels` de `MatrixTable`): la fila y la columna de etiquetas se quedan en su lugar al scrollear. Sin eso, scrollear una matriz de 40×40 es leer números sin saber de qué grado de libertad son. **Es opcional a propósito**: solo sirve cuando la matriz está sola en su contenedor de scroll (la global, un bloque de la partición). Los cuatro operandos de una ecuación comparten **un solo** contenedor, así que ahí cada columna de etiquetas se pegaría al mismo borde y se taparían entre sí.
+- **Toda matriz que crece necesita su propio `overflow-x-auto`.** No es opcional ni cosmético: dentro de un `AccordionContent`, que lleva `overflow-hidden`, una tabla más ancha que su contenedor no se desborda — **se recorta**. Los pasos de ensamblaje y los bloques de la partición estaban así hasta el 2026-08-12, y con el modelo semilla de 4 nudos no se notaba.
+
+Lo que **no** se hizo y queda anotado en el roadmap (deudas **D12**, **D13**, **D14**): el layout escalonado de la ecuación —fila cuando entra, simbólica arriba con operandos apilados cuando no—, la vista de mapa para matrices muy grandes, y el techo en la cantidad de pasos de ensamblaje que se rinden de una.
+
 ## Fuera de alcance de este patrón (a propósito)
 
 - Resaltado interactivo de celdas (hover/click) — Tren B, junto a la visualización.
