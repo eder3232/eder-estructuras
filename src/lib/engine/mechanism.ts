@@ -88,26 +88,85 @@ export const CONDITION_LIMIT = 1e12;
  * absoluto no lo sería.
  */
 export function nullMode(kff: number[][], tolerance = 1e-10): number[] | null {
-  if (kff.length === 0) return null;
+  return nullSpace(kff, tolerance)[0] ?? null;
+}
+
+/**
+ * **Todos** los movimientos que no cuestan energía, no solo el primero.
+ *
+ * En una matriz de rigidez **sin condiciones de borde** son exactamente los
+ * movimientos de cuerpo rígido: 3 en el plano (dos traslaciones y una rotación)
+ * y 6 en el espacio. O sea que `K` sin apoyos es singular **siempre**, hasta en
+ * una estructura perfectamente sujeta — no es un caso patológico, es la teoría.
+ * Poner apoyos es precisamente sacarle esos modos hasta dejarla definida
+ * positiva.
+ *
+ * Cada modo viene normalizado por su mayor componente, para poder dibujarlo tal
+ * cual sea cual sea la escala de la rigidez.
+ */
+export function nullSpace(matrix: number[][], tolerance = 1e-10): number[][] {
+  if (matrix.length === 0) return [];
 
   try {
-    const { eigenvectors } = eigs(kff);
+    const { eigenvectors } = eigs(matrix);
     let mayor = 0;
     for (const { value } of eigenvectors) mayor = Math.max(mayor, Math.abs(Number(value)));
-    if (mayor === 0) return null;
+    if (mayor === 0) return [];
 
-    const nulo = eigenvectors.find(({ value }) => Math.abs(Number(value)) <= tolerance * mayor);
-    if (!nulo) return null;
-
-    const vector = (nulo.vector as unknown as { toArray?: () => number[] }).toArray?.() ??
-      (nulo.vector as unknown as number[]);
-    const componentes = [...vector].map(Number);
-
-    // Normalizado por la mayor componente: así el modo se puede dibujar tal cual
-    // y la forma se lee igual sea cual sea la escala de la rigidez.
-    const maximo = Math.max(...componentes.map(Math.abs));
-    return maximo === 0 ? null : componentes.map((c) => c / maximo);
+    return eigenvectors
+      .filter(({ value }) => Math.abs(Number(value)) <= tolerance * mayor)
+      .map(({ vector }) => {
+        const raw = (vector as unknown as { toArray?: () => number[] }).toArray?.() ??
+          (vector as unknown as number[]);
+        const componentes = [...raw].map(Number);
+        const maximo = Math.max(...componentes.map(Math.abs));
+        return maximo === 0 ? [] : componentes.map((c) => c / maximo);
+      })
+      .filter((modo) => modo.length > 0);
   } catch {
-    return null;
+    return [];
   }
+}
+
+export type LoadVerdict = "accelerates" | "indeterminate";
+
+export interface LoadCompatibility {
+  verdict: LoadVerdict;
+  /** Proyección de la carga sobre cada modo, normalizada. Cero = ortogonal. */
+  projections: number[];
+}
+
+/**
+ * La **alternativa de Fredholm**, que es lo que decide qué significa que la
+ * matriz sea singular.
+ *
+ * Como `K` es simétrica, su imagen es el complemento ortogonal de su núcleo, así
+ * que `K · U = F` tiene solución **si y solo si `F` es ortogonal a todos los
+ * modos nulos**. De ahí salen dos situaciones físicas muy distintas, y ninguna
+ * es "el programa se rompió":
+ *
+ * - **La carga empuja en la dirección del mecanismo** (`accelerates`): no existe
+ *   ninguna configuración en equilibrio. La estructura acelera, y eso ya no es
+ *   un problema de estática.
+ * - **La carga es ortogonal** (`indeterminate`): hay equilibrio, pero infinitas
+ *   posiciones posibles. Y como el modo no deforma ninguna barra, **los
+ *   esfuerzos y las reacciones quedan determinados**: lo único arbitrario es el
+ *   desplazamiento.
+ */
+export function loadCompatibility(
+  modes: number[][],
+  forces: number[],
+  tolerance = 1e-8,
+): LoadCompatibility {
+  const norma = Math.hypot(...forces) || 1;
+
+  const projections = modes.map((mode) => {
+    const dot = mode.reduce((sum, value, i) => sum + value * (forces[i] ?? 0), 0);
+    return dot / (norma * (Math.hypot(...mode) || 1));
+  });
+
+  return {
+    verdict: projections.some((p) => Math.abs(p) > tolerance) ? "accelerates" : "indeterminate",
+    projections,
+  };
 }

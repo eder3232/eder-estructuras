@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SingularStiffnessError, nullMode, zeroStiffnessRows } from "./mechanism";
+import { SingularStiffnessError, loadCompatibility, nullMode, nullSpace, zeroStiffnessRows } from "./mechanism";
 import { System } from "./system";
 import { TrussElement2D } from "./trusses-2d/truss-element-2d";
 
@@ -162,5 +162,85 @@ describe("System.solve con una estructura que es un mecanismo", () => {
     );
 
     expect(() => system.solve()).not.toThrow();
+  });
+});
+
+describe("nullSpace · los movimientos de cuerpo rígido", () => {
+  /** La armadura semilla, para mirar su `K` global sin condiciones de borde. */
+  function global() {
+    const system = new System(2);
+    const puntos = { v1: [0, 0], v2: [3, 0], v3: [0, 4], v4: [3, 4] } as const;
+    system.addNode({ id: "v1", restrained: [true, true] });
+    system.addNode({ id: "v2", restrained: [true, true] });
+    system.addNode({ id: "v3", restrained: [false, false], force: [4.8, -6.4] });
+    system.addNode({ id: "v4", restrained: [false, false], force: [0, -6] });
+    const barras: [string, keyof typeof puntos, keyof typeof puntos][] = [
+      ["e1", "v1", "v2"],
+      ["e2", "v3", "v4"],
+      ["e3", "v1", "v3"],
+      ["e4", "v2", "v4"],
+      ["e5", "v1", "v4"],
+      ["e6", "v2", "v3"],
+    ];
+    for (const [id, from, to] of barras) {
+      system.addElement(
+        new TrussElement2D(
+          id,
+          { id: from, x: puntos[from][0], z: puntos[from][1] },
+          { id: to, x: puntos[to][0], z: puntos[to][1] },
+          0.001,
+          2e7,
+        ),
+      );
+    }
+    return system.solve().assembly;
+  }
+
+  it("la K **sin apoyos** tiene exactamente 3 modos nulos, y eso vale para toda estructura plana", () => {
+    // No es un caso patológico ni una armadura mal armada: es la teoría. Los
+    // modos nulos de una K sin condiciones de borde son los movimientos de
+    // cuerpo rígido — dos traslaciones y una rotación en el plano, seis en el
+    // espacio. Poner apoyos es sacarle esos modos.
+    const modos = nullSpace(global().globalStiffness);
+
+    expect(modos).toHaveLength(3);
+  });
+
+  it("con los apoyos puestos no queda ninguno: Kff es definida positiva", () => {
+    expect(nullSpace(global().partition.kff)).toHaveLength(0);
+  });
+
+  it("ningún modo de cuerpo rígido deforma una barra", () => {
+    // Es lo que los hace "de cuerpo rígido": no almacenan energía. Se comprueba
+    // sobre la barra e1, horizontal de v1 a v2 — su alargamiento es la
+    // proyección del desplazamiento relativo sobre su propio eje.
+    const { globalStiffness } = global();
+    for (const modo of nullSpace(globalStiffness)) {
+      const [v1x, , v2x] = modo;
+      const alargamiento = v2x - v1x; // e1 va de v1(0,0) a v2(3,0): eje x puro
+      expect(alargamiento).toBeCloseTo(0, 8);
+    }
+  });
+});
+
+describe("loadCompatibility · qué significa que sea singular", () => {
+  const modoHorizontal = [[1, 0, 1, 0]];
+
+  it("una carga en la dirección del mecanismo no tiene equilibrio: acelera", () => {
+    const { verdict } = loadCompatibility(modoHorizontal, [5, 0, 0, 0]);
+
+    expect(verdict).toBe("accelerates");
+  });
+
+  it("una carga ortogonal deja infinitas soluciones, no ninguna", () => {
+    // El caso de la armadura del bug: cargas verticales y modo horizontal. Hay
+    // equilibrio; lo único indeterminado es la posición.
+    const { verdict } = loadCompatibility(modoHorizontal, [0, -10, 0, -10]);
+
+    expect(verdict).toBe("indeterminate");
+  });
+
+  it("sin carga no hay nada que empuje, así que es indeterminada", () => {
+    expect(loadCompatibility(modoHorizontal, [0, 0, 0, 0]).verdict).toBe("indeterminate");
   });
 });

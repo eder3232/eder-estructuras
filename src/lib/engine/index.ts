@@ -9,8 +9,10 @@ export type {
   DofOrderEntry,
   PartitionResult,
 } from "./system";
-export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, zeroStiffnessRows } from "./mechanism";
-export type { MechanismDiagnosis, MechanismDof } from "./mechanism";
+export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompatibility, nullMode, nullSpace, zeroStiffnessRows } from "./mechanism";
+export type { LoadCompatibility, LoadVerdict, MechanismDiagnosis, MechanismDof } from "./mechanism";
+export { ldl } from "./factorization";
+export type { LdlResult, LdlOk, LdlFailure } from "./factorization";
 export { unitDisplacementState } from "./unit-displacement";
 export type { UnitDisplacementState, UnitDisplacementForce } from "./unit-displacement";
 export { TrussElement2D } from "./trusses-2d/truss-element-2d";
