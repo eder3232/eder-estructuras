@@ -1,6 +1,6 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12.** Hechos y commiteados: S1, S3, el entorno DOM para tests de componentes y D6 + U4. Quedan **11 puntos**, pendientes y ordenados abajo.
+> **Estado: en curso desde el 2026-08-12.** Hechos y commiteados: S1, S3, el entorno DOM para tests de componentes, D6 + U4 y D10. Quedan **10 puntos**, pendientes y ordenados abajo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -86,49 +86,68 @@ Se aplicaron **las dos** salidas anotadas y una tercera que apareció mirando:
 
 Tests: `axial-label.test.ts` y `viewbox.test.ts` (geometría pura, en `node`) y `force-arrow.test.tsx` (DOM), que fija que la etiqueta arranque después de la punta y crezca hacia afuera. 81 tests en total.
 
+### ✅ D10 · La cadena `K = A·k·Aᵀ` no entraba en pantalla
+
+**Se resolvió ensanchando la página, no achicando el contenido**, y la decisión salió de medir: la cadena de una barra son cuatro matrices en fila —16 columnas contando las de etiquetas— y pide unos **1220 px**. En los **976 útiles** de `max-w-5xl` no entra **a ninguna precisión que sirva**:
+
+| Intento | Ancho que sigue pidiendo |
+| --- | --- |
+| Como estaba (4 decimales) | ~1220 px |
+| 2 decimales | ~1190 px |
+| Fuente `text-xs` | ~1076 px |
+| Las dos cosas juntas | ~1010 px |
+
+O sea que **la salida "bajar los decimales por defecto de esa sección" que estaba anotada no alcanzaba sola**, y bajar de 2 no es una opción: los cosenos directores de `A` viven entre 0 y 1 y con 1 decimal dejan de decir nada. La otra salida anotada —colapsar los operandos y mostrar solo `K`— deshacía lo que la sesión de la narrativa pedagógica había decidido a propósito doce días antes: mostrar el paso entero y no solo el resultado.
+
+`/armaduras-2d` pasó entonces a `max-w-[84rem]`, contra el `max-w-5xl` de los otros tres. Tres cosas que conviene saber:
+
+- **Se ensancha la página y no el bloque de la ecuación.** `AccordionContent` lleva `overflow-hidden` —lo necesita para animar la altura, y es de `ui/`, o sea intocable—, así que todo lo que se salga de su ancho queda recortado: el acordeón tiene que *nacer* ancho.
+- **El primer intento fue ensanchar solo los resultados, y la captura lo descartó**: la página quedaba con dos bordes izquierdos distintos, uno para las tablas de entrada y otro para los resultados. Se lee peor que el scroll que se quería sacar.
+- **La prosa no se ensanchó con la página.** El panel de resultados le pone techo a sus párrafos de una sola vez (`[&_p]:max-w-3xl`) y las dos tablas de texto (`DofOrderTable` e `InternalForcesTable`, que son `w-full`) conservan el ancho que tenían. Ancho para los datos, medida de lectura para el texto.
+
+**Lo que sigue scrolleando**, y se acepta: las dos cadenas de **cinco** operandos de la partición (`Uf = Kff⁻¹·(Ff − Kfr·Ur)` y `Rr = Krf·Uf + Krr·Ur`). Entran mucho más que antes —queda afuera un ~15%, el último operando— pero no completas. La deuda D10 nombraba la cadena de la transformación, que ahora sí entra entera.
+
+Efecto lateral que **no** se propagó: `/frame2d` tiene el mismo problema y peor (su `A` es de 6×6), pero sigue en `max-w-5xl`. Eso es hilo C, y hay que preguntar antes.
+
 ## Pendiente, en orden
 
-### 1 · D10 · La cadena `K = A·k·Aᵀ` no entra en pantalla ⬅️ **acá se retoma**
-
-Con 4 decimales y `EA/L` del orden de 10⁴ no entra en 1500 px y el último operando queda fuera hasta scrollear. `MatrixEquation` **nunca envuelve a propósito** (una ecuación partida en dos renglones deja de leerse como ecuación), y por eso `K` va primero. Salidas: una forma compacta que colapse los operandos, o bajar los decimales por defecto de esa sección.
-
-### 2 · D1 · El error de matriz singular, en inglés
+### 1 · D1 · El error de matriz singular, en inglés ⬅️ **acá se retoma**
 
 `System.solve()` deja pasar *"Cannot calculate inverse, determinant is zero"* de mathjs cuando `Kff` no tiene inversa — que es el caso **normal** de agregar un nudo antes de conectarlo. Un solo lugar (`src/lib/engine/system.ts`) y alcanza a los cuatro sistemas gratis.
 
-### 3 · U3 · Estado vacío del panel de resultados
+### 2 · U3 · Estado vacío del panel de resultados
 
 `ResultsPanel` devuelve `null` si hay error, y queda el título "Resultados" con el selector de decimales al lado y nada debajo. **Decisión abierta**: mensaje en el lugar de los resultados, o esconder la sección entera (más limpio, pero hace saltar el layout). Dato útil: `ui/empty.tsx` ya está instalado.
 
-### 4 · U1 · Encabezados agrupados en la tabla de nudos
+### 3 · U1 · Encabezados agrupados en la tabla de nudos
 
 Hoy son nueve columnas planas (`node-table.tsx`): "Fuerza X", "Desplaz. X"… El original agrupaba `Coordenadas` / `Fuerza` / `Desplazamiento` / `Restringido` en dos niveles con `colSpan`. Al agrupar la tabla se angosta bastante: revisar en la misma pasada si las dos columnas de restricción siguen como checkbox suelto o se compactan.
 
-### 5 · U2 · Combobox buscable en Desde/Hacia
+### 4 · U2 · Combobox buscable en Desde/Hacia
 
 Hoy es un `Select` plano. `cmdk` ya está en dependencias y `ui/combobox.tsx` y `ui/command.tsx` ya están instalados, así que es directo. Sumar el rechazo de **"Desde = Hacia"**, que hoy solo detecta el motor como longitud cero. Con 4 nudos el `Select` está bien; el problema aparece a los 15.
 
-### 6 · U5 · Unidades rotuladas
+### 5 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 7 · N4 · Vincular matriz ↔ modelo
+### 6 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
-### 8 · N5 · Verificación de equilibrio
+### 7 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 9 · N3 · Vincular tabla ↔ diagrama
+### 8 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Decisión abierta**: dónde vive el estado de resaltado (átomo por sistema o contexto local). Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien — y N4 va antes justamente para que ese mecanismo ya esté decidido cuando llegue acá.
 
-### 10 · N1 · Persistencia en `localStorage`
+### 9 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 11 · N2 · Ejemplos precargados
+### 10 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
