@@ -39,6 +39,27 @@ export interface AssemblyResult {
   globalStiffness: number[][];
   steps: AssemblyStep[];
   partition: PartitionResult;
+  /**
+   * Con qué criterio se numeraron los grados de libertad, para que quien
+   * muestre la partición la acomode igual. No se puede deducir mirando los
+   * datos —en un modelo cualquiera el primer DOF puede ser restringido por
+   * casualidad—, así que viaja explícito.
+   */
+  restrainedFirst: boolean;
+}
+
+/**
+ * Cómo se numeran los grados de libertad antes de ensamblar.
+ *
+ * **Existe porque cada profesor lo hace distinto**: unos ponen los grados
+ * restringidos arriba de la matriz global y otros abajo. Matemáticamente da lo
+ * mismo —los desplazamientos, las reacciones y los esfuerzos son idénticos—
+ * pero al que recién aprende el método una matriz que no se parece a la del
+ * pizarrón lo desorienta. Ver `docs/pendientes-comparacion.md`, grupo M.
+ */
+export interface DofOrderOptions {
+  /** `false` (el valor por defecto) numera por orden de inserción de los nudos. */
+  restrainedFirst?: boolean;
 }
 
 export interface SolveResult {
@@ -121,21 +142,40 @@ export class System {
     this.elements.set(element.id, element);
   }
 
-  private buildDOFOrder(): DofIndex {
+  /**
+   * El orden de los grados de libertad, que es **una sola decisión** de la que
+   * cuelga todo lo demás: el ensamblaje usa `byNode`, la partición junta por
+   * lista de índices y la UI se etiqueta con `dofOrder`. Nada de eso supone un
+   * orden en particular, así que cambiarlo acá no obliga a tocar nada más.
+   *
+   * (El proyecto original cortaba la matriz **por posición**, y por eso el
+   * mismo cambio le costaba duplicar la función que la partía.)
+   */
+  private buildDOFOrder({ restrainedFirst = false }: DofOrderOptions): DofIndex {
+    const entries: { nodeId: string; localDof: number; restrained: boolean }[] = [];
+    for (const node of this.nodes.values()) {
+      node.dof.forEach((dof, localDof) =>
+        entries.push({ nodeId: node.id, localDof, restrained: dof.restrained }),
+      );
+    }
+
+    // La partición en dos grupos es lo único que se reordena, y **el orden de
+    // inserción se conserva dentro de cada uno**: mover un nudo de lugar en la
+    // tabla tiene que seguir significando lo mismo.
+    const ordered = restrainedFirst
+      ? [...entries.filter((e) => e.restrained), ...entries.filter((e) => !e.restrained)]
+      : entries;
+
     const byNode = new Map<string, number[]>();
     const free: number[] = [];
     const restrained: number[] = [];
 
-    let cursor = 0;
-    for (const node of this.nodes.values()) {
-      const indices: number[] = [];
-      for (const dof of node.dof) {
-        const globalIndex = cursor++;
-        indices.push(globalIndex);
-        (dof.restrained ? restrained : free).push(globalIndex);
-      }
-      byNode.set(node.id, indices);
-    }
+    ordered.forEach((entry, globalIndex) => {
+      const indices = byNode.get(entry.nodeId) ?? [];
+      indices[entry.localDof] = globalIndex;
+      byNode.set(entry.nodeId, indices);
+      (entry.restrained ? restrained : free).push(globalIndex);
+    });
 
     return { byNode, free, restrained };
   }
@@ -209,8 +249,8 @@ export class System {
     };
   }
 
-  solve(): SolveResult {
-    const dofIndex = this.buildDOFOrder();
+  solve(options: DofOrderOptions = {}): SolveResult {
+    const dofIndex = this.buildDOFOrder(options);
     const { k, f0, steps } = this.assembleGlobal(dofIndex);
     const warnings: SolveWarning[] = unconnectedNodeWarnings(
       [...this.nodes.keys()],
@@ -330,6 +370,11 @@ export class System {
         dofOrder.push({ nodeId: node.id, localDof: i, globalIndex: indices[i], restrained: d.restrained });
       });
     }
+    // **`dofOrder[i]` tiene que ser la fila `i` de la matriz.** Se arma
+    // recorriendo los nudos, así que sin esto queda en orden de inserción y las
+    // etiquetas de todas las matrices salen corridas apenas el orden no sea el
+    // de inserción.
+    dofOrder.sort((a, b) => a.globalIndex - b.globalIndex);
 
     const partition: PartitionResult = { free, restrained, kff, kfr, krf, krr };
 
@@ -337,7 +382,13 @@ export class System {
       displacements,
       reactions,
       internalForces,
-      assembly: { dofOrder, globalStiffness: k, steps, partition },
+      assembly: {
+        dofOrder,
+        globalStiffness: k,
+        steps,
+        partition,
+        restrainedFirst: options.restrainedFirst ?? false,
+      },
       warnings,
     };
   }

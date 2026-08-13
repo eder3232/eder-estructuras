@@ -12,6 +12,7 @@ import { atomElements, type ElementRow } from "../store/elements";
 import { atomResults, type Armaduras2DResults } from "../store/results";
 import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
+import { DofOrderControl } from "./results/dof-order-control";
 import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
@@ -172,7 +173,8 @@ function SolvedResults({
                       `w-full` y estirarlas a 1350 px deja una columna de aire.
                       El techo las devuelve al ancho que tenían antes de que la
                       sección se ensanchara para las matrices. */}
-                  <div className="max-w-5xl">
+                  <div className="flex max-w-5xl flex-col gap-3">
+                    <DofOrderControl />
                     <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={DOF_LABELS} />
                   </div>
                   <LocalStiffnessList elements={elements} nodesById={nodesById} />

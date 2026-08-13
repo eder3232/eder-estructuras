@@ -51,7 +51,7 @@ El caso delicado es `/armaduras-3d`: los materiales de three.js no aceptan clase
 
 | # | Qué falta | Decisión abierta | Tamaño |
 |---|---|---|---|
-| **M1a** | **"¿Los grados de libertad restringidos van arriba?"** — cambia el orden en que se ensambla la matriz global y todo lo que viene después | Ver abajo. **Analizado el 2026-08-13: es mucho más barato en v2 que en v1** | chico |
+| ~~**M1a**~~ | ✅ **Hecho el 2026-08-13.** `solve()` acepta `{ restrainedFirst }` con `false` por defecto, así que los otros tres sistemas no cambian; la UI va solo en `/armaduras-2d`. Salió tan barato como se había medido: solo hubo que emitir `dofOrder` ordenado por `globalIndex` y acomodar los cuatro bloques en `partition-and-solution.tsx`. Detalle en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md) | — | — |
 | **M1b** | **"¿Desea ingresar los grados de libertad?"** — el alumno numera los DOF a mano, como *sugerencia* de orden | Ver abajo — sigue siendo la decisión más interesante del documento | mediano |
 | **M2** | No se validan **nombres duplicados** de nudo ni de barra. El original sí (errores e100/e200). Acá los ids son UUID, así que dos nudos llamados `v1` pasan sin protestar y dejan ambiguas las etiquetas de todas las matrices | Ver abajo | chico |
 

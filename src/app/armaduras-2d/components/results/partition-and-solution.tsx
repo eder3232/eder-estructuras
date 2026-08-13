@@ -54,16 +54,28 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
   const uf = freeEntries.map((e) => [solved.displacements.get(e.nodeId)![e.localDof]]);
   const rr = restrainedEntries.map((e) => [solved.reactions.get(e.nodeId)![e.localDof]]);
 
-  // La matriz global con sus filas y columnas reordenadas: primero las libres,
-  // después las restringidas. Es la misma matriz, no otra.
-  const order = [...partition.free, ...partition.restrained];
+  // La matriz global con sus filas y columnas reordenadas. **El grupo que va
+  // primero es el mismo con el que se ensambló** (`assembly.restrainedFirst`),
+  // porque si no la partición contaría una historia distinta de la del paso
+  // anterior. Es la misma matriz en los dos casos, no otra.
+  const { restrainedFirst } = assembly;
+  const order = restrainedFirst
+    ? [...partition.restrained, ...partition.free]
+    : [...partition.free, ...partition.restrained];
   const permuted = order.map((row) => order.map((col) => globalStiffness[row][col]));
-  const permutedLabels = [...freeLabels, ...restrainedLabels];
-  const cut = partition.free.length;
+  const permutedLabels = restrainedFirst
+    ? [...restrainedLabels, ...freeLabels]
+    : [...freeLabels, ...restrainedLabels];
+  const cut = restrainedFirst ? partition.restrained.length : partition.free.length;
+
+  // Qué bloque cae en cada cuadrante depende del orden; los nombres no.
+  const [topLeft, topRight, bottomLeft, bottomRight] = restrainedFirst
+    ? ([ZONE.krr, ZONE.krf, ZONE.kfr, ZONE.kff] as const)
+    : ([ZONE.kff, ZONE.kfr, ZONE.krf, ZONE.krr] as const);
 
   const zoneClass = (row: number, col: number) =>
     cn(
-      row < cut ? (col < cut ? ZONE.kff : ZONE.kfr) : col < cut ? ZONE.krf : ZONE.krr,
+      row < cut ? (col < cut ? topLeft : topRight) : col < cut ? bottomLeft : bottomRight,
       // La línea del corte, para que se vea que son cuatro bloques y no un damero.
       row === cut - 1 && "border-b-2 border-b-foreground/50",
       col === cut - 1 && "border-r-2 border-r-foreground/50",
@@ -75,12 +87,21 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
       <div className="flex flex-col gap-2">
         <p className="text-sm text-muted-foreground">
           Para poder despejar hay que separar lo conocido de lo incógnito. Se reordena la matriz global poniendo
-          primero los grados de libertad <span className="font-medium text-foreground">libres</span> (f) y después
-          los <span className="font-medium text-foreground">restringidos</span> (r). Es la misma matriz de antes,
-          con las filas y las columnas permutadas — y así el corte deja cuatro bloques:
+          primero los grados de libertad{" "}
+          <span className="font-medium text-foreground">{restrainedFirst ? "restringidos" : "libres"}</span> (
+          {restrainedFirst ? "r" : "f"}) y después los{" "}
+          <span className="font-medium text-foreground">{restrainedFirst ? "libres" : "restringidos"}</span> (
+          {restrainedFirst ? "f" : "r"}). Es la misma matriz de antes, con las filas y las columnas permutadas — y
+          así el corte deja cuatro bloques:
         </p>
 
-        <MathBlock tex="\begin{bmatrix} F_f \\ F_r \end{bmatrix} = \begin{bmatrix} K_{ff} & K_{fr} \\ K_{rf} & K_{rr} \end{bmatrix} \cdot \begin{bmatrix} U_f \\ U_r \end{bmatrix}" />
+        <MathBlock
+          tex={
+            restrainedFirst
+              ? "\\begin{bmatrix} F_r \\\\ F_f \\end{bmatrix} = \\begin{bmatrix} K_{rr} & K_{rf} \\\\ K_{fr} & K_{ff} \\end{bmatrix} \\cdot \\begin{bmatrix} U_r \\\\ U_f \\end{bmatrix}"
+              : "\\begin{bmatrix} F_f \\\\ F_r \\end{bmatrix} = \\begin{bmatrix} K_{ff} & K_{fr} \\\\ K_{rf} & K_{rr} \\end{bmatrix} \\cdot \\begin{bmatrix} U_f \\\\ U_r \\end{bmatrix}"
+          }
+        />
 
         <DecimalsScope id="permuted">
           <div className="flex flex-col gap-1">

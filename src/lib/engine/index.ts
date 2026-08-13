@@ -3,6 +3,7 @@ export type { Element } from "./element";
 export { System } from "./system";
 export type {
   AddNodeInput,
+  DofOrderOptions,
   SolveResult,
   AssemblyResult,
   AssemblyStep,
