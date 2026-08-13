@@ -9,7 +9,7 @@ export type {
   DofOrderEntry,
   PartitionResult,
 } from "./system";
-export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompatibility, nullMode, nullSpace, zeroStiffnessRows } from "./mechanism";
+export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompatibility, nullMode, nullSpace, spectrum, zeroStiffnessRows } from "./mechanism";
 export type { LoadCompatibility, LoadVerdict, MechanismDiagnosis, MechanismDof } from "./mechanism";
 export { ldl } from "./factorization";
 export type { LdlResult, LdlOk, LdlFailure } from "./factorization";

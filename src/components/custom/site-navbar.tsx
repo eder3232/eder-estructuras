@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/custom/theme-toggle";
-import { siteConfig, systemLinks } from "@/lib/site-config";
+import { siteConfig, systemLinks, theoryLinks } from "@/lib/site-config";
 
 /**
  * Barra de navegación **provisional**.
@@ -30,6 +30,16 @@ export function SiteNavbar() {
         <ul className="flex flex-1 flex-wrap items-center gap-4">
           {systemLinks.map((link) => (
             <li key={link.href}>
+              <Link
+                href={link.href}
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+          {theoryLinks.map((link) => (
+            <li key={link.href} className="border-l pl-4">
               <Link
                 href={link.href}
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"

@@ -19,3 +19,11 @@ export const systemLinks = [
   { href: "/armaduras-3d", label: "Armaduras 3D" },
   { href: "/frame2d", label: "Pórticos 2D" },
 ] as const;
+
+/**
+ * Páginas de teoría, que **no** son un sistema estructural y por eso van en su
+ * propia lista: la navegación definitiva (S2) tiene que poder distinguirlas, y
+ * meterlas entre los sistemas ahora sería decidir de costado que van al mismo
+ * nivel.
+ */
+export const theoryLinks = [{ href: "/estabilidad", label: "Estabilidad" }] as const;

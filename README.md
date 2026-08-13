@@ -89,6 +89,8 @@ Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-ro
 - [ ] **Tren C (frame2d-seismic)**: extensión real sobre `frame2d`, no un fork copiado. Ver `docs/refactor-roadmap.md`.
 - [ ] Fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
 
+Además de los sistemas hay una primera página de **teoría**: [`/estabilidad`](./src/app/estabilidad) — por qué la matriz de rigidez es singular *siempre* antes de poner apoyos, por qué el determinante no sirve para darse cuenta, qué hace un programa de cálculo de verdad (factorizar, no invertir) y qué significa que el sistema no tenga solución única. Es contenido que no estaba en el proyecto original ni en la cursada, y salió de un bug real.
+
 Ya existen cuatro páginas funcionales: [`/springs`](./src/app/springs), [`/armaduras-2d`](./src/app/armaduras-2d), [`/frame2d`](./src/app/frame2d) y [`/armaduras-3d`](./src/app/armaduras-3d) — 1, 2, 3 y 3 grados de libertad por nudo (las dos últimas con la misma cantidad pero distinta naturaleza: una rotación vs. tres traslaciones). Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización) que se replica para el resto de los sistemas.
 
 ### Próximo paso

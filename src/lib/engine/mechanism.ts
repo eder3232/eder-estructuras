@@ -128,6 +128,26 @@ export function nullSpace(matrix: number[][], tolerance = 1e-10): number[][] {
   }
 }
 
+/**
+ * Los autovalores de una matriz simétrica, de menor a mayor.
+ *
+ * Para una matriz de rigidez son **la rigidez del sistema en cada dirección
+ * propia**: cuánto cuesta el movimiento más barato, cuánto el más caro. Un cero
+ * quiere decir que hay una dirección que no cuesta nada, y el más chico dividido
+ * por el más grande es, esencialmente, el número de condición.
+ */
+export function spectrum(matrix: number[][]): number[] {
+  if (matrix.length === 0) return [];
+  try {
+    const { values } = eigs(matrix);
+    const raw = (values as unknown as { toArray?: () => number[] }).toArray?.() ??
+      (values as unknown as number[]);
+    return [...raw].map(Number).sort((a, b) => a - b);
+  } catch {
+    return [];
+  }
+}
+
 export type LoadVerdict = "accelerates" | "indeterminate";
 
 export interface LoadCompatibility {
