@@ -1,6 +1,6 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **8 puntos**, ordenados abajo, y el siguiente es **U1**.
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **11 puntos**, ordenados abajo, y el siguiente es **U1**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
 > Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad y U3. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
@@ -249,35 +249,88 @@ Tests: `results-panel.test.tsx`, seis casos que siembran cada estado con **las a
 
 ## Pendiente, en orden
 
+> **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
+>
+> **Dos decisiones tomadas al replanificar:**
+>
+> 1. **El motor gana la capacidad de ordenar los DOF ahora; la UI va solo en `/armaduras-2d`.** El valor por defecto reproduce el comportamiento de hoy, así que los otros tres sistemas no cambian ni ven la feature. Es el criterio con que ya se hizo D1: el diagnóstico vive en `System.solve()` y alcanza a los cuatro, pero la explicación dibujada está solo en 2D. Cuando llegue el hilo C, propagar son dos checkboxes y **ningún** cambio de motor.
+> 2. **El orden de DOF y la numeración del alumno son parte del modelo**, no preferencia de la app: los puso el profesor, son datos del ejercicio, y tienen que viajar con él cuando N1 permita guardar o compartir.
+
+**Cuatro bloques.** La regla que los ordena: **cada archivo se toca una sola vez**, y **el estado persistido se escribe último**, cuando su forma ya no va a cambiar.
+
+| Bloque | Puntos |
+|---|---|
+| Tablas de entrada | 1 · **U1** — 2 · **U2** |
+| Orden de los grados de libertad | 3 · **E2** — 4 · **M1a** — 5 · **M1b** |
+| Lo que se lee | 6 · **U5** — 7 · **N4** — 8 · **N3** — 9 · **N5** |
+| Estado persistente | 10 · **N1** — 11 · **N2** |
+
+**Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
+
+- `E2 → M1b` — sin canal de advertencias, M1b queda muda justo en el caso que más enseña.
+- `M1a → M1b` — los dos son entradas de la misma función de orden: M1a la construye, M1b le agrega el criterio de desempate.
+- `U1 → M1b` — M1b agrega columnas a la tabla de nudos: entrar a una cabecera ya agrupada es sumar un grupo; entrar a once columnas planas es rehacerla.
+- `{U1, M1b} → U5` — rotular unidades recién cuando ninguna columna se vaya a mover más.
+- `M1b → N1` — **la más importante**: M1b cambia la forma de `NodeRow`, y escribir el formato persistido antes obliga a migrarlo enseguida.
+- `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
+- `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
+
 ### 1 · U1 · Encabezados agrupados en la tabla de nudos ⬅️ **acá se retoma**
 
 Hoy son nueve columnas planas (`node-table.tsx`): "Fuerza X", "Desplaz. X"… El original agrupaba `Coordenadas` / `Fuerza` / `Desplazamiento` / `Restringido` en dos niveles con `colSpan`. Al agrupar la tabla se angosta bastante: revisar en la misma pasada si las dos columnas de restricción siguen como checkbox suelto o se compactan.
+
+**Dejar hecho el lugar del grupo `Grado de libertad`** aunque esté vacío: es donde entran las columnas de M1b.
 
 ### 2 · U2 · Combobox buscable en Desde/Hacia
 
 Hoy es un `Select` plano. `cmdk` ya está en dependencias y `ui/combobox.tsx` y `ui/command.tsx` ya están instalados, así que es directo. Sumar el rechazo de **"Desde = Hacia"**, que hoy solo detecta el motor como longitud cero. Con 4 nudos el `Select` está bien; el problema aparece a los 15.
 
-### 3 · U5 · Unidades rotuladas
+### 3 · E2 · Canal de advertencias
+
+`DomainError` gana `severity`, y el panel separa **lo que bloquea de lo que no**. Hoy todo lo que entra bloquea, y ya hay casos que no deberían: un nudo sin ninguna barra conectada, un modelo mal condicionado pero resoluble, una barra de longitud casi nula.
+
+Lo importante es que un resultado `ok` **pueda traer advertencias**: se calcula **y** se avisa. Que un `warning` haga desaparecer los resultados es exactamente la trampa del original, explicada en [`errores.md`](./errores.md). `ui-custom/alert.tsx` ya tiene las variantes `warning` e `info`, sin usar.
+
+### 4 · M1a · ¿Los grados de libertad restringidos van arriba?
+
+Existe porque **algunos profesores ensamblan la matriz global con los restringidos arriba y otros abajo**: matemáticamente da lo mismo, pero al que recién aprende lo confunde. El checkbox hace que la pantalla se parezca al pizarrón del que enseña.
+
+`buildDOFOrder()` deja de numerar por inserción y recibe una **política de orden**. Todo lo demás cuelga de ahí sin tocarse — el ensamblaje usa `byNode` y la partición usa `gather(k, free, free)`, que no supone nada sobre el orden. **Dos trampas** (el detalle está en el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)):
+
+- `dofOrder` se arma hoy recorriendo los nudos, así que vale la invariante `dofOrder[i].globalIndex === i`, de la que dependen las etiquetas de **todas** las matrices. Hay que emitirlo **ordenado por `globalIndex`**.
+- `results/partition-and-solution.tsx` es el **único** lugar de la UI con un orden fijo a mano. Las ecuaciones de despeje **no cambian**: están escritas en términos de bloques, no de posiciones.
+
+**Verificación que vale la pena**: con los restringidos arriba, desplazamientos, reacciones y fuerzas internas tienen que dar **exactamente lo mismo**. Es un invariante fuerte y barato de fijar en un test.
+
+### 5 · M1b · Numeración del alumno
+
+Existe porque **el profesor a veces numera los DOF de una forma rara a propósito**, para ver si el alumno entendió el método. `NodeRow` gana la numeración por eje (es parte del modelo, decisión 2) y las columnas aparecen en el grupo que U1 dejó reservado.
+
+**La semántica es la del original y es lo que la hace valiosa**: el número es una **sugerencia, no una orden**. Se usa como criterio de orden **dentro de cada grupo** (restringidos / libres); si la numeración pedida mezcla los grupos se respeta lo que se pueda y **se avisa por el canal de E2**, explicando por qué. Ese aviso es la parte pedagógica.
+
+### 6 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 4 · N4 · Vincular matriz ↔ modelo
+### 7 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
-### 5 · N5 · Verificación de equilibrio
+**Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
 
-ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
+### 8 · N3 · Vincular tabla ↔ diagrama
 
-### 6 · N3 · Vincular tabla ↔ diagrama
+Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Decisión abierta**: dónde vive el estado de resaltado (átomo por sistema o contexto local). Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien — y N4 va antes justamente para que ese mecanismo ya esté decidido cuando llegue acá.
+### 9 · N5 · Verificación de equilibrio
 
-### 7 · N1 · Persistencia en `localStorage`
+ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
+### 10 · N1 · Persistencia en `localStorage`
 
-### 8 · N2 · Ejemplos precargados
+Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
+
+### 11 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
