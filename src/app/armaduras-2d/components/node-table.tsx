@@ -26,23 +26,52 @@ export function NodeTable() {
   return (
     <div className="max-w-full overflow-x-auto">
       <Table className="border">
+        {/*
+          Encabezado de dos niveles: la magnitud arriba y el eje abajo. Nueve
+          columnas planas obligaban a repetir la magnitud en cada una
+          ("Fuerza X", "Fuerza Z", "Desplaz. X"…), y esa repetición es la que
+          hacía la tabla mucho más ancha de lo que necesita: el rótulo largo le
+          fijaba el piso al ancho de cada columna, no el dato.
+
+          Es también donde van los rótulos de unidad de U5 —una vez por
+          magnitud y no una por eje— y donde entra el grupo "Grado de libertad"
+          de M1b, que agrega un par de columnas más con la misma forma.
+
+          Las dos columnas de acciones y la de nombre atraviesan los dos
+          renglones con `rowSpan`, y por eso el renglón de grupos no lleva
+          borde inferior: cortaría por la mitad las celdas que lo cruzan.
+        */}
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-10">
+          <TableRow className="border-b-0">
+            <TableHead rowSpan={2} className="w-10">
               <Button size="icon" variant="outline" onClick={() => addNode()} aria-label="Agregar un nudo al final">
                 <PlusCircle className="m-auto" />
               </Button>
             </TableHead>
-            <TableHead className="w-10" />
-            <TableHead>Nombre</TableHead>
-            <TableHead>X</TableHead>
-            <TableHead>Z</TableHead>
-            <TableHead>Fuerza X</TableHead>
-            <TableHead>Fuerza Z</TableHead>
-            <TableHead>Desplaz. X</TableHead>
-            <TableHead>Desplaz. Z</TableHead>
-            <TableHead className="text-center">Restr. X</TableHead>
-            <TableHead className="text-center">Restr. Z</TableHead>
+            <TableHead rowSpan={2} className="w-10" />
+            <TableHead rowSpan={2}>Nombre</TableHead>
+            <TableHead colSpan={2} className="h-9 border-l text-center">
+              Coordenadas
+            </TableHead>
+            <TableHead colSpan={2} className="h-9 border-l text-center">
+              Fuerza
+            </TableHead>
+            <TableHead colSpan={2} className="h-9 border-l text-center">
+              Desplazamiento
+            </TableHead>
+            <TableHead colSpan={2} className="h-9 border-l text-center">
+              Restringido
+            </TableHead>
+          </TableRow>
+          <TableRow>
+            <TableHead className="h-8 border-l text-center">X</TableHead>
+            <TableHead className="h-8 text-center">Z</TableHead>
+            <TableHead className="h-8 border-l text-center">X</TableHead>
+            <TableHead className="h-8 text-center">Z</TableHead>
+            <TableHead className="h-8 border-l text-center">X</TableHead>
+            <TableHead className="h-8 text-center">Z</TableHead>
+            <TableHead className="h-8 border-l text-center">X</TableHead>
+            <TableHead className="h-8 text-center">Z</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,13 +104,16 @@ export function NodeTable() {
                   onBlur={(e) => updateField({ id: node.id, field: "name", value: e.target.value })}
                 />
               </TableCell>
-              <TableCell>
+              {/* El `border-l` de la primera columna de cada grupo baja por todo
+                  el cuerpo: sin eso la agrupación existe solo en el encabezado y
+                  se pierde tres filas más abajo, que es donde hace falta. */}
+              <TableCell className="border-l">
                 <FormulaInput value={node.x} onChange={(value) => updateField({ id: node.id, field: "x", value })} />
               </TableCell>
               <TableCell>
                 <FormulaInput value={node.z} onChange={(value) => updateField({ id: node.id, field: "z", value })} />
               </TableCell>
-              <TableCell>
+              <TableCell className="border-l">
                 <FormulaInput
                   value={node.forceX}
                   disabled={node.restrainedX}
@@ -95,7 +127,7 @@ export function NodeTable() {
                   onChange={(value) => updateField({ id: node.id, field: "forceZ", value })}
                 />
               </TableCell>
-              <TableCell>
+              <TableCell className="border-l">
                 <FormulaInput
                   value={node.displacementX}
                   disabled={!node.restrainedX}
@@ -109,16 +141,18 @@ export function NodeTable() {
                   onChange={(value) => updateField({ id: node.id, field: "displacementZ", value })}
                 />
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="border-l text-center">
                 <Checkbox
                   checked={node.restrainedX}
                   onCheckedChange={() => toggleRestrained({ id: node.id, axis: "x" })}
+                  aria-label={`Restringir ${node.name} en x`}
                 />
               </TableCell>
               <TableCell className="text-center">
                 <Checkbox
                   checked={node.restrainedZ}
                   onCheckedChange={() => toggleRestrained({ id: node.id, axis: "z" })}
+                  aria-label={`Restringir ${node.name} en z`}
                 />
               </TableCell>
             </TableRow>

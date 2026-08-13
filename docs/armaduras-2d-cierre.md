@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **11 puntos**, ordenados abajo, y el siguiente es **U1**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **10 puntos**, ordenados abajo, y el siguiente es **U2**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad y U3. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3 y U1. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -247,6 +247,22 @@ Al abrir el código aparecieron **cuatro estados donde este documento contaba un
 
 Tests: `results-panel.test.tsx`, seis casos que siembran cada estado con **las acciones del store** —`atomNodes` y `atomElements` son derivados de solo lectura, así que el camino que se ejercita es el del usuario—. **155 en total.**
 
+### ✅ U1 · Encabezados agrupados en la tabla de nudos
+
+Nueve columnas planas (`Nombre`, `X`, `Z`, `Fuerza X`, `Fuerza Z`, `Desplaz. X`, `Desplaz. Z`, `Restr. X`, `Restr. Z`) pasaron a un encabezado de **dos niveles**: la magnitud arriba con `colSpan={2}` y el eje abajo. Las dos columnas de acciones y la de nombre lo cruzan con `rowSpan={2}`.
+
+**La premisa del punto se confirmó midiendo**, y el resultado fue más grande de lo que decía: a 760 px de ancho, **antes** la tabla se desbordaba —las dos columnas de restricción quedaban directamente fuera de vista y los valores de coordenadas salían cortados a la mitad— y **después entra completa**. La causa es la que se sospechaba: el rótulo largo de cada columna (`Desplaz. X`) le fijaba el piso al ancho, no el dato. Al no repetir la magnitud en cada eje, el piso lo pasa a fijar el número.
+
+Tres cosas que conviene saber antes de tocarlo:
+
+1. **El renglón de grupos no lleva borde inferior** (`border-b-0`): cortaría por la mitad las celdas que lo cruzan con `rowSpan`. El que cierra el encabezado es el renglón de ejes.
+2. **El `border-l` de la primera columna de cada grupo baja por todo el cuerpo.** Sin eso la agrupación existe solo en el encabezado y se pierde tres filas más abajo, que es donde hace falta.
+3. **Las casillas de restricción ganaron `aria-label`.** Al pasar de "Restr. X" a "X" se quedaban sin nombre accesible: un lector de pantalla leía "X". Ahora dicen `Restringir v3 en x`, y de paso es el asidero que usan los tests.
+
+**Acá es donde entra el grupo `Grado de libertad` de M1b**, con la misma forma, y donde van los rótulos de unidad de **U5** — una vez por magnitud y no una por eje, que es la otra razón para haber agrupado primero.
+
+Tests: `node-table.test.tsx`, la primera cobertura que tiene esta tabla (los tests de tabla que había eran los de barras). Fija la agrupación, el nombre accesible de las casillas y que insertar una fila en el medio caiga donde debe. **158 en total.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -275,23 +291,17 @@ Tests: `results-panel.test.tsx`, seis casos que siembran cada estado con **las a
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · U1 · Encabezados agrupados en la tabla de nudos ⬅️ **acá se retoma**
-
-Hoy son nueve columnas planas (`node-table.tsx`): "Fuerza X", "Desplaz. X"… El original agrupaba `Coordenadas` / `Fuerza` / `Desplazamiento` / `Restringido` en dos niveles con `colSpan`. Al agrupar la tabla se angosta bastante: revisar en la misma pasada si las dos columnas de restricción siguen como checkbox suelto o se compactan.
-
-**Dejar hecho el lugar del grupo `Grado de libertad`** aunque esté vacío: es donde entran las columnas de M1b.
-
-### 2 · U2 · Combobox buscable en Desde/Hacia
+### 1 · U2 · Combobox buscable en Desde/Hacia ⬅️ **acá se retoma**
 
 Hoy es un `Select` plano. `cmdk` ya está en dependencias y `ui/combobox.tsx` y `ui/command.tsx` ya están instalados, así que es directo. Sumar el rechazo de **"Desde = Hacia"**, que hoy solo detecta el motor como longitud cero. Con 4 nudos el `Select` está bien; el problema aparece a los 15.
 
-### 3 · E2 · Canal de advertencias
+### 2 · E2 · Canal de advertencias
 
 `DomainError` gana `severity`, y el panel separa **lo que bloquea de lo que no**. Hoy todo lo que entra bloquea, y ya hay casos que no deberían: un nudo sin ninguna barra conectada, un modelo mal condicionado pero resoluble, una barra de longitud casi nula.
 
 Lo importante es que un resultado `ok` **pueda traer advertencias**: se calcula **y** se avisa. Que un `warning` haga desaparecer los resultados es exactamente la trampa del original, explicada en [`errores.md`](./errores.md). `ui-custom/alert.tsx` ya tiene las variantes `warning` e `info`, sin usar.
 
-### 4 · M1a · ¿Los grados de libertad restringidos van arriba?
+### 3 · M1a · ¿Los grados de libertad restringidos van arriba?
 
 Existe porque **algunos profesores ensamblan la matriz global con los restringidos arriba y otros abajo**: matemáticamente da lo mismo, pero al que recién aprende lo confunde. El checkbox hace que la pantalla se parezca al pizarrón del que enseña.
 
@@ -302,35 +312,35 @@ Existe porque **algunos profesores ensamblan la matriz global con los restringid
 
 **Verificación que vale la pena**: con los restringidos arriba, desplazamientos, reacciones y fuerzas internas tienen que dar **exactamente lo mismo**. Es un invariante fuerte y barato de fijar en un test.
 
-### 5 · M1b · Numeración del alumno
+### 4 · M1b · Numeración del alumno
 
 Existe porque **el profesor a veces numera los DOF de una forma rara a propósito**, para ver si el alumno entendió el método. `NodeRow` gana la numeración por eje (es parte del modelo, decisión 2) y las columnas aparecen en el grupo que U1 dejó reservado.
 
 **La semántica es la del original y es lo que la hace valiosa**: el número es una **sugerencia, no una orden**. Se usa como criterio de orden **dentro de cada grupo** (restringidos / libres); si la numeración pedida mezcla los grupos se respeta lo que se pueda y **se avisa por el canal de E2**, explicando por qué. Ese aviso es la parte pedagógica.
 
-### 6 · U5 · Unidades rotuladas
+### 5 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 7 · N4 · Vincular matriz ↔ modelo
+### 6 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
 **Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
 
-### 8 · N3 · Vincular tabla ↔ diagrama
+### 7 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-### 9 · N5 · Verificación de equilibrio
+### 8 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 10 · N1 · Persistencia en `localStorage`
+### 9 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 11 · N2 · Ejemplos precargados
+### 10 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
