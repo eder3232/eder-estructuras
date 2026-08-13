@@ -192,3 +192,11 @@ Esto es lo que se siguió para dejar `/armaduras-2d` completo — ya hecho. Sirv
 5. ✅ `store/results.ts`: `new System(2)` en vez de `new System(1)`, instanciando `TrussElement2D` en vez de `SpringElement` (con manejo de error si una barra referencia un nudo inexistente — necesario porque `TrussElement2D` pide las coordenadas del nudo, no solo su id).
 6. ✅ `local-stiffness-list.tsx` e `internal-forces-table.tsx` adaptados a la rigidez con transformación geométrica y a que la fuerza interna de una barra es axial vía proyección `cos`/`sin` (ver `TrussElement2D.internalForce`).
 7. ✅ Verificado con `pnpm test` (la regresión de armaduras 2D en `src/lib/engine/trusses-2d/system.test.ts` se reusó como datos semilla de la página, para poder cotejar visualmente contra valores ya validados), `tsc`, `lint`, y sirviendo `/armaduras-2d` con `pnpm dev`.
+
+## El modo práctica (`matrix-quiz.tsx`)
+
+Convierte dos pasos del método en ejercicios corregidos, detrás de un interruptor que **arranca apagado**: la página es material de estudio, no un examen.
+
+- **La corrección es pura y vive aparte** (`matrix-quiz-check.ts`), así que se testea sin DOM: comparación de conjuntos para las posiciones —separando faltantes de sobrantes, que son errores distintos— y comparación numérica con margen **relativo** para los valores.
+- **Los ejercicios corrigen contra el motor**, nunca contra números escritos a mano en la UI: las posiciones salen del `dofOrder` real y los valores de `TrussElement2D.stiffness()`. Si cambia la fórmula, cambia el ejercicio.
+- **La grilla es un componente aparte de `MatrixTable`**: esa renderiza texto y ya carga tres cosas (decimales, notación compacta, etiquetas fijas), y su resaltado por celda ya significa las zonas de la partición.

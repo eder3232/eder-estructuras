@@ -13,6 +13,7 @@ import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { PartitionAndSolution } from "./results/partition-and-solution";
+import { PracticeMode } from "./results/practice-mode";
 import { UnitDisplacement } from "./results/unit-displacement";
 
 const DOF_LABELS = ["x", "z"];
@@ -76,6 +77,7 @@ export function ResultsPanel() {
                     <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={DOF_LABELS} />
                   </div>
                   <LocalStiffnessList elements={elements} nodesById={nodesById} />
+                  <PracticeMode elements={elements} nodesById={nodesById} assembly={assembly} />
                 </div>
               </DecimalsScope>
             </AccordionContent>

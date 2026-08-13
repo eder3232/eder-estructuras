@@ -187,6 +187,19 @@ Tres cosas de la implementación:
 
 Y rompió un test ajeno, que vale como aviso: el del desplazamiento unitario buscaba el `svg` del diagrama recorriendo el DOM, y el botón nuevo trae **su propio `svg`** (el icono de lucide). Ahora lo busca por el `viewBox`, que en un diagrama es calculado y en un icono es siempre `0 0 24 24`.
 
+### ✅ Modo práctica («resolvelo vos»)
+
+Quinta y última de las ideas pedagógicas. Un interruptor en la sección 1 convierte dos pasos del método en ejercicios corregidos:
+
+1. **«¿Dónde aporta esta barra?»** — sobre la matriz global vacía, se marcan con clicks las 16 posiciones donde la barra suma algo. Va primero porque es el paso donde más se confunden y porque es de clicks: se puede practicar rápido, que es como conviene ensayar algo que después hay que hacer doce veces seguidas. La corrección **separa faltantes de sobrantes** en vez de dar un puntaje: son dos errores distintos y se corrigen distinto (marcar de menos suele ser olvidarse de los cruces entre los dos nudos; marcar de más, haber tomado filas enteras).
+2. **«Completá la matriz de la barra»** — los 16 valores de su `K` en ejes globales. Acepta **expresiones** (`2e7*0.001/3`), que es como el alumno tiene el número mientras lo calcula en vez de copiarlo, y tolera el redondeo con un margen **relativo** del 0,5%: en una matriz donde conviven 6666.6667 y 0 un margen fijo o deja pasar cualquier cosa en las grandes o rechaza redondeos legítimos en las chicas.
+
+**Arranca apagado a propósito**: la página es material de estudio, no un examen. Quien entra a mirar cómo se resuelve una armadura no quiere que le escondan los números.
+
+Los dos ejercicios corrigen contra **lo que calcula el motor** —las posiciones salen del `dofOrder` real y los valores de `TrussElement2D.stiffness()`—, así que no pueden desincronizarse: si cambia la fórmula del motor, cambia el ejercicio.
+
+`MatrixQuiz` es un componente aparte de `MatrixTable` a propósito: esa renderiza texto y ya carga la cascada de decimales, la notación compacta y las etiquetas fijas, y su resaltado por celda ya significa otra cosa (las zonas de la partición).
+
 ## Pendiente, en orden
 
 ### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**
