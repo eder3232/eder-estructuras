@@ -4,6 +4,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { useHighlightRows } from "@/components/custom/highlight";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,9 @@ export function NodeTable() {
   const toggleRestrained = useSetAtom(atomToggleNodeRestrained);
   const updateField = useSetAtom(atomUpdateNodeField);
   const toggleUseDofNumbers = useSetAtom(atomToggleUseDofNumbers);
+  // N3: una fila y su nudo en el esquema son la misma cosa mirada de dos
+  // formas, así que pasar el mouse por cualquiera de las dos enciende la otra.
+  const rowHighlight = useHighlightRows();
 
   return (
     <div className="flex flex-col gap-3">
@@ -109,7 +113,7 @@ export function NodeTable() {
         </TableHeader>
         <TableBody>
           {nodes.map((node) => (
-            <TableRow key={node.id}>
+            <TableRow key={node.id} {...rowHighlight({ kind: "node", id: node.id })}>
               <TableCell>
                 <Button
                   size="icon"

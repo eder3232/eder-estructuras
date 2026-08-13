@@ -5,6 +5,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { useHighlightRows } from "@/components/custom/highlight";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -32,6 +33,10 @@ export function ElementTable() {
   const addElement = useSetAtom(atomAddElement);
   const removeElement = useSetAtom(atomRemoveElement);
   const updateField = useSetAtom(atomUpdateElementField);
+  // N3, igual que en la tabla de nudos — pero una barra enciende además **sus
+  // dos nudos**, que es lo que hace el dibujo y lo que hace falta para leer una
+  // fila que dice "desde v1 hacia v3".
+  const rowHighlight = useHighlightRows();
 
   // Una sola lista para toda la tabla, y estable entre renders: el valor
   // seleccionado de cada fila sale de acá, así que la comparación por identidad
@@ -64,7 +69,14 @@ export function ElementTable() {
           </TableHeader>
           <TableBody>
             {elements.map((element) => (
-              <TableRow key={element.id}>
+              <TableRow
+                key={element.id}
+                {...rowHighlight({
+                  kind: "element",
+                  id: element.id,
+                  nodeIds: [element.fromNodeId, element.toNodeId],
+                })}
+              >
                 <TableCell>
                   <Button
                     size="icon"

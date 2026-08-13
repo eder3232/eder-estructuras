@@ -55,3 +55,71 @@ export function useHighlight(): ModelHighlight | null {
 export function useSetHighlight(): (highlight: ModelHighlight | null) => void {
   return useContext(HighlightContext).setHighlight;
 }
+
+/** Lo que una fila de tabla *es*, para poder encenderla y encenderse. */
+export interface HighlightTarget {
+  kind: "node" | "element";
+  id: string;
+  /** Solo las barras: los dos nudos que toca, que se encienden con ella. */
+  nodeIds?: string[];
+}
+
+/**
+ * El tinte de una fila señalada.
+ *
+ * **Repite el `hover:`** para ganarle al de `TableRow`, que en la hoja de
+ * estilos va después por ser una variante: sin eso, la fila que tiene el mouse
+ * encima se vería distinta de la que se enciende desde el dibujo, y son el
+ * mismo estado.
+ *
+ * **Y lleva dos opacidades, una por tema, porque la misma no vale para los
+ * dos** — medido, no estimado. En claro el primario es un verde saturado lejos
+ * del blanco y en oscuro es un verde apagado a un paso del fondo, así que la
+ * misma mezcla da 105 de distancia RGB de un lado y 29 del otro. Con `/20` y
+ * `/50` quedan 70 y 46: los dos del orden de los colores de zona de la
+ * partición, que andan entre 61 y 90.
+ */
+const HIGHLIGHTED_ROW = "bg-primary/20 hover:bg-primary/20 dark:bg-primary/50 dark:hover:bg-primary/50";
+
+/**
+ * Las dos mitades de **N3** para las filas de una tabla: encender lo suyo al
+ * pasar el mouse, y encenderse cuando lo señala otro —el dibujo, o una celda de
+ * `K`—.
+ *
+ * **Devuelve una fábrica y no los props directamente** porque las filas salen
+ * de un `.map()`: un hook por fila sería un hook dentro de un bucle. Así el
+ * contexto se lee una vez por tabla.
+ *
+ * **La invariante que lo hace legible**: una fila se enciende *exactamente*
+ * cuando se enciende su dibujo. Por eso la pertenencia se mira contra la
+ * identidad propia de la fila —su id, en la lista de su especie— y no contra
+ * todo lo que la fila enciende: una barra prende sus dos nudos en las dos
+ * partes, y un nudo no prende ninguna barra en ninguna.
+ */
+export function useHighlightRows(): (target: HighlightTarget) => {
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  className?: string;
+  "data-highlighted"?: "";
+} {
+  const { highlight, setHighlight } = useContext(HighlightContext);
+
+  return (target: HighlightTarget) => {
+    const ids = highlight?.[target.kind === "node" ? "nodeIds" : "elementIds"] ?? [];
+    const on = ids.includes(target.id);
+
+    return {
+      onMouseEnter: () =>
+        setHighlight(
+          target.kind === "node"
+            ? { nodeIds: [target.id], elementIds: [] }
+            : { nodeIds: target.nodeIds ?? [], elementIds: [target.id] },
+        ),
+      onMouseLeave: () => setHighlight(null),
+      className: on ? HIGHLIGHTED_ROW : undefined,
+      // Asidero de los tests: afirmar sobre el estado y no sobre las clases,
+      // que son decisión de estilo y van a cambiar.
+      "data-highlighted": on ? ("" as const) : undefined,
+    };
+  };
+}

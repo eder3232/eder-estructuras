@@ -51,6 +51,22 @@ Un diagrama estructural **no tiene lugar libre garantizado**: la etiqueta de una
 
 El **valor de la fuerza axial sobre cada barra** (U4) sigue las mismas reglas, en `axial-label.ts`: al **25% del recorrido y no en el medio**, porque las dos diagonales de una armadura se cruzan justo en su punto medio y dos números centrados quedarían uno sobre el otro (es también la posición que usaba el original), y corrido perpendicular **hacia afuera de la figura**, medido contra el centro del diagrama. Ese "hacia afuera" no fue la primera regla que se probó: la anterior corría la etiqueta siempre hacia arriba en pantalla, que en una barra casi vertical no quiere decir nada —ahí la componente vertical de la perpendicular es ~0 y su signo lo decide el ruido—, y un desplazamiento de milésimas alcanzó para dar vuelta el lado y apilar dos números. Lo encontró una captura, y hoy lo fija `axial-label.test.ts`.
 
+## Señalar: el dibujo y la tabla como el mismo objeto (N4 y N3, 2026-08-13)
+
+`SchemaDiagram` toma dos props opcionales que lo vuelven interactivo, y **opcionales quiere decir que los sistemas que no las pasan siguen exactamente igual**:
+
+- **`highlight`** (`{ nodeIds, elementIds }`): qué señalar. Lo señalado se queda como está y **el resto se apaga** (`opacity-20`). Atenuar no es decoración: resaltar sin apagar deja la figura igual de cargada y hay que buscar la barra con la vista igual.
+- **`onHighlight`**: la dirección inversa, señalar *desde* el dibujo. El diagrama chico de la sección 2 (el de N4, «de dónde sale este número») **no** la pasa a propósito: ahí quien manda es la celda de `K` y el mouse está en la matriz.
+
+El estado vive en un **contexto** (`custom/highlight.tsx`), no en un átomo, y el porqué está en `armaduras-2d-cierre.md`: es estado efímero de vista, y los átomos guardan el modelo. `useHighlightRows()` da los props de una fila de tabla; devuelve una **fábrica** y no los props, porque las filas salen de un `.map()` y un hook por fila sería un hook dentro de un bucle.
+
+Cuatro cosas que aparecieron al construirlo, las dos últimas en la captura:
+
+1. **El engrosado de una barra señalada va solo a las `line`.** Un `stroke` sobre el `circle` de un nudo se dibuja en unidades del modelo —los nudos nunca tuvieron trazo, así que no llevan `vector-effect`— y salen círculos enormes. Es la misma trampa de la sección de abajo, por tercera vez.
+2. **Las zonas sensibles al mouse van en una capa aparte, al final.** Una barra mide 1,5 px: cazarla es imposible, así que hace falta una línea invisible de ~14 px con `non-scaling-stroke`. Y va *fuera* del grupo de la barra porque las clases de resaltado bajan a todo `line` descendiente y le pintarían también el área de captura. Los nudos van después de las barras: en un encuentro el mouse tiene que ganarlo el más chico.
+3. **Los apoyos y las flechas se apagan con su nudo**, no quedan aparte. Con la figura al 20% y las flechas a plena intensidad, lo más fuerte de la pantalla pasaba a ser justo lo que **no** se estaba señalando.
+4. **El tinte de la fila lleva una opacidad por tema.** La misma mezcla da 105 de distancia RGB en claro y 29 en oscuro, porque el primario está lejos del blanco y a un paso del fondo oscuro. Con `/20` y `/50` quedan 70 y 46, los dos del orden de los colores de zona de la partición.
+
 ## Piezas específicas de cada sistema
 
 El adaptador (`src/app/<sistema>/components/schema-diagram.tsx` y `.../results/deformed-shape.tsx`) es lo único que cambia por sistema:
@@ -79,7 +95,7 @@ Lo que **no** se resolvió acá, a propósito: la forma deformada sigue siendo u
 
 ## Fuera de alcance de este patrón (a propósito)
 
-- Interactividad (hover/click sobre un nudo o barra para resaltarlo en las tablas) — no se pidió, se agrega después si hace falta.
+- ~~Interactividad (hover/click sobre un nudo o barra para resaltarlo en las tablas)~~ — **hecho el 2026-08-13** (N4 y N3), ver la sección de arriba. Sigue afuera el **click**: hoy el vínculo es solo con el mouse encima, y qué significaría seleccionar algo —fijar el resaltado, abrir la fila, editarla— es una decisión que nadie tomó todavía.
 - Deformada curva entre nudos (cúbica de Hermite con los giros de los extremos) — ver la sección del DOF rotacional. Anotada como deuda **D3** en el roadmap.
 - Diagramas de corte y momento a lo largo de la barra — el original los tenía (`graphShear`, `graphMoment`) y son contenido pedagógico valioso, pero son otra vista, no una variante de la deformada. Anotada como deuda **D4** en el roadmap.
 - Exportar el SVG como imagen — no se pidió.

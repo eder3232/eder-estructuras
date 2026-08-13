@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **4 puntos**, ordenados abajo, y el siguiente es **N3**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **3 puntos**, ordenados abajo, y el siguiente es **N5**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5 y N4. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4 y N3. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -376,6 +376,22 @@ Y una duplicación que salió de un test que fallaba por la razón correcta: el 
 
 **191 tests.**
 
+### ✅ N3 · Vincular tabla ↔ diagrama
+
+La otra mitad de N4, y la que faltaba para que **la tabla y el dibujo dejen de ser dos cosas**: pasar el mouse por una fila enciende su nudo o su barra en el esquema, y pasarlo por el esquema enciende la fila. Una barra prende además **los dos nudos que toca**, que es lo que hace falta para leer una fila que dice «desde v1 hacia v3».
+
+**Salió barato como estaba previsto**, porque N4 ya había tomado la decisión de fondo: el resaltado vive en `custom/highlight.tsx`, un contexto cuyo proveedor envuelve la página entera. Lo que se agregó es `useHighlightRows()`, que **devuelve una fábrica y no los props** — las filas salen de un `.map()`, así que un hook por fila sería un hook dentro de un bucle— y el prop `onHighlight` del diagrama genérico, opcional, así que los otros tres sistemas no cambian.
+
+**La invariante que lo hace legible, y que fijan los tests**: una fila se enciende *exactamente* cuando se enciende su dibujo. Por eso la pertenencia se mira contra la identidad propia de la fila y no contra todo lo que la fila enciende — si no, un nudo prendería en la tabla las barras que lo tocan y en el dibujo no.
+
+**Tres cosas que aparecieron al hacerlo**, dos de ellas en la captura y **séptima sesión seguida** en que la primera captura encuentra algo con los tests, `tsc` y el build ya en verde:
+
+1. **Los apoyos y las flechas no se apagaban con su nudo.** Con la figura al 20% y las flechas azules a plena intensidad, lo más fuerte de la pantalla pasaba a ser justo lo que **no** se estaba señalando. Ahora cada apoyo y cada fuerza se atenúan con el nudo del que son.
+2. **El tinte de la fila necesita una opacidad por tema, y lo dijo la medición.** La misma mezcla mide **105** de distancia RGB en claro y **29** en oscuro: el primario está lejos del blanco y a un paso del fondo oscuro. Con `/20` y `/50` quedan **70 y 46**, los dos del orden de los colores de zona de la partición (61 a 90). Es la primera vez en el repo que un color necesita valores distintos por tema para decir lo mismo.
+3. **El área sensible de una barra es una línea invisible aparte**, de ~14 px y con `non-scaling-stroke` —una barra mide 1,5 px y es imposible de cazar con el mouse—, y va **fuera** del grupo de la barra: las clases de resaltado bajan a todo `line` descendiente y le pintarían también el área de captura. Los nudos van después, para ganar el mouse en los encuentros.
+
+**Cómo se verificó lo que el mouse no puede mostrar en headless**: sembrando el estado inicial del `HighlightProvider` con un resaltado fijo (`e3` con sus dos nudos), capturando en los dos temas y revirtiendo — la misma técnica de sembrar un modelo distinto que ya se venía usando. Los tests cubren lo otro: las dos direcciones y que el mouse encima de una fila de nudo no encienda ninguna barra. **195 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -389,8 +405,8 @@ Y una duplicación que salió de un test que fallaba por la razón correcta: el 
 
 | Bloque | Puntos |
 |---|---|
-| Lo que se lee | 1 · **N3** — 2 · **N5** |
-| Estado persistente | 3 · **N1** — 4 · **N2** |
+| Lo que se lee | ~~N3~~ — 1 · **N5** |
+| Estado persistente | 2 · **N1** — 3 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -402,19 +418,15 @@ Y una duplicación que salió de un test que fallaba por la razón correcta: el 
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · N3 · Vincular tabla ↔ diagrama ⬅️ **acá se retoma**
-
-Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Reusa el mecanismo que N4 dejó decidido**: `custom/highlight.tsx`, un contexto (no un átomo) cuyo proveedor ya envuelve la página entera — así que las tablas de entrada pueden encender el esquema sin mover nada. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
-
-### 2 · N5 · Verificación de equilibrio
+### 1 · N5 · Verificación de equilibrio ⬅️ **acá se retoma**
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 3 · N1 · Persistencia en `localStorage`
+### 2 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 4 · N2 · Ejemplos precargados
+### 3 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
@@ -423,7 +435,8 @@ Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar
 Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no). Lo específico de esta tanda:
 
 - `pnpm test` · `npx tsc --noEmit` · `pnpm build`. **`pnpm lint` da 2 errores preexistentes en `ui/`**; un tercero sí es nuevo.
-- **Mirar la app no es opcional.** Van seis sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Mirar la app no es opcional.** Van **siete** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Para verificar algo que solo existe con el mouse encima** —N4, N3— hay que sembrar el estado: darle al `useState` del `HighlightProvider` un valor inicial fijo, capturar y **revertir**. Es la misma técnica de sembrar un modelo distinto, aplicada al estado de vista.
 - **Y los tests tampoco.** En esta última tanda un test encontró lo que la captura no podía —que Base UI no selecciona el texto del input al enfocarlo, y headless no puede tipear— igual que la captura encontró lo que el test no podía. Las dos verificaciones son complementarias.
 - **Para juzgar un texto, la métrica es la razón de contraste WCAG (4.5 para texto normal), no la distancia RGB.** La distancia sirve para "¿esta zona se distingue de aquella?", que es la pregunta de los bloques de la partición. El token `--warning` medía 275 de distancia —parecía bien— y 2.28:1 de contraste, que es la mitad de lo que hace falta.
 - **El dev server puede estar ya levantado** en el 3000 sirviendo este mismo repo: usalo, no lo mates.

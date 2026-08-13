@@ -18,11 +18,26 @@ interface SchemaDiagramProps {
    * que buscar la barra con la vista.
    */
   highlight?: { nodeIds: string[]; elementIds: string[] } | null;
+  /**
+   * La otra mitad de **N3**: señalar *desde* el dibujo, para que se encienda la
+   * fila de la tabla. Es opcional a propósito — los tres sistemas que no lo
+   * pasan siguen exactamente igual, y el diagrama chico de la sección 2 no debe
+   * pasarlo: ahí quien manda es la celda de `K` y el mouse está en la matriz.
+   */
+  onHighlight?: (highlight: { nodeIds: string[]; elementIds: string[] } | null) => void;
   /** Para achicarlo: al lado de una matriz no entra un lienzo de 500 px. */
   className?: string;
 }
 
-export function SchemaDiagram({ nodes, elements, supports, forces, highlight, className }: SchemaDiagramProps) {
+export function SchemaDiagram({
+  nodes,
+  elements,
+  supports,
+  forces,
+  highlight,
+  onHighlight,
+  className,
+}: SchemaDiagramProps) {
   if (nodes.length === 0) return null;
 
   /**
@@ -97,21 +112,88 @@ export function SchemaDiagram({ nodes, elements, supports, forces, highlight, cl
           );
         })}
 
+        {/* Apoyos y fuerzas se apagan **con su nudo**: son de él, no del
+            dibujo en general. Lo encontró la captura — con las flechas a plena
+            intensidad sobre una figura al 20%, lo más fuerte de la pantalla
+            pasaba a ser justo lo que no se estaba señalando. */}
         {supports.map((support) => (
-          <SupportIcon
-            key={support.nodeId}
-            x={support.x}
-            z={support.z}
-            restrainedX={support.restrainedX}
-            restrainedZ={support.restrainedZ}
-            restrainedRotation={support.restrainedRotation}
-            unitSize={unitSize}
-          />
+          <g key={support.nodeId} className={dim(support.nodeId, "node")}>
+            <SupportIcon
+              x={support.x}
+              z={support.z}
+              restrainedX={support.restrainedX}
+              restrainedZ={support.restrainedZ}
+              restrainedRotation={support.restrainedRotation}
+              unitSize={unitSize}
+            />
+          </g>
         ))}
 
         {forces.map((force, i) => (
-          <ForceGlyph key={`${force.nodeId}-${force.axis}-${i}`} force={force} unitSize={unitSize} variant="force" />
+          <g key={`${force.nodeId}-${force.axis}-${i}`} className={dim(force.nodeId, "node")}>
+            <ForceGlyph force={force} unitSize={unitSize} variant="force" />
+          </g>
         ))}
+
+        {/*
+          Las zonas sensibles al mouse van **en una capa aparte y al final**, no
+          sobre las formas que ya están dibujadas, por dos razones. Una es que
+          una barra mide un píxel y medio de ancho: cazarla con el mouse a esa
+          escala es imposible, así que hace falta una línea invisible mucho más
+          gruesa —en píxeles, con `non-scaling-stroke`, que es la trampa de este
+          módulo—. La otra es que las clases de resaltado de `dim()` bajan a
+          todos los `line` descendientes de una barra señalada, y le pintarían
+          también el área de captura.
+
+          Los nudos van después de las barras: en un encuentro, el que gana el
+          mouse tiene que ser el nudo, que es el más chico de los dos.
+        */}
+        {onHighlight && (
+          <g className="cursor-pointer">
+            {elements.map((element) => {
+              const from = nodesById.get(element.fromNodeId);
+              const to = nodesById.get(element.toNodeId);
+              if (!from || !to) return null;
+              const a = projectPoint(from);
+              const b = projectPoint(to);
+              return (
+                <line
+                  key={element.id}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  className="stroke-transparent"
+                  strokeWidth={14}
+                  vectorEffect="non-scaling-stroke"
+                  aria-label={`Barra ${element.name}`}
+                  onMouseEnter={() =>
+                    onHighlight({
+                      nodeIds: [element.fromNodeId, element.toNodeId],
+                      elementIds: [element.id],
+                    })
+                  }
+                  onMouseLeave={() => onHighlight(null)}
+                />
+              );
+            })}
+            {nodes.map((node) => {
+              const { x, y } = projectPoint(node);
+              return (
+                <circle
+                  key={node.id}
+                  cx={x}
+                  cy={y}
+                  r={nodeRadius * 2.2}
+                  className="fill-transparent"
+                  aria-label={`Nudo ${node.name}`}
+                  onMouseEnter={() => onHighlight({ nodeIds: [node.id], elementIds: [] })}
+                  onMouseLeave={() => onHighlight(null)}
+                />
+              );
+            })}
+          </g>
+        )}
       </SvgCanvas>
     </DiagramScaleProvider>
   );
