@@ -66,7 +66,20 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --warning: oklch(0.75 0.17 75);
+  /*
+    Ojo con la luminosidad de este token en tema claro: `--warning` se usa como
+    **color de texto** (la variante `warning` de `ui-custom/alert.tsx`) y como
+    color de trazo (las flechas de reacción de los diagramas 2D y 3D). Estaba en
+    `oklch(0.75 …)`, que sobre blanco da un contraste de **2.3:1** — la mitad
+    del 4.5 que pide WCAG AA para texto, y por debajo del 3:1 que piden los
+    gráficos. Se veía "bien" y no lo era: la distancia RGB contra el fondo daba
+    275, del mismo orden que la del rojo de error, pero para texto la métrica
+    que vale es la razón de contraste, no la distancia.
+
+    En 0.56 da 4.77, que es exactamente el mismo contraste que `--destructive`
+    en este tema. El de oscuro no hace falta tocarlo: ahí da 11.5.
+  */
+  --warning: oklch(0.56 0.15 75);
   --info: oklch(0.6 0.19 250);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);

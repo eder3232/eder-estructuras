@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 
 import { atomElements, atomRemoveElement } from "../store/elements";
-import { atomNodes, atomRemoveNode, atomToggleNodeRestrained, seedNodeIds } from "../store/nodes";
+import { atomAddNode, atomNodes, atomRemoveNode, atomToggleNodeRestrained, seedNodeIds } from "../store/nodes";
 import { ErrorsPanel } from "./errors-panel";
 import { ResultsPanel } from "./results-panel";
 
@@ -93,6 +93,28 @@ describe("ResultsPanel", () => {
     expect(detail.textContent).toContain("barra e3");
     expect(detail.textContent).toContain("barra e6");
     expect(accordion()).toBeNull();
+  });
+
+  it("una advertencia se dice **y** los resultados se muestran igual", () => {
+    // Un nudo agregado, restringido y sin conectar: no rompe nada —los apoyos
+    // lo sostienen— pero no aporta. Si estuviera libre sería un mecanismo, o
+    // sea un error, y no llegaría hasta acá.
+    setup((store) => {
+      store.set(atomAddNode);
+      const nuevo = store.get(atomNodes).at(-1)!;
+      store.set(atomToggleNodeRestrained, { id: nuevo.id, axis: "x" });
+      store.set(atomToggleNodeRestrained, { id: nuevo.id, axis: "z" });
+    });
+
+    // Esta es la regla, y es la que el proyecto original violaba: el aviso
+    // viajaba en el mismo array que decidía si los resultados se rendían, así
+    // que los hacía desaparecer. Ver docs/errores.md.
+    expect(screen.getByText(/No tiene ninguna barra conectada/)).toBeDefined();
+    expect(accordion()).not.toBeNull();
+    expect(compactControl()).not.toBeNull();
+
+    // Y la advertencia nombra la fila, que el motor solo sabe señalar por id.
+    expect(screen.getByText(/Revisá nudo v5/)).toBeDefined();
   });
 
   it("un mecanismo se explica en el lugar de los resultados, y una sola vez", () => {

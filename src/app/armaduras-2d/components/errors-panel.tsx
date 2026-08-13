@@ -6,19 +6,24 @@ import { ErrorsPanel as GenericErrorsPanel } from "@/components/custom/errors-pa
 import { atomResults } from "../store/results";
 
 /**
- * Solo las alertas de datos de entrada, que son las que se pueden atribuir a
- * una fila: por eso viven acá arriba, pegadas a las tablas que hay que
- * corregir.
+ * Lo que hay que decir **sobre el modelo**, en el lugar donde se lo corrige:
+ * los errores de datos de entrada, y las advertencias.
  *
- * El error de mecanismo llega por la misma vía pero **se filtra**: no es un
- * dato mal cargado, es lo que produjo el cálculo, y encima no se puede
- * atribuir a ninguna fila (viaja con `refId: "-"`). Se muestra entero, con su
- * dibujo, en el panel de resultados (`results/mechanism-explanation.tsx`).
+ * Dos cosas que no se mezclan, y el porqué está en `docs/errores.md`:
+ *
+ * - El **error de mecanismo se filtra**. No es un dato mal cargado, es lo que
+ *   produjo el cálculo, y encima no se puede atribuir a ninguna fila (viaja
+ *   con `refId: "-"`). Se muestra entero, con su dibujo, en el panel de
+ *   resultados (`results/mechanism-explanation.tsx`).
+ * - Las **advertencias conviven con los resultados**. Aparecen acá arriba y el
+ *   panel de resultados sigue abajo, entero. Un aviso que tira los resultados
+ *   abajo es un error disfrazado, que es lo que hacía el proyecto original.
  */
 export function ErrorsPanel() {
   const [results] = useAtom(atomResults);
 
+  if (results.status === "ok") return <GenericErrorsPanel issues={results.warnings} />;
   if (results.status !== "error") return null;
 
-  return <GenericErrorsPanel errors={results.errors.filter((e) => !e.mechanism)} />;
+  return <GenericErrorsPanel issues={results.errors.filter((e) => !e.mechanism)} />;
 }

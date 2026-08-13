@@ -26,7 +26,7 @@ export const atomResults = atom<SpringsResults>((get) => {
         displacement: [node.displacement],
       });
     } catch (e) {
-      errors.push({ source: "node", refId: node.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({ severity: "error", source: "node", refId: node.id, message: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -34,7 +34,7 @@ export const atomResults = atom<SpringsResults>((get) => {
     try {
       system.addElement(new SpringElement(element.id, [element.fromNodeId, element.toNodeId], element.k));
     } catch (e) {
-      errors.push({ source: "element", refId: element.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({ severity: "error", source: "element", refId: element.id, message: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -47,7 +47,7 @@ export const atomResults = atom<SpringsResults>((get) => {
   } catch (e) {
     return {
       status: "error",
-      errors: [{ source: "element", refId: "-", message: e instanceof Error ? e.message : String(e) }],
+      errors: [{ severity: "error", source: "element", refId: "-", message: e instanceof Error ? e.message : String(e) }],
       nodesById,
     };
   }

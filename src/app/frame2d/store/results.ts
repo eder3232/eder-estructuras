@@ -26,7 +26,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
         displacement: [node.displacementX, node.displacementZ, node.displacementR],
       });
     } catch (e) {
-      errors.push({ source: "node", refId: node.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({ severity: "error", source: "node", refId: node.id, message: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -56,7 +56,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
         ),
       );
     } catch (e) {
-      errors.push({ source: "element", refId: element.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({ severity: "error", source: "element", refId: element.id, message: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -69,7 +69,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
   } catch (e) {
     return {
       status: "error",
-      errors: [{ source: "element", refId: "-", message: e instanceof Error ? e.message : String(e) }],
+      errors: [{ severity: "error", source: "element", refId: "-", message: e instanceof Error ? e.message : String(e) }],
       nodesById,
     };
   }

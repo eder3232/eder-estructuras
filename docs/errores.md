@@ -12,6 +12,19 @@ Se lee antes de tocar cualquier cosa que produzca, transporte o muestre un error
 
 El motor es **el único que decide qué es inválido**. La UI no reimplementa validaciones: las captura y las muestra.
 
+Y hay **dos severidades que no se mezclan**, con una regla que decide todo lo demás:
+
+| | Qué significa | Quién lo produce | Efecto |
+|---|---|---|---|
+| `error` | El motor no pudo calcular | una excepción, capturada por fila | **No hay resultados** |
+| `warning` | Calculó, y hay algo que conviene saber | `SolveResult.warnings` | Hay resultados **y** un aviso |
+
+> **Una advertencia nunca puede impedir que se muestre un resultado.** Si algo tiene que impedirlo, es un error y se tira. Esta regla existe porque el proyecto original hacía exactamente lo contrario, y está contado en la parte 2.
+
+Un error se **tira** (`throw`) y una advertencia se **devuelve** (`SolveResult.warnings`). Eso no es un detalle de estilo: es lo que hace imposible que un aviso corte el cálculo. Las advertencias viven en `src/lib/engine/warnings.ts` y hoy son dos —un nudo sin ninguna barra conectada, y la matriz mal condicionada pero resoluble—, las dos puras y testeadas aparte.
+
+**El motor no nombra la fila en el mensaje**, y a propósito: solo conoce ids, y `seed-v5` en pantalla no le dice nada a nadie. La advertencia viaja con `refId` y el adaptador de cada sistema resuelve el nombre contra su tabla (`refName`). El mensaje de error de mecanismo, que es anterior a esta regla, **sí** mete ids en el texto — es una deuda, no un ejemplo a seguir.
+
 ```ts
 // src/app/<sistema>/store/results.ts
 export type Armaduras2DResults =
@@ -31,6 +44,7 @@ Esto lo fijó **U3** (2026-08-13, ver [`armaduras-2d-cierre.md`](./armaduras-2d-
 | Estado | Dónde se dice | Por qué ahí |
 |---|---|---|
 | **Error de datos** (nudo duplicado, barra a nudo inexistente, longitud cero) | Alerta roja **arriba**, entre las tablas y los resultados | Se atribuye a una fila: su lugar es junto a la tabla que hay que corregir |
+| **Advertencia** (nudo sin barras, matriz mal condicionada) | Alerta ámbar **arriba**, en el mismo lugar que los errores… y **los resultados siguen abajo, enteros** | Es sobre el modelo, así que va donde se lo corrige. Que no bloquee es la regla de arriba |
 | **Mecanismo** (`Kff` singular) | **Adentro del panel de resultados**, con su explicación y el dibujo del modo | No es un dato mal cargado: es lo que **produjo** el cálculo. Es una salida |
 | **Modelo vacío** (sin nudos o sin barras) | En el lugar de los resultados | No es un error: todavía no hay nada que calcular |
 | **Resuelto** | El acordeón | — |
@@ -42,13 +56,25 @@ Dos reglas que se siguen de eso:
 
 ### Dónde vive cada pieza
 
-- `src/components/custom/errors-panel.tsx` — el tipo `DomainError` y el render de las alertas. **Presentación pura.**
+- `src/components/custom/errors-panel.tsx` — el tipo `DomainIssue` (con `DomainError` como el caso `severity: "error"`) y el render de las alertas, errores y advertencias. **Presentación pura.**
+- `src/lib/engine/warnings.ts` — el tipo `SolveWarning` y los productores. Puros y testeados sin motor.
 - `src/components/custom/no-results.tsx` — el bloque de "no hay resultados, y este es el motivo". También presentación pura.
 - `src/app/<sistema>/components/errors-panel.tsx` — adaptador de ~10 líneas que lee el átomo de *su* sistema y delega.
 - `src/app/armaduras-2d/components/results/mechanism-explanation.tsx` — el diagnóstico con su dibujo. Es de `armaduras-2d` porque necesita la geometría del sistema.
 - `src/lib/engine/mechanism.ts` — `SingularStiffnessError` y el diagnóstico. **Alcanza a los cuatro sistemas**: vive en `System.solve()`.
 
-> Hoy solo `/armaduras-2d` está cableado a `NoResults`. Los otros tres siguen con `return null` — eso es **hilo C**, y hay que preguntar antes de propagar.
+> Hoy solo `/armaduras-2d` está cableado a `NoResults` y a las advertencias. Los otros tres siguen con `return null` y **descartan** `solved.warnings`: el motor las calcula para los cuatro, pero solo un sistema las muestra. Eso es **hilo C**, y hay que preguntar antes de propagar.
+
+### El color de una advertencia: medir la razón de contraste, no la distancia
+
+Al usar por primera vez la variante `warning` —existía desde el fork del `Alert` y **nunca la había usado nadie**— apareció que el token `--warning` era ilegible en tema claro. Y lo interesante es **cómo** apareció, porque corrige el método que este repo venía usando:
+
+- La **distancia RGB** contra el fondo daba **275**, del mismo orden que la del rojo de error (355) y muy por encima de los colores de zona de la partición (61–90). Por ese criterio estaba bien.
+- La **razón de contraste WCAG**, que es la métrica que corresponde a **texto**, daba **2.28:1** — la mitad del 4.5 que pide AA, y por debajo del 3:1 que piden los gráficos.
+
+La distancia RGB sirve para *"¿esta zona se distingue de aquella?"*, que es la pregunta de los bloques de la partición. Para *"¿se puede leer esto?"* la pregunta es otra y la métrica también. `--warning` pasó de `oklch(0.75 0.17 75)` a `oklch(0.56 0.15 75)` en tema claro, que da **4.77**, exactamente el mismo contraste que `--destructive`. El de oscuro no hacía falta tocarlo: ahí da 11.5.
+
+**Alcanza también a los diagramas**: `--warning` es el color de las flechas de reacción (`diagram-2d/force-arrow.tsx`, `moment-arc.tsx`, y el material de la escena 3D). O sea que en tema claro las reacciones de `/armaduras-2d`, `/frame2d` y `/armaduras-3d` **estaban a 2.3:1 y ahora están a 4.7:1**. Se verificó por captura con la sección de la deformada abierta.
 
 ---
 

@@ -8,5 +8,5 @@ import { atomResults } from "../store/results";
 export function ErrorsPanel() {
   const [results] = useAtom(atomResults);
 
-  return <GenericErrorsPanel errors={results.status === "error" ? results.errors : []} />;
+  return <GenericErrorsPanel issues={results.status === "error" ? results.errors : []} />;
 }

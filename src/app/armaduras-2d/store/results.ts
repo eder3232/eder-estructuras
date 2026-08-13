@@ -1,12 +1,16 @@
 import { atom } from "jotai";
-import { SingularStiffnessError, System, TrussElement2D, type SolveResult } from "@/lib/engine";
+import { SingularStiffnessError, System, TrussElement2D, type SolveResult, type SolveWarning } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
-import { atomElements } from "./elements";
+import { atomElements, type ElementRow } from "./elements";
 
-import type { DomainError } from "@/components/custom/errors-panel";
+import type { DomainError, DomainIssue } from "@/components/custom/errors-panel";
 
 export type Armaduras2DResults =
-  | { status: "ok"; solved: SolveResult; nodesById: Map<string, NodeRow> }
+  /**
+   * Hay resultados **y** puede haber advertencias: son dos cosas que conviven.
+   * Un aviso nunca tira los resultados abajo — ver `docs/errores.md`.
+   */
+  | { status: "ok"; solved: SolveResult; warnings: DomainIssue[]; nodesById: Map<string, NodeRow> }
   | { status: "error"; errors: DomainError[]; nodesById: Map<string, NodeRow> }
   /**
    * No hay error: no hay todavía un modelo que resolver. Es un estado del
@@ -19,6 +23,30 @@ export type Armaduras2DResults =
       nodeCount: number;
       nodesById: Map<string, NodeRow>;
     };
+
+/**
+ * Le pone nombre a lo que el motor solo sabe señalar por id.
+ *
+ * El motor no conoce los nombres a propósito —son de la UI, y cambiarlos no
+ * debería recalcular nada—, así que la advertencia viaja con `refId` y el
+ * nombre se resuelve acá, que es donde está la tabla.
+ */
+function toIssues(
+  warnings: SolveWarning[],
+  nodesById: Map<string, NodeRow>,
+  elements: ElementRow[],
+): DomainIssue[] {
+  return warnings.map((warning) => ({
+    ...warning,
+    severity: "warning" as const,
+    refName:
+      warning.source === "node"
+        ? nodesById.get(warning.refId)?.name
+        : warning.source === "element"
+          ? elements.find((e) => e.id === warning.refId)?.name
+          : undefined,
+  }));
+}
 
 export const atomResults = atom<Armaduras2DResults>((get) => {
   const nodes = get(atomNodes);
@@ -50,7 +78,13 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
         displacement: [node.displacementX, node.displacementZ],
       });
     } catch (e) {
-      errors.push({ source: "node", refId: node.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({
+        source: "node",
+        refId: node.id,
+        refName: node.name,
+        severity: "error",
+        message: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
@@ -71,7 +105,13 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
         ),
       );
     } catch (e) {
-      errors.push({ source: "element", refId: element.id, message: e instanceof Error ? e.message : String(e) });
+      errors.push({
+        source: "element",
+        refId: element.id,
+        refName: element.name,
+        severity: "error",
+        message: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
@@ -80,12 +120,14 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
   }
 
   try {
-    return { status: "ok", solved: system.solve(), nodesById };
+    const solved = system.solve();
+    return { status: "ok", solved, warnings: toIssues(solved.warnings, nodesById, elements), nodesById };
   } catch (e) {
     return {
       status: "error",
       errors: [
         {
+          severity: "error",
           source: "element",
           refId: "-",
           message: e instanceof Error ? e.message : String(e),

@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **9 puntos**, ordenados abajo, y el siguiente es **E2**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **8 puntos**, ordenados abajo, y el siguiente es **M1a**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1 y U2. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2 y E2. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -277,6 +277,28 @@ Lo que sí funciona solo, y quedó fijado en un test porque es la lección de la
 
 **162 tests.**
 
+### ✅ E2 · Canal de advertencias
+
+Hasta acá, todo lo que entraba al panel **bloqueaba**. Ahora hay dos severidades que no se mezclan, y la regla que las separa es la que el proyecto original violaba: **una advertencia nunca puede impedir que se muestre un resultado**. El contrato completo está en [`errores.md`](./errores.md); acá va lo de esta sesión.
+
+**Un error se tira, una advertencia se devuelve.** No es estilo: es lo que hace *imposible* que un aviso corte el cálculo. `SolveResult` gana `warnings`, y viven en `src/lib/engine/warnings.ts`, puras y testeadas aparte. Hoy hay dos:
+
+- **Nudo sin ninguna barra conectada.** Si está libre no llega hasta acá —sus grados de libertad no tienen rigidez, así que el diagnóstico de mecanismo lo rechaza antes y con un mensaje mucho mejor—. Lo que sí llega es el nudo suelto **y restringido**: no rompe nada, pero ocupa dos filas de todas las matrices para no decir nada.
+- **Matriz mal condicionada pero resoluble.** El número de condición ya se calculaba para el control de mecanismo, así que esto es gratis: entre 10⁸ (`CONDITION_WARNING`) y 10¹² (`CONDITION_LIMIT`) el cálculo sale pero con la mitad de los dígitos perdidos.
+
+**El motor no nombra la fila en el mensaje**, a propósito: solo conoce ids, y `seed-v5` en pantalla no le dice nada a nadie. La advertencia viaja con `refId` y el adaptador resuelve el nombre. (El mensaje de mecanismo, que es anterior, **sí** mete ids en el texto: es deuda, no ejemplo.)
+
+**Alcanza al motor de los cuatro sistemas** —`System.solve()` las calcula siempre— pero **solo `/armaduras-2d` las muestra**: los otros tres descartan `solved.warnings`. Eso es hilo C.
+
+**Y apareció algo que corrige el método de verificación de este repo.** La variante `warning` del `Alert` existía desde el fork y **nunca la había usado nadie**; al estrenarla, el token `--warning` resultó ilegible en tema claro:
+
+- **Distancia RGB** contra el fondo: **275**, del mismo orden que la del rojo de error (355). Por ese criterio, bien.
+- **Razón de contraste WCAG**, que es la métrica que corresponde a *texto*: **2.28:1**, la mitad del 4.5 que pide AA.
+
+La distancia RGB responde *"¿esta zona se distingue de aquella?"* —la pregunta de los bloques de la partición— y no *"¿se puede leer esto?"*. `--warning` pasó a `oklch(0.56 0.15 75)` en claro, que da **4.77**, el mismo contraste que `--destructive`. **Alcanza también a las flechas de reacción** de los tres sistemas con diagrama, que en tema claro estaban a 2.3:1 y ahora están a 4.7:1 — verificado por captura con la sección de la deformada abierta.
+
+**169 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -290,9 +312,9 @@ Lo que sí funciona solo, y quedó fijado en un test porque es la lección de la
 
 | Bloque | Puntos |
 |---|---|
-| Orden de los grados de libertad | 1 · **E2** — 2 · **M1a** — 3 · **M1b** |
-| Lo que se lee | 4 · **U5** — 5 · **N4** — 6 · **N3** — 7 · **N5** |
-| Estado persistente | 8 · **N1** — 9 · **N2** |
+| Orden de los grados de libertad | 1 · **M1a** — 2 · **M1b** |
+| Lo que se lee | 3 · **U5** — 4 · **N4** — 5 · **N3** — 6 · **N5** |
+| Estado persistente | 7 · **N1** — 8 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -304,13 +326,7 @@ Lo que sí funciona solo, y quedó fijado en un test porque es la lección de la
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · E2 · Canal de advertencias ⬅️ **acá se retoma**
-
-`DomainError` gana `severity`, y el panel separa **lo que bloquea de lo que no**. Hoy todo lo que entra bloquea, y ya hay casos que no deberían: un nudo sin ninguna barra conectada, un modelo mal condicionado pero resoluble, una barra de longitud casi nula.
-
-Lo importante es que un resultado `ok` **pueda traer advertencias**: se calcula **y** se avisa. Que un `warning` haga desaparecer los resultados es exactamente la trampa del original, explicada en [`errores.md`](./errores.md). `ui-custom/alert.tsx` ya tiene las variantes `warning` e `info`, sin usar.
-
-### 2 · M1a · ¿Los grados de libertad restringidos van arriba?
+### 1 · M1a · ¿Los grados de libertad restringidos van arriba? ⬅️ **acá se retoma**
 
 Existe porque **algunos profesores ensamblan la matriz global con los restringidos arriba y otros abajo**: matemáticamente da lo mismo, pero al que recién aprende lo confunde. El checkbox hace que la pantalla se parezca al pizarrón del que enseña.
 
@@ -321,35 +337,35 @@ Existe porque **algunos profesores ensamblan la matriz global con los restringid
 
 **Verificación que vale la pena**: con los restringidos arriba, desplazamientos, reacciones y fuerzas internas tienen que dar **exactamente lo mismo**. Es un invariante fuerte y barato de fijar en un test.
 
-### 3 · M1b · Numeración del alumno
+### 2 · M1b · Numeración del alumno
 
 Existe porque **el profesor a veces numera los DOF de una forma rara a propósito**, para ver si el alumno entendió el método. `NodeRow` gana la numeración por eje (es parte del modelo, decisión 2) y las columnas aparecen en el grupo que U1 dejó reservado.
 
 **La semántica es la del original y es lo que la hace valiosa**: el número es una **sugerencia, no una orden**. Se usa como criterio de orden **dentro de cada grupo** (restringidos / libres); si la numeración pedida mezcla los grupos se respeta lo que se pueda y **se avisa por el canal de E2**, explicando por qué. Ese aviso es la parte pedagógica.
 
-### 4 · U5 · Unidades rotuladas
+### 3 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 5 · N4 · Vincular matriz ↔ modelo
+### 4 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
 **Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
 
-### 6 · N3 · Vincular tabla ↔ diagrama
+### 5 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-### 7 · N5 · Verificación de equilibrio
+### 6 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 8 · N1 · Persistencia en `localStorage`
+### 7 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 9 · N2 · Ejemplos precargados
+### 8 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 

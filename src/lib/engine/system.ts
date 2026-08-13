@@ -1,6 +1,8 @@
 import { add, inv, multiply, subtract, zeros } from "mathjs";
 import { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, zeroStiffnessRows } from "./mechanism";
 import type { MechanismDiagnosis, MechanismDof } from "./mechanism";
+import { illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
+import type { SolveWarning } from "./warnings";
 import type { Element } from "./element";
 import type { Node } from "./node";
 
@@ -44,6 +46,12 @@ export interface SolveResult {
   reactions: Map<string, number[]>;
   internalForces: Map<string, unknown>;
   assembly: AssemblyResult;
+  /**
+   * Lo que hay para decir sobre **estos** resultados, que existen. Nunca impide
+   * mostrarlos: si algo tiene que impedirlo es un error y se tira. Ver
+   * `warnings.ts` y `docs/errores.md`.
+   */
+  warnings: SolveWarning[];
 }
 
 interface DofIndex {
@@ -204,6 +212,10 @@ export class System {
   solve(): SolveResult {
     const dofIndex = this.buildDOFOrder();
     const { k, f0, steps } = this.assembleGlobal(dofIndex);
+    const warnings: SolveWarning[] = unconnectedNodeWarnings(
+      [...this.nodes.keys()],
+      [...this.elements.values()],
+    );
 
     const nodesInOrder = [...this.nodes.values()];
     const t = nodesInOrder.length * this.dofPerNode;
@@ -261,9 +273,15 @@ export class System {
       // El segundo mira **la inversa que salió**: si el número de condición se
       // dispara, esos desplazamientos no tienen ningún dígito que valga. Es el
       // control que atrapa el mecanismo que `inv` deja pasar.
-      if (conditionEstimate(kff, inverse) > CONDITION_LIMIT) {
+      const condition = conditionEstimate(kff, inverse);
+      if (condition > CONDITION_LIMIT) {
         throw new SingularStiffnessError(this.diagnoseMechanism(kff, free, dofIndex));
       }
+
+      // Entre "sano" y "es un mecanismo" hay una franja donde el cálculo sale
+      // pero con la mitad de los dígitos perdidos. Eso no se rechaza: se avisa.
+      const illConditioned = illConditionedWarning(condition);
+      if (illConditioned) warnings.push(illConditioned);
     }
 
     const krfUf = free.length > 0 ? (multiply(krf, uf) as number[][]) : restrained.map(() => [0]);
@@ -320,6 +338,7 @@ export class System {
       reactions,
       internalForces,
       assembly: { dofOrder, globalStiffness: k, steps, partition },
+      warnings,
     };
   }
 }
