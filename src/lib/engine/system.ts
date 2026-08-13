@@ -1,4 +1,6 @@
 import { add, inv, multiply, subtract, zeros } from "mathjs";
+import { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, zeroStiffnessRows } from "./mechanism";
+import type { MechanismDiagnosis, MechanismDof } from "./mechanism";
 import type { Element } from "./element";
 import type { Node } from "./node";
 
@@ -179,6 +181,26 @@ export class System {
     return indices.map((i) => vector[i]);
   }
 
+  /**
+   * Traduce el diagnóstico de `mechanism.ts` —que trabaja con índices de la
+   * submatriz libre— a nudos y grados de libertad, que es lo único que la UI
+   * puede dibujar.
+   */
+  private diagnoseMechanism(kff: number[][], free: number[], dofIndex: DofIndex): MechanismDiagnosis {
+    const byGlobalIndex = new Map<number, MechanismDof>();
+    for (const [nodeId, indices] of dofIndex.byNode) {
+      indices.forEach((globalIndex, localDof) => byGlobalIndex.set(globalIndex, { nodeId, localDof }));
+    }
+    const dofAt = (freeIndex: number) => byGlobalIndex.get(free[freeIndex])!;
+
+    const mode = nullMode(kff);
+
+    return {
+      loose: zeroStiffnessRows(kff).map(dofAt),
+      mode: mode ? mode.map((value, i) => ({ ...dofAt(i), value })) : null,
+    };
+  }
+
   solve(): SolveResult {
     const dofIndex = this.buildDOFOrder();
     const { k, f0, steps } = this.assembleGlobal(dofIndex);
@@ -215,7 +237,33 @@ export class System {
     if (free.length > 0) {
       const kfrUr = restrained.length > 0 ? (multiply(kfr, ur) as number[][]) : free.map(() => [0]);
       const netFf = subtract(ff, kfrUr) as number[][];
-      uf = multiply(inv(kff), netFf) as number[][];
+
+      // **No alcanza con esperar a que `inv` falle.** mathjs solo tira error si
+      // el determinante da exactamente cero, y una estructura que es un
+      // mecanismo suele dar 10⁻¹⁰ por redondeo: ahí devuelve una "inversa" y el
+      // sistema entero se resuelve con números sin ningún sentido, sin avisar.
+      // Se comprobó con una armadura sin ningún apoyo horizontal.
+      //
+      // Por eso hay dos controles. El primero es exacto y barato: una fila nula
+      // es un grado de libertad al que no se opone nada.
+      if (zeroStiffnessRows(kff).length > 0) {
+        throw new SingularStiffnessError(this.diagnoseMechanism(kff, free, dofIndex));
+      }
+
+      let inverse: number[][];
+      try {
+        inverse = inv(kff) as number[][];
+      } catch {
+        throw new SingularStiffnessError(this.diagnoseMechanism(kff, free, dofIndex));
+      }
+      uf = multiply(inverse, netFf) as number[][];
+
+      // El segundo mira **la inversa que salió**: si el número de condición se
+      // dispara, esos desplazamientos no tienen ningún dígito que valga. Es el
+      // control que atrapa el mecanismo que `inv` deja pasar.
+      if (conditionEstimate(kff, inverse) > CONDITION_LIMIT) {
+        throw new SingularStiffnessError(this.diagnoseMechanism(kff, free, dofIndex));
+      }
     }
 
     const krfUf = free.length > 0 ? (multiply(krf, uf) as number[][]) : restrained.map(() => [0]);

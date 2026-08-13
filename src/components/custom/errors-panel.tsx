@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 
+import type { MechanismDiagnosis } from "@/lib/engine";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui-custom/alert";
 
 /**
@@ -11,6 +12,12 @@ export interface DomainError {
   source: "node" | "element";
   refId: string;
   message: string;
+  /**
+   * Presente solo cuando el sistema no se pudo resolver porque la estructura es
+   * un mecanismo. Lo dibuja el panel de cada sistema —hace falta la geometría,
+   * que acá no está—; este componente solo lo transporta.
+   */
+  mechanism?: MechanismDiagnosis;
 }
 
 /**

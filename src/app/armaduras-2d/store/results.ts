@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import { System, TrussElement2D, type SolveResult } from "@/lib/engine";
+import { SingularStiffnessError, System, TrussElement2D, type SolveResult } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
 import { atomElements } from "./elements";
 
@@ -60,7 +60,16 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
   } catch (e) {
     return {
       status: "error",
-      errors: [{ source: "element", refId: "-", message: e instanceof Error ? e.message : String(e) }],
+      errors: [
+        {
+          source: "element",
+          refId: "-",
+          message: e instanceof Error ? e.message : String(e),
+          // El motor no solo dice que no pudo: dice **por qué** y cómo se mueve
+          // la estructura. Eso se lleva a la UI para poder dibujarlo.
+          mechanism: e instanceof SingularStiffnessError ? e.diagnosis : undefined,
+        },
+      ],
       nodesById,
     };
   }

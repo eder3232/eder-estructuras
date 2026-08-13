@@ -1,6 +1,6 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12.** Hechos y commiteados: S1, S3, el entorno DOM para tests de componentes, D6 + U4 y D10. Quedan **10 puntos**, pendientes y ordenados abajo.
+> **Estado: en curso desde el 2026-08-12.** Hechos y commiteados: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario y D1. Quedan **9 puntos**, pendientes y ordenados abajo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -147,45 +147,59 @@ No hay cálculo nuevo: `unitDisplacementState()` (`src/lib/engine/unit-displacem
 
 `DeformedDiagram` ganó además `scale` y `legend`, porque el default de 50 sirve para desplazamientos de 10⁻³ y acá el desplazamiento **es 1**. Los tres props son aditivos, así que los otros tres sistemas no cambian.
 
+### ✅ D1 ampliado · El error de matriz singular, convertido en lección
+
+Reemplaza al punto que decía "traducir el mensaje de mathjs". Que `Kff` no se pueda invertir **no es un problema numérico**: significa que la estructura es un mecanismo, o sea que puede moverse sin deformarse — y ese es el error más común del principiante. Ahora la app lo dice en castellano, **nombra el nudo y el eje** que quedaron sueltos, y **dibuja el movimiento**: la estructura desplazada sobre la original, sin que ninguna barra cambie de longitud.
+
+**Y apareció un bug de fondo que no tenía nada que ver con el mensaje.** Se armó una armadura sin ningún apoyo horizontal —un mecanismo de manual— y la página **la resolvió igual, sin avisar**: `inv` de mathjs solo tira error si el determinante da exactamente cero, y por redondeo daba 10⁻¹⁰. O sea que devolvía una "inversa" con números enormes y todo el panel de resultados mostraba valores sin sentido, en silencio. Eso estaba pasando en `main` desde siempre.
+
+El diagnóstico terminó con tres controles, y el orden importa:
+
+1. **Filas nulas de `Kff`** — exacto y barato. Es el caso más común: un nudo agregado y no conectado, o uno al que solo llegan barras paralelas.
+2. **Número de condición** (`‖K‖·‖K⁻¹‖`) contra un límite de 10¹². Una armadura sana anda en 10²–10⁵; un mecanismo se dispara a 10¹⁶. Es el control que atrapa lo que `inv` deja pasar.
+3. El error de `inv`, que sigue ahí para el caso exacto.
+
+**Una idea que parecía obvia y no sirve**, anotada para que nadie la reintente: comprobar que `Kff · Uf` reproduce el término independiente. El error de esa solución vive en la dirección del modo nulo, donde `Kff · u = 0` por definición, así que la ecuación se cumple igual de bien. Se implementó, se probó y no detectaba nada.
+
+El modo de movimiento sale del autovector del autovalor nulo (`eigs` de mathjs, que ya era dependencia), normalizado por su mayor componente para poder dibujarlo tal cual. Si no converge, el diagnóstico sigue con el texto y sin el dibujo.
+
+**Alcanza a los cuatro sistemas**, que era el argumento original de D1: vive en `System.solve()`.
+
 ## Pendiente, en orden
 
-### 1 · D1 · El error de matriz singular, en inglés ⬅️ **acá se retoma**
-
-`System.solve()` deja pasar *"Cannot calculate inverse, determinant is zero"* de mathjs cuando `Kff` no tiene inversa — que es el caso **normal** de agregar un nudo antes de conectarlo. Un solo lugar (`src/lib/engine/system.ts`) y alcanza a los cuatro sistemas gratis.
-
-### 2 · U3 · Estado vacío del panel de resultados
+### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**
 
 `ResultsPanel` devuelve `null` si hay error, y queda el título "Resultados" con el selector de decimales al lado y nada debajo. **Decisión abierta**: mensaje en el lugar de los resultados, o esconder la sección entera (más limpio, pero hace saltar el layout). Dato útil: `ui/empty.tsx` ya está instalado.
 
-### 3 · U1 · Encabezados agrupados en la tabla de nudos
+### 2 · U1 · Encabezados agrupados en la tabla de nudos
 
 Hoy son nueve columnas planas (`node-table.tsx`): "Fuerza X", "Desplaz. X"… El original agrupaba `Coordenadas` / `Fuerza` / `Desplazamiento` / `Restringido` en dos niveles con `colSpan`. Al agrupar la tabla se angosta bastante: revisar en la misma pasada si las dos columnas de restricción siguen como checkbox suelto o se compactan.
 
-### 4 · U2 · Combobox buscable en Desde/Hacia
+### 3 · U2 · Combobox buscable en Desde/Hacia
 
 Hoy es un `Select` plano. `cmdk` ya está en dependencias y `ui/combobox.tsx` y `ui/command.tsx` ya están instalados, así que es directo. Sumar el rechazo de **"Desde = Hacia"**, que hoy solo detecta el motor como longitud cero. Con 4 nudos el `Select` está bien; el problema aparece a los 15.
 
-### 5 · U5 · Unidades rotuladas
+### 4 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 6 · N4 · Vincular matriz ↔ modelo
+### 5 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
-### 7 · N5 · Verificación de equilibrio
+### 6 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 8 · N3 · Vincular tabla ↔ diagrama
+### 7 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Decisión abierta**: dónde vive el estado de resaltado (átomo por sistema o contexto local). Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien — y N4 va antes justamente para que ese mecanismo ya esté decidido cuando llegue acá.
 
-### 9 · N1 · Persistencia en `localStorage`
+### 8 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 10 · N2 · Ejemplos precargados
+### 9 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 

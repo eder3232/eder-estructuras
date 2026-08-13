@@ -9,6 +9,8 @@ export type {
   DofOrderEntry,
   PartitionResult,
 } from "./system";
+export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, zeroStiffnessRows } from "./mechanism";
+export type { MechanismDiagnosis, MechanismDof } from "./mechanism";
 export { unitDisplacementState } from "./unit-displacement";
 export type { UnitDisplacementState, UnitDisplacementForce } from "./unit-displacement";
 export { TrussElement2D } from "./trusses-2d/truss-element-2d";
