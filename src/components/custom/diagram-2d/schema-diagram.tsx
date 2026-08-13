@@ -1,4 +1,5 @@
 import { computeUnitSize } from "./unit-scale";
+import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
 import { SupportIcon } from "./support-icon";
 import type { DiagramElement, DiagramForce, DiagramNode, DiagramSupport } from "./types";
@@ -35,15 +36,15 @@ export function SchemaDiagram({ nodes, elements, supports, forces }: SchemaDiagr
           return (
             <g key={element.id}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
-              <text
+              <DiagramLabel
                 x={labelX}
                 y={labelY - unitSize * 0.4}
-                fontSize={unitSize}
-                textAnchor="middle"
-                className="fill-foreground stroke-none"
+                unitSize={unitSize}
+                baseline="auto"
+                className="fill-foreground"
               >
                 {element.name}
-              </text>
+              </DiagramLabel>
             </g>
           );
         })}
@@ -54,14 +55,16 @@ export function SchemaDiagram({ nodes, elements, supports, forces }: SchemaDiagr
         return (
           <g key={node.id}>
             <circle cx={x} cy={y} r={nodeRadius} className="fill-primary" />
-            <text
+            <DiagramLabel
               x={x + nodeRadius * 1.6}
               y={y - nodeRadius * 1.6}
-              fontSize={unitSize}
-              className="fill-primary stroke-none"
+              unitSize={unitSize}
+              anchor="start"
+              baseline="auto"
+              className="fill-primary"
             >
               {node.name}
-            </text>
+            </DiagramLabel>
           </g>
         );
       })}

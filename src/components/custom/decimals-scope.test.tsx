@@ -120,6 +120,29 @@ describe("ScopeDecimalsStepper", () => {
 });
 
 describe("ScopeDecimalsControl", () => {
+  it("fija la sección desde el desplegable, y el trigger pasa de «Auto» a «Fijo»", async () => {
+    const user = userEvent.setup();
+    renderScopes(
+      <DecimalsScope id="bloque">
+        <ScopeDecimalsControl label="Decimales de la sección" />
+        <Table id="auto" />
+      </DecimalsScope>,
+    );
+
+    const trigger = () => screen.getByRole("combobox");
+    expect(trigger().textContent).toContain("Auto (4)");
+
+    await user.click(trigger());
+    await user.click(await screen.findByRole("option", { name: "2" }));
+
+    // El estado `Fijo (n)` del trigger es justo lo que la verificación visual
+    // no había podido mirar: para verlo en una captura hay que sembrar el átomo
+    // a mano, porque headless no abre un desplegable.
+    expect(trigger().textContent).toContain("Fijo (2)");
+    expect(shown("auto")).toBe("2");
+  });
+
+
   it("«Restablecer» arranca deshabilitado y devuelve a automático la sección y sus tablas", async () => {
     const user = userEvent.setup();
     renderScopes(

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
+import { useDecimals } from "@/components/custom/decimals-scope";
 import { Slider } from "@/components/ui/slider";
+import { axialLabelPoint } from "./axial-label";
+import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
 import { computeUnitSize } from "./unit-scale";
 import type { DiagramElement, DiagramForce, DiagramNode } from "./types";
@@ -21,13 +24,27 @@ interface DeformedDiagramProps {
 
 const ZERO_THRESHOLD = 1e-6;
 
-function stateClassName(force: number | undefined): string {
-  if (force === undefined || Math.abs(force) < ZERO_THRESHOLD) return "stroke-muted-foreground";
-  return force > 0 ? "stroke-emerald-500" : "stroke-destructive";
+/** Tracción, compresión o barra descargada — el mismo criterio para la barra y para su número. */
+function state(force: number | undefined): "zero" | "tension" | "compression" {
+  if (force === undefined || Math.abs(force) < ZERO_THRESHOLD) return "zero";
+  return force > 0 ? "tension" : "compression";
 }
+
+const STROKE_CLASS = {
+  zero: "stroke-muted-foreground",
+  tension: "stroke-emerald-500",
+  compression: "stroke-destructive",
+} as const;
+
+const FILL_CLASS = {
+  zero: "fill-muted-foreground",
+  tension: "fill-emerald-500",
+  compression: "fill-destructive",
+} as const;
 
 export function DeformedDiagram({ nodes, elements, displacements, reactions, elementForceValue }: DeformedDiagramProps) {
   const [scaleFactor, setScaleFactor] = useState(50);
+  const decimals = useDecimals();
 
   if (nodes.length === 0) return null;
 
@@ -44,6 +61,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
   const viewBox = computeViewBox([...originalPoints, ...displacedPoints]);
   const unitSize = computeUnitSize(viewBox);
   const nodeRadius = unitSize * 0.3;
+  const center = { x: viewBox.minX + viewBox.width / 2, y: viewBox.minY + viewBox.height / 2 };
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,12 +103,33 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                className={stateClassName(elementForceValue.get(element.id))}
+                className={STROKE_CLASS[state(elementForceValue.get(element.id))]}
                 vectorEffect="non-scaling-stroke"
               />
             );
           })}
         </g>
+
+        {elements.map((element) => {
+          const from = displacedById.get(element.fromNodeId);
+          const to = displacedById.get(element.toNodeId);
+          if (!from || !to) return null;
+          const force = elementForceValue.get(element.id);
+          if (force === undefined) return null;
+          const { x, y, anchor } = axialLabelPoint(projectPoint(from), projectPoint(to), unitSize, center);
+          return (
+            <DiagramLabel
+              key={element.id}
+              x={x}
+              y={y}
+              unitSize={unitSize}
+              anchor={anchor}
+              className={FILL_CLASS[state(force)]}
+            >
+              {force.toFixed(decimals)}
+            </DiagramLabel>
+          );
+        })}
 
         {[...displacedById.entries()].map(([nodeId, point]) => {
           const { x, y } = projectPoint(point);
@@ -109,7 +148,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
 
       <p className="text-xs text-muted-foreground">
         Línea punteada: forma original. Línea sólida: forma desplazada (escalada). Verde = tracción, rojo =
-        compresión. Flechas: reacciones en los apoyos.
+        compresión. El número sobre cada barra es su fuerza axial. Flechas: reacciones en los apoyos.
       </p>
     </div>
   );

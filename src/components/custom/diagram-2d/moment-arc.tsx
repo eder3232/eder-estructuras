@@ -1,6 +1,7 @@
 "use client";
 
 import { useDecimals } from "@/components/custom/decimals-scope";
+import { DiagramLabel } from "./diagram-label";
 import { projectPoint } from "./viewbox";
 
 interface MomentArcProps {
@@ -69,16 +70,20 @@ export function MomentArc({ x, z, value, unitSize, variant }: MomentArcProps) {
         points={`${tip.x},${tip.y} ${base.x + perp.x * headSize},${base.y + perp.y * headSize} ${base.x - perp.x * headSize},${base.y - perp.y * headSize}`}
         className="stroke-none"
       />
-      <text
-        x={cx}
-        y={cy - radius - unitSize * 0.7}
-        fontSize={unitSize}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="stroke-none"
+      {/* Arriba y a la izquierda del arco, no centrado sobre el nudo.
+          Un empotramiento tiene las tres reacciones en el mismo nudo, y las
+          etiquetas de las flechas rectas salen para el otro lado (las
+          verticales al costado derecho de su punta, las horizontales por
+          debajo de su eje). Centrado sobre el nudo, el momento se superponía
+          con la reacción vertical — visible en los dos apoyos de `/frame2d`. */}
+      <DiagramLabel
+        x={cx - radius - unitSize * 0.35}
+        y={cy - radius - unitSize * 0.35}
+        unitSize={unitSize}
+        anchor="end"
       >
         {value.toFixed(decimals)}
-      </text>
+      </DiagramLabel>
     </g>
   );
 }

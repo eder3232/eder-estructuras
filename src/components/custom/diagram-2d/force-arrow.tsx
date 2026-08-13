@@ -1,6 +1,7 @@
 "use client";
 
 import { useDecimals } from "@/components/custom/decimals-scope";
+import { DiagramLabel } from "./diagram-label";
 import { projectPoint } from "./viewbox";
 
 interface ForceArrowProps {
@@ -36,8 +37,33 @@ export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowP
   const baseX = headX - dir.x * headSize * 1.6;
   const baseY = headY - dir.y * headSize * 1.6;
 
-  const labelX = tailX + dir.x * (length + unitSize * 0.6);
-  const labelY = tailY + dir.y * (length + unitSize * 0.6);
+  // La etiqueta nunca se apoya sobre el eje de la flecha: arranca al lado de la
+  // punta y crece hacia afuera.
+  //
+  // Antes iba centrada un poco más allá de la punta, y eso fallaba de dos
+  // maneras a la vez. Centrada, la mitad del número quedaba *detrás* del punto
+  // de anclaje, o sea encima de su propia cabeza de flecha ("4.8000" con la
+  // punta clavada entre el 4 y el 8, en el nudo v3 del esquema semilla). Y
+  // sobre el eje, una flecha vertical apoya el número justo sobre la barra
+  // vertical que sale del nudo, que es el caso más común en una armadura.
+  //
+  // Las horizontales se corren a lo largo de su dirección, se anclan por el
+  // extremo que toca la punta y bajan medio renglón; las verticales se corren
+  // al costado, que es la única salida que las despega de la barra.
+  //
+  // El medio renglón hacia abajo no es cosmético: los nombres de barra del
+  // esquema van *arriba* de su barra (`y - 0.4·unit`), así que una carga
+  // horizontal sobre un cordón —el caso del nudo v3— dejaba el número pegado al
+  // nombre. Debajo del eje no hay nada más compitiendo.
+  const gap = unitSize * 0.55;
+  const label =
+    axis === "x"
+      ? {
+          x: headX + dir.x * gap,
+          y: headY + unitSize * 0.6,
+          anchor: dir.x > 0 ? ("start" as const) : ("end" as const),
+        }
+      : { x: headX + gap, y: headY, anchor: "start" as const };
 
   return (
     <g className={COLOR_CLASS[variant]}>
@@ -48,16 +74,9 @@ export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowP
         points={`${headX},${headY} ${baseX + perp.x * headSize},${baseY + perp.y * headSize} ${baseX - perp.x * headSize},${baseY - perp.y * headSize}`}
         className="stroke-none"
       />
-      <text
-        x={labelX}
-        y={labelY}
-        fontSize={unitSize}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="stroke-none"
-      >
+      <DiagramLabel x={label.x} y={label.y} unitSize={unitSize} anchor={label.anchor}>
         {value.toFixed(decimals)}
-      </text>
+      </DiagramLabel>
     </g>
   );
 }
