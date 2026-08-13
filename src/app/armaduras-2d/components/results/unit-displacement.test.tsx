@@ -127,8 +127,10 @@ describe("UnitDisplacement", () => {
       (e) => assembly.globalStiffness[e.globalIndex][v3x.globalIndex] !== 0,
     ).length;
 
-    // El diagrama es el único `svg` del bloque; cada flecha aporta una línea.
-    const svg = screen.getByRole("table").closest("div")?.parentElement?.querySelector("svg");
+    // Se busca por el `viewBox`, que en el diagrama es calculado, y no por la
+    // estructura del DOM: los iconos de lucide también son `svg` (con el suyo
+    // en `0 0 24 24`), así que agregar un botón al bloque rompía el selector.
+    const svg = [...document.querySelectorAll("svg")].find((s) => s.getAttribute("viewBox") !== "0 0 24 24");
     const flechas = [...(svg?.querySelectorAll("polygon") ?? [])];
 
     expect(flechas).toHaveLength(noNulas);

@@ -175,6 +175,18 @@ Está en la matriz global (sección 2) y en `Kff`/`Krr` de la partición. En `Kf
 
 **El color salió mal la primera vez y lo dijo la medición**, no el ojo: `bg-primary/40` encima del color de zona de la partición quedaba a **8/255** del verde de `Kfr` sin resaltar. Con relleno sólido (`bg-primary` + `text-primary-foreground`) la distancia pasa a 58, del mismo orden que las que separan las cuatro zonas del fondo.
 
+### ✅ Animar la deformada
+
+Cuarta idea. Un botón ▷ al lado del slider lleva la deformación de 0 al valor actual en ~0,9 s. Una deformada quieta se lee como una figura; animada se lee como un movimiento, que es lo que en realidad es. Sirve para la forma deformada y también para el desplazamiento unitario.
+
+Tres cosas de la implementación:
+
+- **El bucle va con `requestAnimationFrame` desde el handler del click**, nunca con `setState` dentro de un `useEffect`: eso es la regla `react-hooks/set-state-in-effect`, y el repo usa "2 errores de lint preexistentes" como referencia de que no hay ninguno nuevo. El único efecto que hay solo cancela el cuadro pendiente al desmontar.
+- **Respeta `prefers-reduced-motion`**: quien pidió menos movimiento no quiere una animación, así que salta al valor final.
+- **Es lo único de las cinco que no se puede verificar mirando**: headless saca cuadros quietos. El test toma el control de `requestAnimationFrame` en vez de esperar a que corra solo — si no, pasaría igual sin animar, porque la animación empieza y termina en el mismo número.
+
+Y rompió un test ajeno, que vale como aviso: el del desplazamiento unitario buscaba el `svg` del diagrama recorriendo el DOM, y el botón nuevo trae **su propio `svg`** (el icono de lucide). Ahora lo busca por el `viewBox`, que en un diagrama es calculado y en un icono es siempre `0 0 24 24`.
+
 ## Pendiente, en orden
 
 ### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**

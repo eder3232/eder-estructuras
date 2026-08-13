@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Play } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { useDecimals } from "@/components/custom/decimals-scope";
 import { Slider } from "@/components/ui/slider";
@@ -92,6 +95,13 @@ function DeformedDiagramBody({
 }: DeformedDiagramProps) {
   const { initial, max, step } = { ...DEFAULT_SCALE, ...scale };
   const [scaleFactor, setScaleFactor] = useState(initial);
+  const animation = useRef<number | null>(null);
+
+  // Solo limpieza: el efecto no toca estado, así que no roza la regla
+  // `react-hooks/set-state-in-effect`.
+  useEffect(() => () => {
+    if (animation.current !== null) cancelAnimationFrame(animation.current);
+  }, []);
   const decimals = useDecimals();
   const numberScale = useDiagramScale();
 
@@ -112,9 +122,53 @@ function DeformedDiagramBody({
   const nodeRadius = unitSize * 0.3;
   const center = { x: viewBox.minX + viewBox.width / 2, y: viewBox.minY + viewBox.height / 2 };
 
+  /**
+   * Lleva la deformación de 0 al valor actual.
+   *
+   * Una deformada dibujada quieta se lee como una figura; animada se lee como
+   * un movimiento, que es lo que en realidad es. Sirve igual para la forma
+   * deformada real y para el desplazamiento unitario del explorador de columnas.
+   *
+   * El bucle va con `requestAnimationFrame` desde el handler del click y
+   * **nunca** con `setState` dentro de un `useEffect`: eso es exactamente la
+   * regla `react-hooks/set-state-in-effect`, y este repo tiene 2 errores de lint
+   * preexistentes que se usan como referencia de "no hay ninguno nuevo".
+   */
+  function play() {
+    const target = scaleFactor || initial;
+    if (animation.current !== null) cancelAnimationFrame(animation.current);
+
+    // Quien pidió menos movimiento no quiere una animación: se salta al final.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setScaleFactor(target);
+      return;
+    }
+
+    const start = performance.now();
+    const frame = (now: number) => {
+      const t = Math.min(1, (now - start) / 900);
+      const eased = 1 - (1 - t) ** 3;
+      setScaleFactor(Number((target * eased).toFixed(2)));
+      animation.current = t < 1 ? requestAnimationFrame(frame) : null;
+    };
+
+    setScaleFactor(0);
+    animation.current = requestAnimationFrame(frame);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 text-sm">
+        <Button
+          size="icon"
+          variant="outline"
+          className="size-7"
+          onClick={play}
+          aria-label="Animar la deformación desde cero"
+          title="Animar la deformación desde cero"
+        >
+          <Play className="size-3.5" />
+        </Button>
         <span className="tabular-nums">Factor de escala: {scaleFactor}</span>
         <Slider
           value={[scaleFactor]}
