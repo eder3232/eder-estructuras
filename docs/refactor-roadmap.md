@@ -171,7 +171,7 @@ Todo lo que hace falta para seguir está en esta sección. Última actualizació
 
 > **Antes que nada: hay una lista de trabajo activa.** El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**, y todo lo pendiente de ese sistema —que estaba repartido entre las deudas de acá abajo y los grupos U y N de [`pendientes-comparacion.md`](./pendientes-comparacion.md)— se juntó y se ordenó en **[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)**. Ese documento es de dónde se sigue. Esta sección es el contexto.
 >
-> **Quedan 9 puntos** y el siguiente es **U3** (estado vacío del panel de resultados). Ya están hechos: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario, D1, la reciprocidad, la animación de la deformada, el modo práctica y la sección de estabilidad.
+> **Quedan 8 puntos** y el siguiente es **U1** (encabezados agrupados en la tabla de nudos). Ya están hechos: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario, D1, la reciprocidad, la animación de la deformada, el modo práctica, la sección de estabilidad y U3.
 
 **Ninguna de las cinco últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
 
@@ -213,6 +213,8 @@ Lo que dejó, ordenado por lo que conviene saber al retomar:
 3. **La página `/estabilidad`**, primera de teoría, con su propia lista de navegación (`theoryLinks`) para no decidir de costado la navegación definitiva (S2).
 4. **Tres módulos nuevos en el motor**, todos puros y testeados: `mechanism.ts` (diagnóstico, núcleo, Fredholm), `factorization.ts` (`LDLᵀ`) y `unit-displacement.ts`.
 5. **`MatrixTable` ganó tres cosas** que llegan a los cuatro sistemas: notación compacta con factor común, etiquetas fijas al scrollear y resaltado de la celda simétrica.
+
+**2026-08-13, segunda parte** — **U3**, el estado vacío del panel de resultados. Lo que conviene saber al retomar: el `ErrorsPanel` se partió en dos, y el **diagnóstico de mecanismo dejó de vivir arriba de las tablas y pasó al panel de resultados** (`armaduras-2d/components/results/mechanism-explanation.tsx`), que es donde corresponde porque no es un dato mal cargado sino una salida del motor. Las alertas rojas siguen arriba, pegadas a las filas que señalan, y el error de mecanismo **se filtra** de ellas para no decir lo mismo dos veces. El detalle está en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md).
 
 **Una decisión del usuario que acota lo que sigue**: `System.solve()` **sigue resolviendo con la inversa**, no con la factorización. Fue explícito —quería riesgo cero para el resto de la app— y la página lo aclara en vez de disimularlo. Que el motor factorice queda como mejora posible, anotada abajo.
 
@@ -317,7 +319,7 @@ Para no re-verificar de cero ni asumir de más.
 **Pasa limpio hoy** (`main`, después del Tren D):
 
 ```
-pnpm test          # 149 tests, 28 archivos (motor, stores, geometría de diagramas y componentes)
+pnpm test          # 155 tests, 29 archivos (motor, stores, geometría de diagramas y componentes)
 npx tsc --noEmit   # sin salida
 pnpm build         # prerrenderiza las 4 rutas + home
 ```
@@ -367,6 +369,12 @@ Dos cosas del método que sirven para la próxima:
 - **Headless no scrollea.** Para ver una matriz *scrolleada* el `#fragmento` no sirve (dos capturas idénticas); lo que funcionó fue **`dir="rtl"` en el contenedor**, que lo hace arrancar en el extremo derecho.
 - **La captura corrigió un texto, no solo un layout**: en la página de estabilidad, el pivote falla en `v3x` y se afirmaba que ahí "no hay nada que se oponga", cuando `v3` está perfectamente sujeto. En un mecanismo global el pivote dice **dónde se agota el cálculo**, no quién lo causó.
 - **Medir siguió ganándole al ojo**: el resaltado de la celda simétrica quedaba a 8/255 del color de zona de la partición — a simple vista, el mismo verde.
+
+**Lo que se miró al cerrar U3** (headless, los cuatro estados del panel de resultados sembrados a mano y revertidos, y los dos temas en el estado de error):
+
+- **La captura encontró algo por quinta sesión seguida**, con los 155 tests, `tsc` y el build en verde: la sección **«Esquema» tenía el mismo agujero** que U3 venía a tapar en los resultados —el diagrama genérico devuelve `null` sin nudos y quedaba el título solo—. Se tapó con el mismo componente.
+- **Medir siguió siendo el método**: el título del bloque queda a 354 (claro) y 277 (oscuro) de distancia RGB del fondo, y su borde punteado da 42 en oscuro contra los 52 del borde de la caja del esquema — el mismo token, la diferencia es el antialias de la línea cortada.
+- Sembrar un estado degenerado se hace igual que un modelo distinto: tocando el valor inicial de `atomNodesBase`/`atomElementsBase` (`[]`, un `filter`, un `map`), capturar y **revertir**.
 
 **Lo que sigue sin mirarse:**
 

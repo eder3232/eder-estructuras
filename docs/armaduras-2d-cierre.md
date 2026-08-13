@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **9 puntos**, ordenados abajo, y el siguiente es **U3**.
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **8 puntos**, ordenados abajo, y el siguiente es **U1**.
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica y la sección de estabilidad. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad y U3. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -213,41 +213,71 @@ Sale de la conversación posterior al diagnóstico del mecanismo: el usuario se�
 - **Control de estabilidad en la sección 3**, justo antes de despejar: los pivotes de la `Kff` cargada, con el veredicto ("los 4 son positivos, así que tiene inversa") y el enlace. Va ahí porque es la pregunta que corresponde hacerse **antes** de invertir.
 - **Veredicto de Fredholm en el mensaje de mecanismo**: hasta ahora decía que la estructura se puede mover, pero no qué pasa con *esta* carga. Ahora distingue los dos casos, que son muy distintos — si la carga empuja en la dirección del movimiento libre **no hay ningún equilibrio posible** (acelera, y eso ya no es estática); si es ortogonal hay equilibrio en infinitas posiciones y **los esfuerzos igual quedan determinados**. Las dos ramas se verificaron en la app sembrando la armadura sin apoyos horizontales, con carga horizontal y sin ella.
 
+### ✅ U3 · Estado vacío del panel de resultados
+
+**La decisión abierta la tomó el usuario**: mensaje en el lugar de los resultados, no esconder la sección. *"No es adecuado que se muestren unos resultados vacíos, hay que dar feedback adecuado de por qué no se pudo calcular."*
+
+Al abrir el código aparecieron **cuatro estados donde este documento contaba uno**, y dos se veían mal:
+
+| Estado | Cómo se llega | Cómo se veía |
+|---|---|---|
+| Sin nudos / sin barras | borrar todas las filas de una tabla | `solve()` **no falla**: devolvía un resultado degenerado y se dibujaban las 5 secciones del acordeón con matrices de 0×0 |
+| Error de datos | borrar un nudo que una barra referencia | alerta roja arriba, nada debajo de «Resultados» |
+| Mecanismo | sacar los apoyos horizontales | explicación completa y dibujo **arriba**, nada debajo de «Resultados» |
+
+**Dónde vive el "por qué", que era la parte a decidir.** El `ErrorsPanel` mezclaba dos cosas de naturaleza distinta y se partió en dos:
+
+- Las **alertas de datos** se atribuyen a una fila, así que se quedan arriba, pegadas a las tablas que hay que corregir.
+- El **diagnóstico de mecanismo bajó al panel de resultados** (`results/mechanism-explanation.tsx`): no es un dato mal cargado, es lo que produjo el cálculo — una salida con forma de lección. Y se **filtra** de las alertas (`errors.filter((e) => !e.mechanism)`), donde salía como "Error en un elemento" atribuido a un `refId: "-"` que no existe. Así el motivo se dice **una sola vez**, y en el lugar donde el usuario fue a buscar el número.
+
+**Tres cosas más que conviene saber:**
+
+1. **El estado vacío se decide en el store, no en el componente** (`status: "empty"`, con `reason`), y **antes** de armar el `System`. El orden cambia una respuesta para mejor: un modelo con nudos y sin barras llegaba a `solve()`, la `Kff` salía toda de ceros y el motor lo reportaba —con razón— como **mecanismo**. Es cierto y es rebuscado: ahora dice que faltan las barras.
+2. **El título de la sección se mudó de `page.tsx` al panel.** Los controles de decimales y notación compacta **dependen del estado** (formatear números no significa nada sin números) y el título no: la sección nunca desaparece, porque irse entera haría saltar el layout justo mientras el usuario corrige el modelo.
+3. **El bloque es genérico** (`custom/no-results.tsx`), como el `ErrorsPanel`: los otros tres sistemas tienen el mismo `return null`. **Solo se cableó `/armaduras-2d`** — propagar es hilo C y hay que preguntar.
+
+**Lo que apareció mirando la captura, quinta sesión seguida**: la sección **«Esquema» tenía exactamente el mismo agujero** un bloque más arriba —el diagrama genérico devuelve `null` sin nudos y quedaba el título solo—. Se tapó con el mismo componente.
+
+**Dos trampas de `ui/empty.tsx`**, que es intocable y hasta hoy no lo usaba nadie:
+
+- **`EmptyTitle` aplica `uppercase`**, la misma familia de trampa que ya costó una vez con KaTeX: nombres de nudo, ejes y símbolos van en la descripción, nunca en el título.
+- **`Empty` trae `border-dashed` pero no `border`**: sin agregarlo, el recuadro punteado no se dibuja.
+
+**Medido, no mirado**, en los dos temas: el título rojo queda a 354 (claro) y 277 (oscuro) de distancia RGB del fondo, y la descripción a 242 y 261 — del mismo orden que los colores de zona de la partición, que andan entre 61 y 90. El borde punteado da 42 en oscuro contra los 52 del borde de la caja del esquema: es el mismo token, la diferencia es el antialias de la línea cortada.
+
+Tests: `results-panel.test.tsx`, seis casos que siembran cada estado con **las acciones del store** —`atomNodes` y `atomElements` son derivados de solo lectura, así que el camino que se ejercita es el del usuario—. **155 en total.**
+
 ## Pendiente, en orden
 
-### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**
-
-`ResultsPanel` devuelve `null` si hay error, y queda el título "Resultados" con el selector de decimales al lado y nada debajo. **Decisión abierta**: mensaje en el lugar de los resultados, o esconder la sección entera (más limpio, pero hace saltar el layout). Dato útil: `ui/empty.tsx` ya está instalado.
-
-### 2 · U1 · Encabezados agrupados en la tabla de nudos
+### 1 · U1 · Encabezados agrupados en la tabla de nudos ⬅️ **acá se retoma**
 
 Hoy son nueve columnas planas (`node-table.tsx`): "Fuerza X", "Desplaz. X"… El original agrupaba `Coordenadas` / `Fuerza` / `Desplazamiento` / `Restringido` en dos niveles con `colSpan`. Al agrupar la tabla se angosta bastante: revisar en la misma pasada si las dos columnas de restricción siguen como checkbox suelto o se compactan.
 
-### 3 · U2 · Combobox buscable en Desde/Hacia
+### 2 · U2 · Combobox buscable en Desde/Hacia
 
 Hoy es un `Select` plano. `cmdk` ya está en dependencias y `ui/combobox.tsx` y `ui/command.tsx` ya están instalados, así que es directo. Sumar el rechazo de **"Desde = Hacia"**, que hoy solo detecta el motor como longitud cero. Con 4 nudos el `Select` está bien; el problema aparece a los 15.
 
-### 4 · U5 · Unidades rotuladas
+### 3 · U5 · Unidades rotuladas
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 5 · N4 · Vincular matriz ↔ modelo
+### 4 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
-### 6 · N5 · Verificación de equilibrio
+### 5 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 7 · N3 · Vincular tabla ↔ diagrama
+### 6 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Decisión abierta**: dónde vive el estado de resaltado (átomo por sistema o contexto local). Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien — y N4 va antes justamente para que ese mecanismo ya esté decidido cuando llegue acá.
 
-### 8 · N1 · Persistencia en `localStorage`
+### 7 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 9 · N2 · Ejemplos precargados
+### 8 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
