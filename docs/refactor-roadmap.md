@@ -167,13 +167,13 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-12, sesión del shell de la app (S1 + S3)**.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-13, sesión pedagógica + estabilidad (8 commits)**.
 
 > **Antes que nada: hay una lista de trabajo activa.** El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**, y todo lo pendiente de ese sistema —que estaba repartido entre las deudas de acá abajo y los grupos U y N de [`pendientes-comparacion.md`](./pendientes-comparacion.md)— se juntó y se ordenó en **[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)**. Ese documento es de dónde se sigue. Esta sección es el contexto.
 >
-> Los dos primeros puntos ya están hechos (**S1** nombre/idioma/metadata y **S3** modo oscuro, commits `b1ee999` y `b9468e0`). El siguiente es el **entorno DOM para tests de componentes**.
+> **Quedan 9 puntos** y el siguiente es **U3** (estado vacío del panel de resultados). Ya están hechos: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario, D1, la reciprocidad, la animación de la deformada, el modo práctica y la sección de estabilidad.
 
-**Ninguna de las cuatro últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
+**Ninguna de las cinco últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
 
 ### Qué pasó en las últimas tres sesiones
 
@@ -201,6 +201,20 @@ Dejó la deuda **D10** y **agrandó mucho la superficie del hilo C** (ver el pun
 Y la primera verificación en oscuro que se hizo nunca (ver el punto 5): los cuatro colores de zona de la partición **funcionan**, y el intento de juzgarlos a ojo **falló** — hubo que medir.
 
 > **La validación del usuario sobre la UI de decimales sigue abierta.** Aprobó los arreglos puntuales que encontró, nunca el conjunto. **Preguntá antes de propagar nada a los otros tres sistemas.**
+
+**2026-08-13** (commits `5a9230d` → `2a75080`, ocho commits) — **la sesión más larga de todas**, y la única que agregó contenido que el proyecto original nunca tuvo. Arrancó cerrando puntos de la lista (D10, matrices que crecen) y terminó en una página de teoría que no estaba en ningún plan.
+
+Salió así: al cerrar el diagnóstico del mecanismo (D1) apareció que **una armadura sin apoyos horizontales se resolvía igual y mostraba números** — `inv` de mathjs solo falla con determinante exactamente cero. El usuario preguntó qué dice la teoría al respecto, dijo que **eso no se lo enseñaron en la cursada**, y pidió una sección que lo explique. De ahí salió `/estabilidad`.
+
+Lo que dejó, ordenado por lo que conviene saber al retomar:
+
+1. **Un bug de fondo que estaba desde siempre**, ya arreglado: el motor ahora rechaza el mecanismo con tres controles (filas nulas, número de condición contra 10¹², y el error de `inv`). Vive en `System.solve()`, así que alcanza a los cuatro sistemas.
+2. **Cinco agregados pedagógicos en `/armaduras-2d`** (el plan completo está en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)): el desplazamiento unitario que muestra qué **es** una columna de `K`, el error singular convertido en lección con el mecanismo dibujado, la reciprocidad `k_ij = k_ji` al pasar el mouse, la animación de la deformada, y un modo práctica con dos ejercicios corregidos.
+3. **La página `/estabilidad`**, primera de teoría, con su propia lista de navegación (`theoryLinks`) para no decidir de costado la navegación definitiva (S2).
+4. **Tres módulos nuevos en el motor**, todos puros y testeados: `mechanism.ts` (diagnóstico, núcleo, Fredholm), `factorization.ts` (`LDLᵀ`) y `unit-displacement.ts`.
+5. **`MatrixTable` ganó tres cosas** que llegan a los cuatro sistemas: notación compacta con factor común, etiquetas fijas al scrollear y resaltado de la celda simétrica.
+
+**Una decisión del usuario que acota lo que sigue**: `System.solve()` **sigue resolviendo con la inversa**, no con la factorización. Fue explícito —quería riesgo cero para el resto de la app— y la página lo aclara en vez de disimularlo. Que el motor factorice queda como mejora posible, anotada abajo.
 
 ### 1. Dónde está parado el proyecto
 
@@ -294,6 +308,7 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D12 | **La ecuación no se adapta al tamaño de sus operandos.** `MatrixEquation` pone los operandos en fila y nunca envuelve, que es lo correcto mientras entren. Con la narrativa propagada a pórticos (`A` de 6×6, 18 columnas numéricas) no entra ni con la página ancha, y en pantalla angosta tampoco entra ninguna. Salida anotada: cuando no entra, la **ecuación simbólica en KaTeX arriba** —que no crece nunca— y los operandos numéricos apilados debajo, uno por bloque; la decisión se toma con las dimensiones, no midiendo el DOM. Es también la respuesta al diseño responsive del panel de resultados | `custom/matrix-equation.tsx` | mediano |
 | D13 | **Matrices grandes como mapa y no como números.** Pasados unos 12–15 DOF, una tabla de números deja de ser legible aunque scrollee bien. Salida anotada: una grilla de celdas chicas coloreadas por signo y magnitud, con los ceros en blanco y el valor exacto al pasar el mouse. Para un sistema grande **muestra más** que los números: se ve la estructura en banda y qué barra aporta dónde. Se apoya en el mecanismo de N4 (vincular matriz ↔ modelo), así que conviene hacerla después de esa | `custom/matrix-table.tsx` | mediano |
 | D14 | **Los pasos de ensamblaje crecen peor que lineal**: es una matriz global (`DOF × DOF`) **por barra**. Con 20 nudos y 40 barras son 40 matrices de 40×40, o sea unas 64.000 celdas en el DOM — deja de ser un problema de ancho y pasa a ser uno de rendimiento. Salida anotada: pasados N elementos, los pasos vienen colapsados y se abren de a uno | `results/assembly-steps.tsx` de cada sistema | mediano |
+| D15 | **El motor resuelve invirtiendo, no factorizando.** `System.solve()` hace `inv(kff)` y comprueba la estabilidad con el número de condición; `ldl()` existe (`src/lib/engine/factorization.ts`, con tests) pero **solo la usan la página `/estabilidad` y el bloque de control de la sección 3**. Factorizar sería más rápido, más estable, y el pivote que falla nombraría el grado de libertad sin necesidad de autovalores. **No es un olvido**: el 2026-08-13 el usuario eligió explícitamente no tocar el solver para no arriesgar regresiones, y la página lo aclara en vez de disimularlo. El riesgo es bajo y medible: las regresiones toleran 1e-8/1e-10 y el cambio de redondeo es ~1e-14 | `src/lib/engine/system.ts` | mediano |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
 
@@ -302,7 +317,7 @@ Para no re-verificar de cero ni asumir de más.
 **Pasa limpio hoy** (`main`, después del Tren D):
 
 ```
-pnpm test          # 81 tests, 19 archivos (motor, stores, geometría de diagramas y componentes)
+pnpm test          # 149 tests, 28 archivos (motor, stores, geometría de diagramas y componentes)
 npx tsc --noEmit   # sin salida
 pnpm build         # prerrenderiza las 4 rutas + home
 ```
@@ -346,7 +361,17 @@ Dos cosas del método que sirven para la próxima:
 - **Para forzar un tema en headless**: agregarle `forcedTheme="light"` o `"dark"` al `<ThemeProvider>` de `layout.tsx`, capturar y **revertir**. Sin eso, headless resuelve `prefers-color-scheme` por su cuenta y no necesariamente da el tema que se quiere ver.
 - **Truco que ahorra tiempo**: para mirar una sección del acordeón, abrir *solo* esa en el `defaultValue`. Queda arriba y se recorta sin buscarla dentro de una captura de 16000 px.
 
+**Lo que se miró el 2026-08-13** (headless, ocho commits): el bloque del desplazamiento unitario, el diagnóstico del mecanismo en sus dos formas (nudo suelto y mecanismo global), el modo práctica en **los dos temas**, y la página `/estabilidad` entera, también en los dos temas. Cuatro cosas del método que sirven para la próxima:
+
+- **Sembrar un modelo distinto y revertirlo** es la técnica que más rindió: una armadura de 8 nudos para ver las matrices grandes, una sin apoyos horizontales para el mecanismo, un nudo sin conectar para el otro caso. El modelo semilla de 4 nudos no muestra ninguno de esos problemas.
+- **Headless no scrollea.** Para ver una matriz *scrolleada* el `#fragmento` no sirve (dos capturas idénticas); lo que funcionó fue **`dir="rtl"` en el contenedor**, que lo hace arrancar en el extremo derecho.
+- **La captura corrigió un texto, no solo un layout**: en la página de estabilidad, el pivote falla en `v3x` y se afirmaba que ahí "no hay nada que se oponga", cuando `v3` está perfectamente sujeto. En un mecanismo global el pivote dice **dónde se agota el cálculo**, no quién lo causó.
+- **Medir siguió ganándole al ojo**: el resaltado de la celda simétrica quedaba a 8/255 del color de zona de la partición — a simple vista, el mismo verde.
+
 **Lo que sigue sin mirarse:**
+
+- **Los otros tres sistemas después de los cambios compartidos de esta sesión.** `MatrixTable` (notación compacta, etiquetas fijas), el contexto de escala de los diagramas y el botón de animar llegan a `/springs`, `/frame2d` y `/armaduras-3d` sin que se los haya vuelto a mirar. Se capturó `/springs` y `/frame2d` **después de la notación compacta** y estaban bien; lo que **no** se volvió a ver es `/frame2d` con el botón de animar y con los números del diagrama ya escalados. Es lo primero a mirar si algo se ve raro ahí.
+- **El diagnóstico del mecanismo en 3D.** `System.solve()` lo aplica a los cuatro sistemas, pero `nullSpace`/`eigs` solo se probó en matrices planas. En 3D los modos de cuerpo rígido son **6**, no 3, y eso nunca se ejercitó.
 
 - ~~**`/frame2d`**, sección "5. Forma deformada"~~ — ✅ **mirada el 2026-08-12**, al cerrar D6 + U4. Valió exactamente lo que prometía: apareció el número de la reacción horizontal **cortado por el borde del lienzo** y el del momento **encima** del de la reacción vertical, en los dos empotramientos. Los dos arreglados. El arco de momento en sí (geometría, sentido de giro) se ve bien.
 - **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
