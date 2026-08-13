@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **5 puntos**, ordenados abajo, y el siguiente es **N4**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **4 puntos**, ordenados abajo, y el siguiente es **N3**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b y U5. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5 y N4. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -351,6 +351,31 @@ Es genérico porque la regla vale para los cuatro sistemas, pero se cableó solo
 
 Se descartó, y queda anotado: un campo libre donde el alumno declare sus unidades y la app las repita. Compra un eco y se desactualiza sola — vuelve a ser un rótulo que puede mentir.
 
+### ✅ N4 · Vincular matriz ↔ modelo
+
+Pasar el mouse por una celda de `K` y ver **de dónde sale ese número**: qué barras aportan ahí y cuánto, con el modelo dibujado al lado. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
+
+**La respuesta es topológica, y esa es la parte que enseña**: una barra aporta a `K[i][j]` **si toca los dos nudos**, el de la fila y el de la columna. Por eso los ceros de la matriz global son pares de nudos que ninguna barra conecta — se ve en el dibujo antes que en la cuenta. El cálculo es puro y vive en `engine/cell-contributions.ts`: la topología decide *quién* aporta, y la diferencia entre dos pasos consecutivos del ensamblaje dice *cuánto*.
+
+**Una barra que toca los dos nudos y aporta `0` se muestra igual**, con el cero y una aclaración. Es el caso que más enseña: una barra horizontal no tiene ninguna rigidez en el eje vertical de sus nudos, que es exactamente el mecanismo que el motor diagnostica cuando ya es tarde.
+
+#### La decisión abierta: contexto, no átomo
+
+`custom/highlight.tsx`, y el razonamiento vale para N3 que lo reusa:
+
+El resaltado es **estado efímero de vista** —nace y muere con el mouse—, no del modelo. La regla del repo es que los átomos guardan datos planos del modelo, que es lo que va a permitir que **N1** los serialice sin inventar nada; meter ahí algo que cambia sesenta veces por segundo ensucia esa regla justo antes de que N1 la necesite intacta. Y hay precedente para las dos formas, sin contradicción: la cascada de decimales vive en un átomo **porque el usuario la configura y espera que dure** (y el acordeón desmonta las tablas al cerrarse), mientras que la escala de los diagramas y el resaltado de la celda simétrica son contexto y estado local, porque son de presentación.
+
+El valor por defecto del contexto es inerte, así que un componente que lo lea sin proveedor —los otros tres sistemas, o un test— funciona igual sin resaltar nada. El proveedor envuelve **la página entera** y no solo los resultados, porque N3 va a querer encender el esquema desde las tablas de entrada.
+
+#### Dos cosas que aparecieron al hacerlo
+
+1. **El dibujo va al lado de la matriz, no se reusa el de arriba.** Cuando el mouse está en una celda de la sección 2, el esquema del encabezado quedó a mil píxeles de scroll: un resaltado que no se mira no existe. `SchemaDiagram` ganó `className` y `highlight`.
+2. **La captura encontró un bug que el markup no deja ver, otra vez la misma familia.** El primer intento resaltaba con `[&_*]:stroke-primary`, y los nudos salieron como **círculos enormes**: un `stroke` sobre el `circle` se dibuja en unidades del modelo, no en píxeles, porque los nudos nunca tuvieron trazo y no llevan `vector-effect`. Es la tercera vez que esta trampa aparece en el repo (los apoyos, y antes el grosor de las barras). El engrosado va **solo a las `line`**.
+
+Y una duplicación que salió de un test que fallaba por la razón correcta: el párrafo de la reciprocidad **también** empezaba con "Pasá el mouse por una celda de K", así que quedaban dos textos seguidos diciendo lo mismo. La instrucción se dice una sola vez.
+
+**191 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -364,8 +389,8 @@ Se descartó, y queda anotado: un campo libre donde el alumno declare sus unidad
 
 | Bloque | Puntos |
 |---|---|
-| Lo que se lee | 1 · **N4** — 2 · **N3** — 3 · **N5** |
-| Estado persistente | 4 · **N1** — 5 · **N2** |
+| Lo que se lee | 1 · **N3** — 2 · **N5** |
+| Estado persistente | 3 · **N1** — 4 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -377,25 +402,19 @@ Se descartó, y queda anotado: un campo libre donde el alumno declare sus unidad
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · N4 · Vincular matriz ↔ modelo ⬅️ **acá se retoma**
+### 1 · N3 · Vincular tabla ↔ diagrama ⬅️ **acá se retoma**
 
-**El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
+Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. **Reusa el mecanismo que N4 dejó decidido**: `custom/highlight.tsx`, un contexto (no un átomo) cuyo proveedor ya envuelve la página entera — así que las tablas de entrada pueden encender el esquema sin mover nada. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-**Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
-
-### 2 · N3 · Vincular tabla ↔ diagrama
-
-Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
-
-### 3 · N5 · Verificación de equilibrio
+### 2 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 4 · N1 · Persistencia en `localStorage`
+### 3 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 5 · N2 · Ejemplos precargados
+### 4 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 

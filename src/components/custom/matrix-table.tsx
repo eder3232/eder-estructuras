@@ -49,6 +49,14 @@ interface MatrixTableProps {
    * necesita ni la condiciona.
    */
   symmetricHighlight?: boolean;
+  /**
+   * Avisa qué celda tiene el mouse encima, o `null` al salir.
+   *
+   * Es el gancho de N4: quien lo use decide qué significa esa celda —qué barras
+   * aportan ahí— y qué se resalta afuera. La tabla no lo sabe ni tiene por qué:
+   * solo dice dónde está el mouse.
+   */
+  onCellHover?: (cell: [number, number] | null) => void;
   className?: string;
 }
 
@@ -61,6 +69,7 @@ export function MatrixTable({
   cellClass,
   stickyLabels,
   symmetricHighlight,
+  onCellHover,
   className,
 }: MatrixTableProps) {
   const decimals = useDecimals();
@@ -129,8 +138,22 @@ export function MatrixTable({
             {row.map((value, j) => (
               <td
                 key={j}
-                onMouseEnter={symmetricHighlight ? () => setHovered([i, j]) : undefined}
-                onMouseLeave={symmetricHighlight ? () => setHovered(null) : undefined}
+                onMouseEnter={
+                  symmetricHighlight || onCellHover
+                    ? () => {
+                        if (symmetricHighlight) setHovered([i, j]);
+                        onCellHover?.([i, j]);
+                      }
+                    : undefined
+                }
+                onMouseLeave={
+                  symmetricHighlight || onCellHover
+                    ? () => {
+                        if (symmetricHighlight) setHovered(null);
+                        onCellHover?.(null);
+                      }
+                    : undefined
+                }
                 className={cn(
                   "border px-2 py-1 text-right tabular-nums",
                   highlighted.has(`${i}-${j}`) && "bg-primary/15 font-semibold",

@@ -196,7 +196,7 @@ function SolvedResults({
                     elements={elements}
                     nodesById={nodesById}
                   />
-                  <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} />
+                  <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} elements={elements} />
                   <UnitDisplacement elements={elements} nodesById={nodesById} assembly={assembly} />
                 </div>
               </DecimalsScope>

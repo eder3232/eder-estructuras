@@ -1,5 +1,6 @@
 "use client";
 
+import { HighlightProvider } from "@/components/custom/highlight";
 import { UnitsNote } from "@/components/custom/units-note";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
@@ -31,41 +32,47 @@ export default function Armaduras2DPage() {
       panel de resultados tienen techo propio. Ancho para los datos, medida de
       lectura para el texto.
     */
-    <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
-      <div className="flex flex-col gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Armaduras 2D</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de la
-            rigidez axial de cada barra según su ángulo.
-          </p>
+    // El proveedor de resaltado envuelve la página entera y no solo los
+    // resultados: N3 va a querer que pasar el mouse por una fila de las tablas
+    // de entrada encienda el nudo o la barra en el esquema, y esas tablas están
+    // acá arriba.
+    <HighlightProvider>
+      <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
+        <div className="flex flex-col gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Armaduras 2D</h1>
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de la
+              rigidez axial de cada barra según su ángulo.
+            </p>
+          </div>
+          {/* Arriba de todo y no al lado de una tabla: la regla vale para lo que
+              se carga **y** para lo que sale, así que no pertenece a ninguna de
+              las dos mitades. */}
+          <UnitsNote />
         </div>
-        {/* Arriba de todo y no al lado de una tabla: la regla vale para lo que
-            se carga **y** para lo que sale, así que no pertenece a ninguna de
-            las dos mitades. */}
-        <UnitsNote />
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Nudos</h2>
+          <NodeTable />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Barras</h2>
+          <ElementTable />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Esquema</h2>
+          <SchemaDiagram />
+        </div>
+
+        <ErrorsPanel />
+
+        {/* El título y los controles de la sección viven adentro del panel: los
+            controles dependen de si hay resultados y el título no. */}
+        <ResultsPanel />
       </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Nudos</h2>
-        <NodeTable />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Barras</h2>
-        <ElementTable />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Esquema</h2>
-        <SchemaDiagram />
-      </div>
-
-      <ErrorsPanel />
-
-      {/* El título y los controles de la sección viven adentro del panel: los
-          controles dependen de si hay resultados y el título no. */}
-      <ResultsPanel />
-    </div>
+    </HighlightProvider>
   );
 }
