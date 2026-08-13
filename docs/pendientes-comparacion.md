@@ -11,7 +11,9 @@ El **2026-08-12** se comparó `/armaduras-2d` contra el `armor2d` del proyecto o
 
 Existe para no volver a descubrirlo dentro de seis meses, y para que cuando le llegue el turno a cada punto la discusión arranque de donde quedó y no de cero.
 
-**Cómo leerlo.** Cada punto tiene un id estable (`S`hell, `M`otor, `U`sabilidad, `N`uevo) y, sobre todo, **la decisión abierta** — que es lo que no se puede reconstruir mirando el código. El *qué falta* casi siempre es obvio; el *por qué no se hizo así nomás*, no.
+**Cómo leerlo.** Cada punto tiene un id estable (`S`hell, `M`otor, `U`sabilidad, `N`uevo, `E`rrores) y, sobre todo, **la decisión abierta** — que es lo que no se puede reconstruir mirando el código. El *qué falta* casi siempre es obvio; el *por qué no se hizo así nomás*, no.
+
+> **Segunda pasada, 2026-08-13.** La comparación original miró **solo `armor2d`**. A pedido del usuario se barrió después el resto del proyecto v1 —el sistema de errores completo, `shared/`, `app/`, `content/`, `db/` y los otros cuatro programas— con la consigna de *rescatar lo bueno que v2 no esté haciendo mejor*. De ahí salió el **grupo E** y **N7**, más la lista de **falsos rescates** del final: cosas que v1 aparentaba tener y no tenía. El análisis del sistema de errores de v1 está resumido en el grupo E.
 
 **Regla de orden que atraviesa todo el documento**: los grupos S y M alcanzan a los cuatro sistemas. Cambiar algo en un sistema es barato; en cuatro, no. Todo lo que alcance a los cuatro conviene decidirlo **una vez** y aplicarlo de una pasada, igual que se resolvió con el hilo C del [roadmap](./refactor-roadmap.md#3-los-hilos-pendientes).
 
@@ -111,6 +113,7 @@ Esto es el **P2**: no son regresiones, son las mejoras que harían que el rework
 | **N4** | **Vincular matriz ↔ modelo**: pasar el mouse por una celda de K resalta los dos grados de libertad involucrados y las barras que aportan ahí | Ver abajo — es la mejor de la lista | mediano |
 | **N5** | **Verificación de equilibrio** (ΣF = 0 por nudo y global) como cierre de los resultados | ¿Sección propia del acordeón, o un cartel de "resultado verificado" arriba? Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico | chico |
 | **N6** | **Contenido teórico enlazado desde cada sección** de resultados. El original tenía `/thesis/explanation/armor2d` | Es la **Fase 8** del roadmap, no una decisión suelta. Lo único que conviene adelantar es si el link va por sección del acordeón o si es una página aparte — porque eso condiciona S2 | — |
+| **N7** | **Los videos de uso ya grabados.** `app/learn/page.tsx` de v1 enlaza **tres videos de YouTube** que el usuario grabó: guía de resortes (`lY4iRpKh2AM`) y dos ejercicios de armaduras 2D (`vwyqRPN6PNY`, `gXT1ksfbcKM`). No es código: es contenido que ya existe y se pierde si nadie lo anota | Ver abajo | chico |
 
 ### N1 · Tres cosas distintas con el mismo nombre
 
@@ -138,6 +141,54 @@ O sea que hoy esto es sobre todo cablear un `onMouseEnter`. Y lo que responde �
 
 > **El P0 ya se hizo** (2026-08-12), así que `cellClass` existe y las tres piezas están puestas. **N4 es, de toda esta lista, lo que está más cerca de poder empezarse.**
 
+### N7 · Los videos existen y no están en ningún lado
+
+Son tres videos ya grabados y publicados, o sea trabajo hecho que no cuesta nada recuperar y que se pierde con solo no anotarlo. **La decisión abierta es dónde viven**, y depende de S2: si el contenido educativo termina teniendo su propia zona, los videos son una sección de esa zona; si no, el candidato natural es un enlace desde la página del sistema que cada video explica.
+
+Dos cosas a mirar antes: que los videos **sigan siendo válidos** —la UI de v2 ya no se parece a la de v1, así que una guía de uso puede confundir más de lo que ayuda— y que la miniatura no se cargue de `img.youtube.com` sin pensarlo, porque eso mete un pedido a un tercero en una app que hoy no hace ninguno.
+
+---
+
+## Grupo E — El sistema de errores del original
+
+Sale del barrido del **2026-08-13**: el usuario pidió revisar cómo manejaba los errores v1 —tres átomos derivados que se concatenan, un catálogo de códigos y un "debouncer"— y qué valía la pena rescatar.
+
+**El veredicto corto**: la arquitectura de v1 era correcta y v2 ya la tiene (errores como átomo **derivado** del estado, nunca imperativo; mensajes que nombran la fila; resultados bloqueados mientras hay errores). Lo que v1 tenía y v2 **no** son dos ideas, las dos con el cableado mal hecho en el original — o sea que no se copian: se rehacen bien.
+
+| # | Qué | Decisión abierta | Tamaño |
+|---|---|---|---|
+| **E1** | **Códigos de error estables** (`e114`) y un catálogo que sea la **fuente** de los textos | Ver abajo | chico |
+| **E2** | **Canal de advertencias**, separado del de errores bloqueantes | Ver abajo | chico |
+
+### E1 · El catálogo tiene que ser la fuente, no un documento paralelo
+
+v1 tenía `store/errors/errorsCode.ts` con 17 errores, cada uno con `name`, `message`, `typeError`, `errorCode` y `severity`. **Nunca se importó en tiempo de ejecución**: lo único que se usaba era `keyof typeof errorsCode` como tipo, y los textos estaban escritos otra vez a mano en cada `push`. Un catálogo que no es la fuente se desactualiza, y ya lo había hecho: `e211` ("Área no numérica") lleva `errorCode: 210` copiado del anterior, y el aviso del debounce se manda con `errorCode: "e100"`, que en el catálogo es "Nombre de nudo duplicado".
+
+Hoy en v2 los mensajes los tira el motor como texto libre (`throw new Error(...)`), que es simple y funciona, pero un error no tiene identidad: no se lo puede enlazar, contar ni explicar en otro lado.
+
+**Lo que hay que decidir es si hace falta**, y la respuesta depende de N6: si cada error va a poder llevar un *"¿por qué?"* que lleve al contenido teórico —como ya hace el mensaje de mecanismo con `/estabilidad`—, entonces el código estable es el que ancla ese enlace, y conviene **antes** de la Fase 8. Si no, el texto alcanza.
+
+Si se hace, la regla que v1 no cumplió: **el catálogo exporta las funciones que construyen el error**, no constantes que alguien vuelve a tipear. Un mensaje que nombra la fila (`El nudo v3 …`) es una función de sus datos, no una cadena fija — y eso es justamente lo que hizo que en v1 el catálogo quedara decorativo.
+
+### E2 · "Estoy esperando" no es un error
+
+v1 metía un aviso de severidad `warning` en el **mismo array** que los errores, y como los resultados se rendían con `errors.length === 0`, ese aviso los hacía desaparecer. O sea: un warning que bloquea es un error disfrazado.
+
+v2 no tiene el concepto de advertencia: `DomainError` no tiene `severity` y todo lo que entra al panel bloquea. Y ya hay casos que **no deberían bloquear** y hoy no tienen dónde ir: un nudo sin ninguna barra conectada, un modelo que se resuelve pero está mal condicionado, una barra de longitud casi nula. Hoy o se tira todo abajo o no se dice nada.
+
+**La decisión abierta**: si la advertencia es un tercer estado del panel de resultados (se calcula **y** se avisa) o una fila más en el panel de errores con otro color. Dato útil: `ui-custom/alert.tsx` **ya tiene las variantes `warning` e `info`** y ninguna se usa todavía.
+
+---
+
+## Falsos rescates: lo que v1 aparentaba tener
+
+Anotado para que nadie lo "recupere" creyendo que funcionaba, que es la trampa más cara de un barrido como este:
+
+- **Resortes en los nudos de `armor2d`.** Hay columnas en la tabla (`springX`, `springZ`), un diálogo de "condiciones especiales" para cargarlos, y hasta una validación de dominio que impide poner un resorte en un grado de libertad restringido. El valor se guarda en `dataArray.k`… y **nunca se suma a la matriz global**. La rigidez del resorte no entra al cálculo: la app aceptaba el dato y lo ignoraba. Es el mismo caso que las fuerzas internas que `armor3d` declaraba y no calculaba. Los apoyos elásticos siguen siendo una idea válida — pero es una **funcionalidad nueva**, no un rescate.
+- **El "debouncer".** No cancelaba el temporizador anterior, así que no era un debounce; y lo que de hecho evitaba el recálculo era una cadena accidental (el aviso desmonta `<Results/>` → nadie lee el átomo → Jotai no lo calcula, porque es perezoso). Existía para tapar un bug de `EderInput`: el valor se confirmaba solo en `onBlur`, pero Enter y el click-away **desmontaban el input** antes. v2 no lo necesita porque `FormulaInput` tiene **un solo camino de confirmación** y el input nunca se desmonta.
+- **La exportación a Excel.** `file-saver` está en las dependencias de v1 y no se usa en ningún lado. La Fase 7 del roadmap arranca de cero.
+- **Zoom y pan en los diagramas 2D.** `<OrbitControls />` está en el código de `graphic2D.tsx`, **comentado**.
+
 ---
 
 ## Cuándo volver a este documento
@@ -145,3 +196,4 @@ O sea que hoy esto es sobre todo cablear un `onMouseEnter`. Y lo que responde �
 - **Durante el cierre de `/armaduras-2d`**: los grupos **U** y **N** están todos ahí adentro, así que este documento es el que tiene *por qué* de cada uno. El orden y el estado están en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md).
 - **Antes de arrancar la Fase 8** (contenido educativo): **S2** y **N6** se condicionan mutuamente, y la navbar de hoy es provisional justamente para no adelantar esa decisión.
 - **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para el **grupo M**, que alcanza a todos y toca motor y stores.
+- **Antes de la Fase 8, junto con S2 y N6**: el **grupo E** entero y **N7**. `E1` solo vale la pena si los errores van a enlazar contenido teórico, y `N7` no se puede ubicar hasta saber qué forma tiene la zona educativa.
