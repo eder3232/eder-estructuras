@@ -131,6 +131,22 @@ Y un bug que apareció buscando dónde ponerlas: **los pasos de ensamblaje y los
 
 **Lo que se decidió no hacer** y quedó anotado como deudas **D12**, **D13** y **D14** en el roadmap: el layout escalonado de la ecuación (que es también la respuesta responsive), la vista de mapa para matrices muy grandes, y el techo en los pasos de ensamblaje.
 
+### ✅ Qué significa cada columna de K (desplazamiento unitario)
+
+Primera de las cinco ideas pedagógicas que el usuario aprobó el 2026-08-12 (plan completo: las cinco están en el mensaje de esa sesión y en el roadmap).
+
+`k_ij` es la fuerza que aparece en el grado de libertad *i* cuando se impone un desplazamiento unitario en el *j* y todos los demás quedan en cero. O sea que **una columna de `K` no es una lista de números: es un experimento físico completo**, y era lo único del método que la app calculaba sin mostrar. Ahora, debajo de la matriz global, se elige un grado de libertad y se ve la estructura con 1 ahí, las fuerzas que hacen falta para sostenerla —que *son* esa columna— y las barras que se estiran, que son las que ponen los números.
+
+No hay cálculo nuevo: `unitDisplacementState()` (`src/lib/engine/unit-displacement.ts`) solo reordena lo que el motor ya sabe.
+
+**Tres cosas que aparecieron al hacerlo:**
+
+- **Un test falló por física, no por bug**: en un nudo donde solo llega una barra vertical, el término diagonal horizontal de `K` es **cero**, porque una barra de armadura solo tiene rigidez sobre su propio eje. Se dejó como caso documentado en `unit-displacement.test.ts`: ese cero es exactamente el mecanismo que diagnostica la etapa siguiente.
+- **El dibujo y la matriz decían el mismo número de dos formas distintas** (`8106.6667` en la flecha, `8.1067 ×10³` en la tabla). Con la afirmación "las flechas *son* la columna", eso obliga a creer en vez de ver. Se agregó `diagram-2d/scale-context.tsx`: un factor común para todos los números de un diagrama, con el mismo criterio que las matrices, anunciado una vez en la leyenda.
+- **Los ceros tapaban lo que importa**: bajo un desplazamiento unitario la mayoría de las barras da cero, y una docena de `0.0000` superpuestos escondía las dos que no. `DeformedDiagram` ganó `showZeroAxialLabels` (en la deformada real siguen: una barra de fuerza cero es un concepto con nombre propio).
+
+`DeformedDiagram` ganó además `scale` y `legend`, porque el default de 50 sirve para desplazamientos de 10⁻³ y acá el desplazamiento **es 1**. Los tres props son aditivos, así que los otros tres sistemas no cambian.
+
 ## Pendiente, en orden
 
 ### 1 · D1 · El error de matriz singular, en inglés ⬅️ **acá se retoma**

@@ -13,6 +13,7 @@ import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { PartitionAndSolution } from "./results/partition-and-solution";
+import { UnitDisplacement } from "./results/unit-displacement";
 
 const DOF_LABELS = ["x", "z"];
 
@@ -93,6 +94,7 @@ export function ResultsPanel() {
                     nodesById={nodesById}
                   />
                   <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} />
+                  <UnitDisplacement elements={elements} nodesById={nodesById} assembly={assembly} />
                 </div>
               </DecimalsScope>
             </AccordionContent>

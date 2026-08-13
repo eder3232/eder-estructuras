@@ -9,6 +9,8 @@ export type {
   DofOrderEntry,
   PartitionResult,
 } from "./system";
+export { unitDisplacementState } from "./unit-displacement";
+export type { UnitDisplacementState, UnitDisplacementForce } from "./unit-displacement";
 export { TrussElement2D } from "./trusses-2d/truss-element-2d";
 export type { TrussPoint, TrussInternalForce, TrussBreakdown } from "./trusses-2d/truss-element-2d";
 export { TrussElement3D } from "./trusses-3d/truss-element-3d";

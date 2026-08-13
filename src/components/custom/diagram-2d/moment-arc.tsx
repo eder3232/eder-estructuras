@@ -2,6 +2,7 @@
 
 import { useDecimals } from "@/components/custom/decimals-scope";
 import { DiagramLabel } from "./diagram-label";
+import { useDiagramScale } from "./scale-context";
 import { projectPoint } from "./viewbox";
 
 interface MomentArcProps {
@@ -31,6 +32,7 @@ function pointAt(cx: number, cy: number, radius: number, degrees: number) {
  */
 export function MomentArc({ x, z, value, unitSize, variant }: MomentArcProps) {
   const decimals = useDecimals();
+  const scale = useDiagramScale();
   if (value === 0) return null;
 
   const { x: cx, y: cy } = projectPoint({ x, z });
@@ -82,7 +84,7 @@ export function MomentArc({ x, z, value, unitSize, variant }: MomentArcProps) {
         unitSize={unitSize}
         anchor="end"
       >
-        {value.toFixed(decimals)}
+        {scale.format(value, decimals)}
       </DiagramLabel>
     </g>
   );

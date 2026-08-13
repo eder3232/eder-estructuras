@@ -1,6 +1,7 @@
 import { computeUnitSize } from "./unit-scale";
 import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
+import { DiagramScaleProvider } from "./scale-context";
 import { SupportIcon } from "./support-icon";
 import type { DiagramElement, DiagramForce, DiagramNode, DiagramSupport } from "./types";
 import { computeViewBox, projectPoint } from "./viewbox";
@@ -23,67 +24,69 @@ export function SchemaDiagram({ nodes, elements, supports, forces }: SchemaDiagr
   const nodeRadius = unitSize * 0.35;
 
   return (
-    <SvgCanvas viewBox={viewBox}>
-      <g className="stroke-foreground" strokeWidth={1.5}>
-        {elements.map((element) => {
-          const from = nodesById.get(element.fromNodeId);
-          const to = nodesById.get(element.toNodeId);
-          if (!from || !to) return null;
-          const a = projectPoint(from);
-          const b = projectPoint(to);
-          const labelX = a.x + 0.25 * (b.x - a.x);
-          const labelY = a.y + 0.25 * (b.y - a.y);
+    <DiagramScaleProvider values={forces.map((f) => f.value)}>
+      <SvgCanvas viewBox={viewBox}>
+        <g className="stroke-foreground" strokeWidth={1.5}>
+          {elements.map((element) => {
+            const from = nodesById.get(element.fromNodeId);
+            const to = nodesById.get(element.toNodeId);
+            if (!from || !to) return null;
+            const a = projectPoint(from);
+            const b = projectPoint(to);
+            const labelX = a.x + 0.25 * (b.x - a.x);
+            const labelY = a.y + 0.25 * (b.y - a.y);
+            return (
+              <g key={element.id}>
+                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
+                <DiagramLabel
+                  x={labelX}
+                  y={labelY - unitSize * 0.4}
+                  unitSize={unitSize}
+                  baseline="auto"
+                  className="fill-foreground"
+                >
+                  {element.name}
+                </DiagramLabel>
+              </g>
+            );
+          })}
+        </g>
+
+        {nodes.map((node) => {
+          const { x, y } = projectPoint(node);
           return (
-            <g key={element.id}>
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
+            <g key={node.id}>
+              <circle cx={x} cy={y} r={nodeRadius} className="fill-primary" />
               <DiagramLabel
-                x={labelX}
-                y={labelY - unitSize * 0.4}
+                x={x + nodeRadius * 1.6}
+                y={y - nodeRadius * 1.6}
                 unitSize={unitSize}
+                anchor="start"
                 baseline="auto"
-                className="fill-foreground"
+                className="fill-primary"
               >
-                {element.name}
+                {node.name}
               </DiagramLabel>
             </g>
           );
         })}
-      </g>
 
-      {nodes.map((node) => {
-        const { x, y } = projectPoint(node);
-        return (
-          <g key={node.id}>
-            <circle cx={x} cy={y} r={nodeRadius} className="fill-primary" />
-            <DiagramLabel
-              x={x + nodeRadius * 1.6}
-              y={y - nodeRadius * 1.6}
-              unitSize={unitSize}
-              anchor="start"
-              baseline="auto"
-              className="fill-primary"
-            >
-              {node.name}
-            </DiagramLabel>
-          </g>
-        );
-      })}
+        {supports.map((support) => (
+          <SupportIcon
+            key={support.nodeId}
+            x={support.x}
+            z={support.z}
+            restrainedX={support.restrainedX}
+            restrainedZ={support.restrainedZ}
+            restrainedRotation={support.restrainedRotation}
+            unitSize={unitSize}
+          />
+        ))}
 
-      {supports.map((support) => (
-        <SupportIcon
-          key={support.nodeId}
-          x={support.x}
-          z={support.z}
-          restrainedX={support.restrainedX}
-          restrainedZ={support.restrainedZ}
-          restrainedRotation={support.restrainedRotation}
-          unitSize={unitSize}
-        />
-      ))}
-
-      {forces.map((force, i) => (
-        <ForceGlyph key={`${force.nodeId}-${force.axis}-${i}`} force={force} unitSize={unitSize} variant="force" />
-      ))}
-    </SvgCanvas>
+        {forces.map((force, i) => (
+          <ForceGlyph key={`${force.nodeId}-${force.axis}-${i}`} force={force} unitSize={unitSize} variant="force" />
+        ))}
+      </SvgCanvas>
+    </DiagramScaleProvider>
   );
 }

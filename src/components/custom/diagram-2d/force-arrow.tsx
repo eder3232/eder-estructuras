@@ -2,6 +2,7 @@
 
 import { useDecimals } from "@/components/custom/decimals-scope";
 import { DiagramLabel } from "./diagram-label";
+import { useDiagramScale } from "./scale-context";
 import { projectPoint } from "./viewbox";
 
 interface ForceArrowProps {
@@ -21,6 +22,7 @@ const COLOR_CLASS = {
 
 export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowProps) {
   const decimals = useDecimals();
+  const scale = useDiagramScale();
   if (value === 0) return null;
 
   const { x: tailX, y: tailY } = projectPoint({ x, z });
@@ -75,7 +77,7 @@ export function ForceArrow({ x, z, axis, value, unitSize, variant }: ForceArrowP
         className="stroke-none"
       />
       <DiagramLabel x={label.x} y={label.y} unitSize={unitSize} anchor={label.anchor}>
-        {value.toFixed(decimals)}
+        {scale.format(value, decimals)}
       </DiagramLabel>
     </g>
   );

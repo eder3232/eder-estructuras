@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { useDecimals } from "@/components/custom/decimals-scope";
 import { Slider } from "@/components/ui/slider";
 import { axialLabelPoint } from "./axial-label";
 import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
+import { DiagramScaleProvider, useDiagramScale } from "./scale-context";
 import { computeUnitSize } from "./unit-scale";
 import type { DiagramElement, DiagramForce, DiagramNode } from "./types";
 import { computeViewBox, projectPoint, type SvgPoint } from "./viewbox";
@@ -20,7 +21,29 @@ interface DeformedDiagramProps {
   reactions: DiagramForce[];
   /** Fuerza interna por elemento (signo: positivo = tracción, negativo = compresión), para el color de cada barra. */
   elementForceValue: Map<string, number>;
+  /**
+   * Rango del factor de escala. El default sirve para una deformada real, donde
+   * los desplazamientos son de 10⁻³ y hay que multiplicarlos por decenas para
+   * ver algo. **No sirve para un desplazamiento impuesto de 1**, que es el caso
+   * del explorador de columnas de K: ahí el factor útil está cerca de 1 y con
+   * 50 la estructura se dibuja deformada cincuenta veces su tamaño.
+   */
+  scale?: { initial?: number; max?: number; step?: number };
+  /**
+   * Si se escribe el número de las barras con fuerza nula.
+   *
+   * En la deformada real conviene que sí: una barra de fuerza cero es un
+   * concepto con nombre propio en armaduras, no un hueco. En el explorador de
+   * columnas de `K`, en cambio, **la mayoría de las barras dan cero** —solo se
+   * estiran las que tocan el nudo que se movió— y una docena de `0.0000`
+   * superpuestos tapa justamente los números que importan.
+   */
+  showZeroAxialLabels?: boolean;
+  /** Reemplaza la leyenda de abajo, que describe qué significa cada trazo. */
+  legend?: ReactNode;
 }
+
+const DEFAULT_SCALE = { initial: 50, max: 500, step: 10 };
 
 const ZERO_THRESHOLD = 1e-6;
 
@@ -42,9 +65,35 @@ const FILL_CLASS = {
   compression: "fill-destructive",
 } as const;
 
-export function DeformedDiagram({ nodes, elements, displacements, reactions, elementForceValue }: DeformedDiagramProps) {
-  const [scaleFactor, setScaleFactor] = useState(50);
+/**
+ * El factor común de los números del dibujo sale de **todo** lo que se va a
+ * escribir —reacciones y fuerzas axiales—, así que se calcula acá afuera y el
+ * cuerpo del diagrama lo consume por contexto (ver `scale-context.tsx`).
+ */
+export function DeformedDiagram(props: DeformedDiagramProps) {
+  const values = [...props.reactions.map((r) => r.value), ...props.elementForceValue.values()];
+
+  return (
+    <DiagramScaleProvider values={values}>
+      <DeformedDiagramBody {...props} />
+    </DiagramScaleProvider>
+  );
+}
+
+function DeformedDiagramBody({
+  nodes,
+  elements,
+  displacements,
+  reactions,
+  elementForceValue,
+  scale,
+  showZeroAxialLabels = true,
+  legend,
+}: DeformedDiagramProps) {
+  const { initial, max, step } = { ...DEFAULT_SCALE, ...scale };
+  const [scaleFactor, setScaleFactor] = useState(initial);
   const decimals = useDecimals();
+  const numberScale = useDiagramScale();
 
   if (nodes.length === 0) return null;
 
@@ -66,13 +115,13 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 text-sm">
-        <span>Factor de escala: {scaleFactor}</span>
+        <span className="tabular-nums">Factor de escala: {scaleFactor}</span>
         <Slider
           value={[scaleFactor]}
           onValueChange={(value) => setScaleFactor(value[0])}
           min={0}
-          max={500}
-          step={10}
+          max={max}
+          step={step}
           className="w-64"
         />
       </div>
@@ -116,6 +165,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
           if (!from || !to) return null;
           const force = elementForceValue.get(element.id);
           if (force === undefined) return null;
+          if (!showZeroAxialLabels && state(force) === "zero") return null;
           const { x, y, anchor } = axialLabelPoint(projectPoint(from), projectPoint(to), unitSize, center);
           return (
             <DiagramLabel
@@ -126,7 +176,7 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
               anchor={anchor}
               className={FILL_CLASS[state(force)]}
             >
-              {force.toFixed(decimals)}
+              {numberScale.format(force, decimals)}
             </DiagramLabel>
           );
         })}
@@ -147,8 +197,17 @@ export function DeformedDiagram({ nodes, elements, displacements, reactions, ele
       </SvgCanvas>
 
       <p className="text-xs text-muted-foreground">
-        Línea punteada: forma original. Línea sólida: forma desplazada (escalada). Verde = tracción, rojo =
-        compresión. El número sobre cada barra es su fuerza axial. Flechas: reacciones en los apoyos.
+        {numberScale.factor && (
+          <>
+            Todos los valores del dibujo van <span className="tabular-nums">{numberScale.factor}</span>.{" "}
+          </>
+        )}
+        {legend ?? (
+          <>
+            Línea punteada: forma original. Línea sólida: forma desplazada (escalada). Verde = tracción, rojo =
+            compresión. El número sobre cada barra es su fuerza axial. Flechas: reacciones en los apoyos.
+          </>
+        )}
       </p>
     </div>
   );
