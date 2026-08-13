@@ -51,21 +51,49 @@ El caso delicado es `/armaduras-3d`: los materiales de three.js no aceptan clase
 
 | # | Qué falta | Decisión abierta | Tamaño |
 |---|---|---|---|
-| **M1** | El original dejaba que el alumno **numerara los grados de libertad a mano** y eligiera si los restringidos van arriba o abajo. Acá `System.buildDOFOrder()` numera por orden de inserción y no hay forma de intervenir | Ver abajo — es la decisión más interesante del documento | mediano |
+| **M1a** | **"¿Los grados de libertad restringidos van arriba?"** — cambia el orden en que se ensambla la matriz global y todo lo que viene después | Ver abajo. **Analizado el 2026-08-13: es mucho más barato en v2 que en v1** | chico |
+| **M1b** | **"¿Desea ingresar los grados de libertad?"** — el alumno numera los DOF a mano, como *sugerencia* de orden | Ver abajo — sigue siendo la decisión más interesante del documento | mediano |
 | **M2** | No se validan **nombres duplicados** de nudo ni de barra. El original sí (errores e100/e200). Acá los ids son UUID, así que dos nudos llamados `v1` pasan sin protestar y dejan ambiguas las etiquetas de todas las matrices | Ver abajo | chico |
 
-### M1 · ¿Numeración propia del alumno, o reordenar filas?
+### M1 · Los dos checkboxes del original
 
-**Por qué importa de verdad**: el alumno resuelve el ejercicio a mano con *su* numeración y quiere cotejar contra la app. Si la app numera distinto, sus matrices y las de la pantalla no se pueden comparar término a término, y el valor pedagógico se cae. No es un capricho del original: es exactamente el caso de uso académico.
+**Para qué existían** — lo contó el usuario el 2026-08-13, y es lo que no se puede deducir del código:
 
-Hay dos formas de darlo, y son muy distintas en costo:
+- **"¿Los restringidos van arriba?"** — *algunos profesores ensamblan la matriz global con los grados restringidos arriba y otros abajo. Matemáticamente da lo mismo, pero al que recién aprende lo confunde muchísimo.* El checkbox existe para que la pantalla se parezca al pizarrón del que enseña.
+- **"¿Desea ingresar los grados de libertad?"** — *el profesor a veces numera los DOF de una forma rara, a propósito, para ver si el alumno entendió el método.* El checkbox agrega inputs en la tabla de nudos y el número que el alumno carga es una **sugerencia, no una orden**: la app la respeta solo si tiene sentido —o sea, si los restringidos y los libres quedan agrupados como corresponde— y si no, la usa nada más como criterio de desempate. En el original eso era literalmente un `sort` por el número del usuario **dentro de cada grupo**, y después la concatenación de los dos grupos según el otro checkbox.
 
-1. **Numeración explícita** (lo que hacía el original): dos columnas más por nudo, un estado paralelo, y la tabla de orden mostrando "interno" contra "usuario". Duplica el estado y hay que validar que la numeración del usuario sea una permutación completa, sin huecos ni repetidos.
-2. **Reordenar las filas** (no toca el motor): `buildDOFOrder()` numera por orden de inserción, y el orden de inserción lo decide el store. O sea que **arrastrar filas ya es cambiar la numeración**, y solo hace falta mostrar el índice resultante en la tabla. Mucho más barato, y el botón de insertar en el medio ya existe justamente porque el orden de las filas tiene sentido.
+En v1 estas dos features **duplicaron la lógica**: `splitGlobal()` tiene dos ramas de ~30 líneas cada una que hacen lo mismo con los índices corridos, y hay renderizado condicional colgando de los flags.
 
-La segunda cubre el caso real con una fracción del trabajo. La pregunta abierta es si cubre *todos* los casos: con 2 DOF por nudo, reordenar filas permuta de a pares (`v1x`,`v1z` van juntos), y una numeración arbitraria del alumno podría intercalarlos. **Habría que ver si eso pasa en la práctica o es un caso de laboratorio.**
+#### Por qué en v2 sale mucho más barato
 
-El toggle **"¿los restringidos van arriba?"** es un problema aparte y más simple: es una permutación de la *partición*, no del ensamblaje. Se puede resolver como una vista (permutar solo para mostrar) sin tocar `System`.
+**Porque v2 ya separa lo que v1 mezclaba.** El original **cortaba la matriz por posición** (`global[i][j]` contra `global[i+u][j+u]`), así que cambiar el orden obligaba a reescribir el corte entero — de ahí las dos ramas. `System.solve()` en cambio **junta por lista de índices**:
+
+```ts
+const kff = this.gather(k, free, free);   // free y restrained son listas de índices
+```
+
+`gather` no supone nada sobre el orden: funciona igual con los restringidos arriba, abajo o intercalados. Y todo lo demás cuelga de ahí — `assembleGlobal` usa `byNode`, los pasos salen del mismo ensamblaje, y la UI se etiqueta con `assembly.dofOrder`, nunca con posiciones fijas.
+
+**Consecuencia: en v2 los dos checkboxes no son dos features, son dos entradas de la misma función.** El orden de los DOF es una sola decisión —una lista ordenada de pares `(nudo, dof local)`— y los dos flags son criterios de esa ordenación: agrupar por restricción (y en qué orden van los grupos), y desempatar por el número del usuario.
+
+Lo que hay que tocar, medido contra el código de hoy:
+
+| Dónde | Qué | Tamaño |
+|---|---|---|
+| `System.buildDOFOrder()` | Recibe la política de orden en vez de numerar por inserción. **Ojo**: `dofOrder` se arma hoy recorriendo los nudos, así que hay que emitirlo ordenado por `globalIndex` para no romper la invariante `dofOrder[i].globalIndex === i` de la que dependen las etiquetas | chico |
+| `partition-and-solution.tsx` | Es el **único** lugar que fija un orden a mano (`[...partition.free, ...partition.restrained]` y `cut = free.length`). Con los restringidos arriba, los cuatro bloques se acomodan al revés | chico |
+| Store + tabla de nudos (solo M1b) | Dos columnas más por nudo (tres en pórticos y 3D), condicionales al checkbox | mediano |
+
+Lo que **no** hay que tocar, y es la mitad del trabajo de v1: el ensamblaje, los pasos, la partición, las ecuaciones de despeje (están escritas en términos de bloques `Kff`/`Kfr`, no de posiciones), el diagnóstico de mecanismo, el desplazamiento unitario y el modo práctica. Todos leen `dofOrder` o listas de índices.
+
+Y los resultados son **invariantes**: los tests de regresión afirman desplazamientos, reacciones y fuerzas internas **por nudo**, así que no se mueven. Los únicos que verían el cambio son los tres `expect` de `system.test.ts` que fijan el orden de inserción — y solo si se cambia el valor por defecto, que no hay que cambiarlo.
+
+#### Lo que queda por decidir
+
+- **M1a** casi no tiene decisión: es un flag, con `false` (libres arriba) como valor por defecto. La única pregunta es si el flag es por sistema o global de la app.
+- **M1b** sí tiene dos:
+  1. **Numeración explícita contra reordenar filas.** Sigue en pie la alternativa barata: `buildDOFOrder()` numera por orden de inserción y ese orden lo decide el store, así que **arrastrar filas ya es cambiar la numeración**. Pero ahora sabemos que la numeración del original es una *sugerencia con desempate dentro del grupo*, y eso el arrastre no lo da: reordenar filas permuta de a pares (`v1x`,`v1z` van juntos), y el profesor que numera "raro" puede justamente intercalarlos.
+  2. **Qué se le dice al alumno cuando su numeración no se puede respetar.** Es el caso pedagógicamente más interesante —*pediste este orden, no se puede porque mezcla restringidos con libres, así que lo usé para ordenar dentro de cada grupo*— y **no tiene dónde decirse hoy**: no es un error que bloquee. Es el primer caso concreto que empuja a **E2** (el canal de advertencias, ver el grupo E). Conviene hacer E2 antes, o al mismo tiempo.
 
 ### M2 · Dónde va la validación de nombres
 
@@ -197,5 +225,5 @@ Anotado para que nadie lo "recupere" creyendo que funcionaba, que es la trampa m
 
 - **Durante el cierre de `/armaduras-2d`**: los grupos **U** y **N** están todos ahí adentro, así que este documento es el que tiene *por qué* de cada uno. El orden y el estado están en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md).
 - **Antes de arrancar la Fase 8** (contenido educativo): **S2** y **N6** se condicionan mutuamente, y la navbar de hoy es provisional justamente para no adelantar esa decisión.
-- **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para el **grupo M**, que alcanza a todos y toca motor y stores.
+- **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para el **grupo M**, que alcanza a todos y toca motor y stores. **Excepción posible: M1a**, que después del análisis del 2026-08-13 quedó en "chico" y no toca ningún store — se puede adelantar sin arrastrar el resto del grupo.
 - **Antes de la Fase 8, junto con S2 y N6**: el **grupo E** entero y **N7**. `E1` solo vale la pena si los errores van a enlazar contenido teórico, y `N7` no se puede ubicar hasta saber qué forma tiene la zona educativa.
