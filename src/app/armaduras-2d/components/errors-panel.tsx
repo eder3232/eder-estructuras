@@ -2,7 +2,9 @@
 
 import { useAtom } from "jotai";
 
-import type { MechanismDiagnosis } from "@/lib/engine";
+import Link from "next/link";
+
+import { loadCompatibility, type MechanismDiagnosis } from "@/lib/engine";
 import { ErrorsPanel as GenericErrorsPanel } from "@/components/custom/errors-panel";
 import { DeformedDiagram } from "@/components/custom/diagram-2d/deformed-diagram";
 import { atomElements } from "../store/elements";
@@ -86,6 +88,8 @@ function MechanismExplanation({
         )}
       </div>
 
+      {diagnosis.mode && <Fredholm mode={diagnosis.mode} nodesById={nodesById} />}
+
       {diagnosis.mode && (
         <DeformedDiagram
           nodes={nodes}
@@ -103,6 +107,59 @@ function MechanismExplanation({
           }
         />
       )}
+
+      <p className="text-xs text-muted-foreground">
+        Por qué la matriz de rigidez es singular, y por qué el determinante no sirve para darse cuenta:{" "}
+        <Link href="/estabilidad" className="underline underline-offset-3 hover:text-foreground">
+          estabilidad y unicidad de la solución
+        </Link>
+        .
+      </p>
     </div>
+  );
+}
+
+/**
+ * Qué tipo de "no tiene solución" es este, que son dos y muy distintos.
+ *
+ * Que la estructura pueda moverse no dice todavía qué pasa con **esta** carga.
+ * La alternativa de Fredholm sí: si la carga tiene componente en la dirección
+ * del movimiento libre no existe ninguna configuración en equilibrio —la
+ * estructura acelera, y eso ya no es estática—; si es ortogonal hay equilibrio
+ * en infinitas posiciones, y como el movimiento no deforma ninguna barra los
+ * esfuerzos igual quedan determinados.
+ */
+function Fredholm({
+  mode,
+  nodesById,
+}: {
+  mode: NonNullable<MechanismDiagnosis["mode"]>;
+  nodesById: Map<string, NodeRow>;
+}) {
+  const forces = mode.map((dof) => {
+    const node = nodesById.get(dof.nodeId);
+    if (!node) return 0;
+    return dof.localDof === 0 ? node.forceX : node.forceZ;
+  });
+
+  const { verdict } = loadCompatibility([mode.map((dof) => dof.value)], forces);
+
+  return (
+    <p className="max-w-3xl text-sm">
+      {verdict === "accelerates" ? (
+        <>
+          <span className="font-medium text-destructive">Y con esta carga no hay ningún equilibrio posible:</span> la
+          carga empuja justo en la dirección en la que la estructura puede moverse, así que aceleraría. No es que falte
+          calcular algo — la estática no tiene nada que responder acá.
+        </>
+      ) : (
+        <>
+          <span className="font-medium">Con esta carga sí hay equilibrio</span>, pero en infinitas posiciones: la carga
+          es perpendicular al movimiento libre. Curiosamente, como ese movimiento no deforma ninguna barra,{" "}
+          <span className="font-medium">los esfuerzos quedarían determinados</span> — lo único que no se puede saber es
+          dónde queda parada la estructura.
+        </>
+      )}
+    </p>
   );
 }

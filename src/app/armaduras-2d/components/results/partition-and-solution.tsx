@@ -1,4 +1,6 @@
-import type { AssemblyResult, SolveResult } from "@/lib/engine";
+import Link from "next/link";
+
+import { ldl, type AssemblyResult, type SolveResult } from "@/lib/engine";
 import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
 import { Math, MathBlock } from "@/components/custom/math";
 import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
@@ -146,6 +148,8 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
         </div>
       </div>
 
+      <StabilityCheck kff={partition.kff} labels={freeLabels} />
+
       {/* ── Despejar los desplazamientos ───────────────────────────────── */}
       <DecimalsScope id="solve-uf">
         <div className="flex flex-col gap-2">
@@ -282,5 +286,45 @@ function LabeledMatrix({
         </div>
       </div>
     </DecimalsScope>
+  );
+}
+
+/**
+ * El control de estabilidad sobre la `Kff` que el alumno tiene cargada.
+ *
+ * Va acá y no en otra sección porque `Kff` es la matriz que se va a invertir en
+ * el paso siguiente, y esta es la pregunta que corresponde hacerse **antes** de
+ * invertir: ¿tiene inversa? El detalle de por qué se pregunta así —y no mirando
+ * el determinante— está en `/estabilidad`; acá va solo el veredicto, para no
+ * convertir un paso del cálculo en una clase entera.
+ */
+function StabilityCheck({ kff, labels }: { kff: number[][]; labels: string[] }) {
+  const result = ldl(kff);
+
+  return (
+    <div className="flex flex-col gap-1 rounded-md border border-dashed p-3">
+      <p className="text-sm">
+        {result.ok ? (
+          <>
+            <span className="font-medium">Los {result.d.length} pivotes de la factorización son positivos</span>, así
+            que <Math tex="K_{ff}" /> es definida positiva y tiene inversa: la solución del paso siguiente es única.
+          </>
+        ) : (
+          <>
+            <span className="font-medium text-destructive">
+              La factorización se detiene en {labels[result.failedAt]}
+            </span>
+            : <Math tex="K_{ff}" /> no es definida positiva, así que el paso siguiente no tiene una solución única.
+          </>
+        )}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Es el control que hace un programa de cálculo antes de resolver, y no es mirar el determinante —{" "}
+        <Link href="/estabilidad" className="underline underline-offset-3 hover:text-foreground">
+          por qué la matriz es singular
+        </Link>
+        .
+      </p>
+    </div>
   );
 }

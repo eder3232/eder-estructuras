@@ -200,6 +200,17 @@ Los dos ejercicios corrigen contra **lo que calcula el motor** —las posiciones
 
 `MatrixQuiz` es un componente aparte de `MatrixTable` a propósito: esa renderiza texto y ya carga la cascada de decimales, la notación compacta y las etiquetas fijas, y su resaltado por celda ya significa otra cosa (las zonas de la partición).
 
+### ✅ Estabilidad: la sección de teoría y su enganche
+
+Sale de la conversación posterior al diagnóstico del mecanismo: el usuario señaló que **nada de esto se enseña en la cursada** ni estaba en el proyecto original, y pidió una sección que lo explique con un método confiable. El detalle está en la página `/estabilidad`; acá va lo que toca a este sistema.
+
+**Decisión que acotó el alcance**: el usuario eligió **no cambiar el solver del motor**. `System.solve()` sigue invirtiendo `Kff` y comprobando con el número de condición; la factorización `LDLᵀ` vive aparte y solo la usan la página y el bloque nuevo. El costo es que la sección explica un método que la app no usa para resolver, y se paga diciéndolo: la página lo aclara en un recuadro al final. Los 149 tests no se movieron.
+
+**En `/armaduras-2d` quedaron dos enganches**, los dos aditivos:
+
+- **Control de estabilidad en la sección 3**, justo antes de despejar: los pivotes de la `Kff` cargada, con el veredicto ("los 4 son positivos, así que tiene inversa") y el enlace. Va ahí porque es la pregunta que corresponde hacerse **antes** de invertir.
+- **Veredicto de Fredholm en el mensaje de mecanismo**: hasta ahora decía que la estructura se puede mover, pero no qué pasa con *esta* carga. Ahora distingue los dos casos, que son muy distintos — si la carga empuja en la dirección del movimiento libre **no hay ningún equilibrio posible** (acelera, y eso ya no es estática); si es ortogonal hay equilibrio en infinitas posiciones y **los esfuerzos igual quedan determinados**. Las dos ramas se verificaron en la app sembrando la armadura sin apoyos horizontales, con carga horizontal y sin ella.
+
 ## Pendiente, en orden
 
 ### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**
