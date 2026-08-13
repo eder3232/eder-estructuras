@@ -423,7 +423,9 @@ Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar
 Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no). Lo específico de esta tanda:
 
 - `pnpm test` · `npx tsc --noEmit` · `pnpm build`. **`pnpm lint` da 2 errores preexistentes en `ui/`**; un tercero sí es nuevo.
-- **Mirar la app no es opcional.** Van cuatro sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Mirar la app no es opcional.** Van seis sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Y los tests tampoco.** En esta última tanda un test encontró lo que la captura no podía —que Base UI no selecciona el texto del input al enfocarlo, y headless no puede tipear— igual que la captura encontró lo que el test no podía. Las dos verificaciones son complementarias.
+- **Para juzgar un texto, la métrica es la razón de contraste WCAG (4.5 para texto normal), no la distancia RGB.** La distancia sirve para "¿esta zona se distingue de aquella?", que es la pregunta de los bloques de la partición. El token `--warning` medía 275 de distancia —parecía bien— y 2.28:1 de contraste, que es la mitad de lo que hace falta.
 - **El dev server puede estar ya levantado** en el 3000 sirviendo este mismo repo: usalo, no lo mates.
 
 **Para capturar una sección del acordeón que arranca cerrada**, tocar `defaultValue` del `<Accordion>` en `results-panel.tsx` (hoy `["dof"]`), capturar y **revertir**. Conviene abrir *solo* la sección de interés: así queda arriba y se recorta sin buscarla en una captura de 16000 px.

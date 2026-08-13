@@ -167,15 +167,27 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-13, sesión pedagógica + estabilidad (8 commits)**.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-13, sesión de cierre de `/armaduras-2d` (8 puntos de la lista + el barrido del proyecto v1)**.
 
 > **Antes que nada: hay una lista de trabajo activa.** El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**, y todo lo pendiente de ese sistema —que estaba repartido entre las deudas de acá abajo y los grupos U y N de [`pendientes-comparacion.md`](./pendientes-comparacion.md)— se juntó y se ordenó en **[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)**. Ese documento es de dónde se sigue. Esta sección es el contexto.
 >
 > **Quedan 4 puntos** y el siguiente es **N3** (vincular tabla ↔ diagrama). La lista se **replanificó el 2026-08-13**: eran 8, y el barrido de v1 sumó **E2** (canal de advertencias) y **M1a/M1b** (los dos checkboxes de orden de grados de libertad del original). El motor gana la capacidad de ordenar los DOF con el valor por defecto de hoy, así que **los otros tres sistemas no cambian**; la UI va solo en `/armaduras-2d`. Ya están hechos: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario, D1, la reciprocidad, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5 y N4.
 
-**Ninguna de las cinco últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
+**Ninguna de las últimas seis sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Todas trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
 
-### Qué pasó en las últimas tres sesiones
+### Qué pasó en la última sesión (2026-08-13, la más larga)
+
+Ocho puntos de la lista de cierre —**U3, U1, U2, E2, M1a, M1b, U5, N4**— y, antes de eso, un **barrido del proyecto v1** más allá de `armor2d`, que el usuario pidió con la consigna de *rescatar lo bueno que v2 no esté haciendo mejor*. Lo que conviene saber al retomar, ordenado por lo que más cambia decisiones futuras:
+
+1. **El motor gana dos capacidades que alcanzan a los cuatro sistemas, con el valor por defecto de hoy**: el orden de los grados de libertad (`solve({ restrainedFirst, useDofNumbers })`) y el canal de **advertencias** (`SolveResult.warnings`). Los otros tres sistemas **no cambian ni las ven**; la UI va solo en `/armaduras-2d`. Es el criterio con que ya se había hecho D1.
+2. **Un error se tira, una advertencia se devuelve.** Esa es la regla que hace imposible que un aviso corte el cálculo, y sale de la trampa del original. Todo el contrato de errores está ahora en **[`docs/errores.md`](./errores.md)**, que es lectura obligatoria antes de tocar algo que produzca, transporte o muestre un error.
+3. **Dos puntos se hicieron al revés de como estaban planteados, y los dos por buenas razones.** **U5** pedía rotular unidades: el usuario mostró que eso asume que la app debería elegir un sistema, cuando el método es dimensionalmente homogéneo — un rótulo fijo sería *falso*. **M1b** trataba la numeración del alumno como una *sugerencia*: eso era una limitación de v1 (cortaba la matriz por posición), no del método. Los dos razonamientos quedaron escritos, con su error, en `pendientes-comparacion.md`.
+4. **La decisión de dónde vive el resaltado transversal quedó tomada** (N4): un **contexto**, `custom/highlight.tsx`, no un átomo — los átomos son del modelo, que es lo que N1 va a serializar. **N3 lo hereda y el proveedor ya envuelve la página entera.**
+5. **`--warning` era ilegible en tema claro** y nadie lo había usado nunca. Se corrigió el token, y eso **alcanza a las flechas de reacción de los tres sistemas con diagrama**: estaban a 2.3:1 y ahora están a 4.7:1.
+
+Y una corrección al método de verificación del repo, que vale para todo lo que venga: **para texto, la métrica es la razón de contraste WCAG, no la distancia RGB**. La distancia responde *"¿se distingue de aquello?"* —la pregunta de los bloques de la partición— y no *"¿se puede leer?"*.
+
+### Qué pasó en las sesiones anteriores
 
 **2026-08-10** (commits `0813f5d`, `9f9eaa2`, `c906e4b`, `74f9d17`) — arreglos y mejoras de UI. Dejó dos cosas que cambian cómo trabajar: se descubrió **cómo mirar la app sin la extensión de Chrome** (headless por línea de comandos, punto 5), y aparecieron las deudas **D6, D7, D8**.
 
@@ -320,7 +332,7 @@ Para no re-verificar de cero ni asumir de más.
 **Pasa limpio hoy** (`main`, después del Tren D):
 
 ```
-pnpm test          # 155 tests, 29 archivos (motor, stores, geometría de diagramas y componentes)
+pnpm test          # 191 tests, 36 archivos (motor, stores, geometría de diagramas y componentes)
 npx tsc --noEmit   # sin salida
 pnpm build         # prerrenderiza las 4 rutas + home
 ```
@@ -373,11 +385,20 @@ Dos cosas del método que sirven para la próxima:
 
 **Lo que se miró al cerrar U3** (headless, los cuatro estados del panel de resultados sembrados a mano y revertidos, y los dos temas en el estado de error):
 
-- **La captura encontró algo por quinta sesión seguida**, con los 155 tests, `tsc` y el build en verde: la sección **«Esquema» tenía el mismo agujero** que U3 venía a tapar en los resultados —el diagrama genérico devuelve `null` sin nudos y quedaba el título solo—. Se tapó con el mismo componente.
+- **La captura encontró algo por quinta sesión seguida**, con los tests, `tsc` y el build en verde: la sección **«Esquema» tenía el mismo agujero** que U3 venía a tapar en los resultados —el diagrama genérico devuelve `null` sin nudos y quedaba el título solo—. Se tapó con el mismo componente.
 - **Medir siguió siendo el método**: el título del bloque queda a 354 (claro) y 277 (oscuro) de distancia RGB del fondo, y su borde punteado da 42 en oscuro contra los 52 del borde de la caja del esquema — el mismo token, la diferencia es el antialias de la línea cortada.
 - Sembrar un estado degenerado se hace igual que un modelo distinto: tocando el valor inicial de `atomNodesBase`/`atomElementsBase` (`[]`, un `filter`, un `map`), capturar y **revertir**.
 
+**Lo que se miró al cerrar los ocho puntos del 2026-08-13** (headless, sembrando el estado y revirtiendo):
+
+- Los **cuatro estados del panel de resultados** (U3), la tabla de nudos agrupada **en los dos temas** (U1), el combobox en reposo (U2), la advertencia conviviendo con los resultados **en los dos temas** (E2), la partición acomodada al revés y **también en su orden por defecto** (M1a), la numeración del alumno respetada tal cual (M1b), la nota de unidades (U5) y el bloque de N4 en reposo y con un resaltado sembrado.
+- **Dos hallazgos que solo dio la captura**: la sección «Esquema» tenía el mismo agujero que U3 venía a tapar, y el resaltado de N4 dibujaba los nudos como círculos enormes —un `stroke` sobre un `circle` va en unidades del modelo—. **Tercera vez que aparece esa trampa** (antes: los apoyos, y el grosor de las barras).
+- **Y uno que solo dio un test**: Base UI no selecciona el texto del input al enfocarlo, así que en el combobox hacer click y escribir dejaba `v2v3` adentro y la lista vacía. Headless no puede tipear — es el caso simétrico de los dos de arriba.
+
 **Lo que sigue sin mirarse:**
+
+- **El hover de N4 en la app de verdad.** Headless no mueve el mouse: se verificó el estado en reposo por captura y el resaltado sembrando el contexto a mano, más cuatro tests que ejercitan el hover en el DOM. Lo que **no** se vio es la transición real al pasar el mouse por la matriz.
+- **La lista abierta del combobox de U2.** Misma razón: los tests la abren y filtran, pero no hay captura de la lista desplegada.
 
 - **Los otros tres sistemas después de los cambios compartidos de esta sesión.** `MatrixTable` (notación compacta, etiquetas fijas), el contexto de escala de los diagramas y el botón de animar llegan a `/springs`, `/frame2d` y `/armaduras-3d` sin que se los haya vuelto a mirar. Se capturó `/springs` y `/frame2d` **después de la notación compacta** y estaban bien; lo que **no** se volvió a ver es `/frame2d` con el botón de animar y con los números del diagrama ya escalados. Es lo primero a mirar si algo se ve raro ahí.
 - **El diagnóstico del mecanismo en 3D.** `System.solve()` lo aplica a los cuatro sistemas, pero `nullSpace`/`eigs` solo se probó en matrices planas. En 3D los modos de cuerpo rígido son **6**, no 3, y eso nunca se ejercitó.
