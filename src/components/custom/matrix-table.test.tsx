@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider, createStore } from "jotai";
 
 import { MatrixTable } from "./matrix-table";
@@ -55,6 +56,29 @@ describe("MatrixTable", () => {
 
     expect(container.querySelector("caption")).toBeNull();
     expect(screen.getByText("4.8000")).toBeDefined();
+  });
+
+  it("al pasar el mouse por una celda resalta también su simétrica", async () => {
+    const user = userEvent.setup();
+    const { container } = renderMatrix(true, { symmetricHighlight: true });
+    const celdas = () => [...container.querySelectorAll("tbody td")];
+
+    await user.hover(celdas()[1]); // fila 0, columna 1
+
+    // `k_ij = k_ji`: la propiedad que siempre se enuncia y nunca se muestra.
+    const resaltadas = celdas()
+      .map((td, i) => (td.className.includes("text-primary-foreground") ? i : -1))
+      .filter((i) => i >= 0);
+    expect(resaltadas).toEqual([1, 2]); // (0,1) y (1,0)
+  });
+
+  it("sin la prop no resalta nada, porque en una matriz no cuadrada la espejada no existe", async () => {
+    const user = userEvent.setup();
+    const { container } = renderMatrix(true);
+
+    await user.hover(container.querySelectorAll("tbody td")[1]);
+
+    expect([...container.querySelectorAll("tbody td")].some((td) => td.className.includes("text-primary-foreground"))).toBe(false);
   });
 
   it("fija las etiquetas solo cuando se lo piden", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
@@ -34,6 +35,20 @@ interface MatrixTableProps {
    * mismo borde izquierdo y se taparían entre sí.
    */
   stickyLabels?: boolean;
+  /**
+   * Al pasar el mouse por una celda, resalta también su simétrica.
+   *
+   * `k_ij = k_ji` es la propiedad que **siempre se enuncia y nunca se muestra**:
+   * la fuerza que aparece en *i* cuando *j* se desplaza una unidad es la misma
+   * que aparece en *j* cuando se desplaza *i*. Solo tiene sentido en las
+   * matrices cuadradas y simétricas (la global, `Kff`, `Krr`); en `Kfr` o `Krf`
+   * la celda espejada ni siquiera existe.
+   *
+   * El estado es local a propósito: dónde vive el resaltado transversal
+   * (tabla ↔ diagrama, matriz ↔ modelo) es una decisión abierta, y esto no la
+   * necesita ni la condiciona.
+   */
+  symmetricHighlight?: boolean;
   className?: string;
 }
 
@@ -45,9 +60,11 @@ export function MatrixTable({
   highlight,
   cellClass,
   stickyLabels,
+  symmetricHighlight,
   className,
 }: MatrixTableProps) {
   const decimals = useDecimals();
+  const [hovered, setHovered] = useState<[number, number] | null>(null);
   const compact = useAtomValue(atomCompactNumbers);
   const highlighted = new Set(highlight?.map(([r, c]) => `${r}-${c}`));
   const rows = rowLabels ?? labels;
@@ -58,6 +75,9 @@ export function MatrixTable({
   // que sirve una matriz.
   const exponent = compact ? scaleExponent(matrix.flat()) : 0;
   const factor = scaleLabel(exponent);
+
+  const isReciprocal = (row: number, col: number) =>
+    hovered !== null && ((row === hovered[0] && col === hovered[1]) || (row === hovered[1] && col === hovered[0]));
 
   // El fondo es obligatorio en una celda pegajosa: sin él se transparenta lo que
   // pasa por debajo al scrollear. La sombra de la columna es por lo mismo, pero
@@ -109,10 +129,18 @@ export function MatrixTable({
             {row.map((value, j) => (
               <td
                 key={j}
+                onMouseEnter={symmetricHighlight ? () => setHovered([i, j]) : undefined}
+                onMouseLeave={symmetricHighlight ? () => setHovered(null) : undefined}
                 className={cn(
                   "border px-2 py-1 text-right tabular-nums",
                   highlighted.has(`${i}-${j}`) && "bg-primary/15 font-semibold",
                   cellClass?.(i, j),
+                  // Relleno **sólido**, no una transparencia. Va después de
+                  // `cellClass` para ganarle al color de zona de la partición,
+                  // pero con alpha no alcanzaba: medido sobre una captura, un
+                  // `bg-primary/40` encima de la zona esmeralda quedaba a 8/255
+                  // de la zona sin resaltar. A simple vista eran el mismo verde.
+                  isReciprocal(i, j) && "bg-primary font-semibold text-primary-foreground",
                 )}
               >
                 {formatScaled(value, decimals, exponent)}

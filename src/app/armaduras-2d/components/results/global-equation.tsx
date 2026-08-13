@@ -1,6 +1,6 @@
 import type { AssemblyResult, SolveResult } from "@/lib/engine";
 import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
-import { MathBlock } from "@/components/custom/math";
+import { Math, MathBlock } from "@/components/custom/math";
 import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { NodeRow } from "../../store/nodes";
@@ -69,7 +69,7 @@ export function GlobalEquation({ assembly, solved, nodesById }: GlobalEquationPr
           </EquationTerm>
           <MathOp tex="=" />
           <EquationTerm tex="K">
-            <MatrixTable matrix={globalStiffness} labels={labels} />
+            <MatrixTable matrix={globalStiffness} labels={labels} symmetricHighlight />
           </EquationTerm>
           <MathOp tex="\cdot" />
           <EquationTerm tex="U">
@@ -80,6 +80,13 @@ export function GlobalEquation({ assembly, solved, nodesById }: GlobalEquationPr
             />
           </EquationTerm>
         </MatrixEquation>
+
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Pasá el mouse por una celda de K</span> y se resalta también
+          su simétrica: <Math tex="k_{ij} = k_{ji}" />. La fuerza que aparece en <Math tex="i" /> cuando{" "}
+          <Math tex="j" /> se desplaza una unidad es la misma que aparece en <Math tex="j" /> cuando se desplaza{" "}
+          <Math tex="i" /> — por eso la matriz es simétrica, y no por casualidad.
+        </p>
 
         <p className="text-xs text-muted-foreground">
           Las celdas resaltadas son las <span className="font-medium text-foreground">incógnitas</span>: en un nudo

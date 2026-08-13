@@ -92,6 +92,7 @@ export function PartitionAndSolution({ assembly, solved, nodesById }: PartitionA
                 labels={permutedLabels}
                 cellClass={zoneClass}
                 stickyLabels
+                symmetricHighlight
               />
             </div>
           </div>
@@ -275,6 +276,8 @@ function LabeledMatrix({
             rowLabels={rowLabels}
             colLabels={colLabels}
             stickyLabels
+            // `Kfr` y `Krf` no son cuadradas: ahí la celda espejada no existe.
+            symmetricHighlight={labels !== undefined}
           />
         </div>
       </div>

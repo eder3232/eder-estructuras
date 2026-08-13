@@ -165,6 +165,16 @@ El modo de movimiento sale del autovector del autovalor nulo (`eigs` de mathjs, 
 
 **Alcanza a los cuatro sistemas**, que era el argumento original de D1: vive en `System.solve()`.
 
+### ✅ Reciprocidad: `k_ij = k_ji`
+
+Tercera idea pedagógica, y la más barata de las cinco. Pasar el mouse por una celda de una matriz simétrica resalta **también su simétrica**: la fuerza que aparece en *i* cuando *j* se desplaza una unidad es la misma que aparece en *j* cuando se desplaza *i*. Es la propiedad que siempre se enuncia y nunca se muestra, y encaja justo debajo del desplazamiento unitario, que es lo que le da sentido.
+
+Está en la matriz global (sección 2) y en `Kff`/`Krr` de la partición. En `Kfr` y `Krf` no: no son cuadradas, así que la celda espejada no existe.
+
+**El estado del resaltado es local al componente, a propósito.** Dónde vive el resaltado transversal —tabla ↔ diagrama, matriz ↔ modelo— es una decisión abierta de N3/N4, y esto no la necesita: meterlo en un átomo ahora sería tomarla de costado.
+
+**El color salió mal la primera vez y lo dijo la medición**, no el ojo: `bg-primary/40` encima del color de zona de la partición quedaba a **8/255** del verde de `Kfr` sin resaltar. Con relleno sólido (`bg-primary` + `text-primary-foreground`) la distancia pasa a 58, del mismo orden que las que separan las cuatro zonas del fondo.
+
 ## Pendiente, en orden
 
 ### 1 · U3 · Estado vacío del panel de resultados ⬅️ **acá se retoma**
