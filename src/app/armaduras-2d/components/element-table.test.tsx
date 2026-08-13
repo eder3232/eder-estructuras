@@ -47,6 +47,32 @@ function renderTable() {
 const rows = () => [...screen.getByTestId("probe").children].map((li) => li.textContent ?? "");
 const names = () => rows().map((row) => row.split(":")[0]);
 
+/**
+ * Sonda aparte para los extremos de cada barra: la de arriba ya fija área y
+ * módulo, y sumarle campos rompería las aserciones que comparan la fila entera.
+ */
+function EndpointsProbe() {
+  const elements = useAtomValue(atomElements);
+  return (
+    <ul data-testid="endpoints">
+      {elements.map((e) => (
+        <li key={e.id}>{`${e.name}:${e.fromNodeId}:${e.toNodeId}`}</li>
+      ))}
+    </ul>
+  );
+}
+
+function renderWithEndpoints() {
+  render(
+    <Provider>
+      <ElementTable />
+      <EndpointsProbe />
+    </Provider>,
+  );
+}
+
+const endpoints = () => [...screen.getByTestId("endpoints").children].map((li) => li.textContent ?? "");
+
 describe("ElementTable", () => {
   it("agrega una barra al final con el + del encabezado", async () => {
     const user = userEvent.setup();
@@ -115,5 +141,71 @@ describe("ElementTable", () => {
     await user.click(screen.getByRole("button", { name: "Agregar una barra al final" }));
 
     expect(screen.getByRole("button", { name: "Aplicar a las 7 barras" })).toBeDefined();
+  });
+});
+
+/**
+ * U2. El combobox reemplazó al desplegable plano, así que lo que se fija acá es
+ * lo que el desplegable no daba: escribir para filtrar, y que el nudo del otro
+ * extremo no se pueda elegir.
+ */
+describe("ElementTable · elegir los nudos de una barra", () => {
+  it("muestra el nudo elegido, y no el id", () => {
+    renderWithEndpoints();
+
+    // e1 va de v1 a v2 en la semilla.
+    expect(screen.getByLabelText("Nudo de origen de e1").getAttribute("value")).toBe("v1");
+    expect(screen.getByLabelText("Nudo de destino de e1").getAttribute("value")).toBe("v2");
+  });
+
+  it("escribir filtra la lista y elegir cambia el extremo", async () => {
+    const user = userEvent.setup();
+    renderWithEndpoints();
+
+    expect(endpoints()[0]).toBe("e1:seed-v1:seed-v2");
+
+    const input = screen.getByLabelText("Nudo de destino de e1");
+    await user.click(input);
+    await user.keyboard("v3");
+
+    // Con "v3" escrito, v3 es lo único que queda en la lista: eso es lo que el
+    // `Select` no podía hacer y es el punto del cambio.
+    const opciones = screen.getAllByRole("option");
+    expect(opciones.map((o) => o.textContent)).toEqual(["v3"]);
+
+    await user.click(opciones[0]);
+
+    expect(endpoints()[0]).toBe("e1:seed-v1:seed-v3");
+  });
+
+  it("escribir cualquier cosa y salir no deja el input diciendo algo que el modelo no dice", async () => {
+    const user = userEvent.setup();
+    renderWithEndpoints();
+
+    const input = screen.getByLabelText("Nudo de destino de e1");
+    await user.click(input);
+    await user.keyboard("no existe");
+    await user.tab();
+
+    // La lección de la v1: el input y el modelo no pueden divergir. Ahí el
+    // valor se confirmaba en `onBlur` y dos caminos lo desmontaban antes, así
+    // que la celda mostraba un valor viejo. Ver docs/errores.md.
+    expect(endpoints()[0]).toBe("e1:seed-v1:seed-v2");
+    expect(input.getAttribute("value")).toBe("v2");
+  });
+
+  it("el nudo del otro extremo no se puede elegir", async () => {
+    const user = userEvent.setup();
+    renderWithEndpoints();
+
+    // e1 ya va de v1 a v2: en el origen, v2 tiene que estar deshabilitado.
+    await user.click(screen.getByLabelText("Nudo de origen de e1"));
+
+    const v2 = screen.getAllByRole("option").find((o) => o.textContent === "v2")!;
+    expect(v2.getAttribute("aria-disabled")).toBe("true");
+
+    // Y el resto sigue disponible: no se deshabilita la lista, solo ese.
+    const v3 = screen.getAllByRole("option").find((o) => o.textContent === "v3")!;
+    expect(v3.getAttribute("aria-disabled")).not.toBe("true");
   });
 });
