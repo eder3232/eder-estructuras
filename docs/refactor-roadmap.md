@@ -254,8 +254,9 @@ Consecuencia práctica: **si vas a tocar la UI de otro sistema, mirá primero c�
 1. Este documento — el porqué del orden de trabajo y el diagnóstico del proyecto original.
 2. [`docs/state-pattern.md`](./state-pattern.md) — **obligatorio antes de armar la página de un sistema nuevo**.
 3. [`docs/diagram-pattern.md`](./diagram-pattern.md) si tocás visualización de un sistema **plano**; [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md) si es **espacial**. Son módulos hermanos, ninguno importa del otro.
-4. [`docs/components.md`](./components.md) — qué es intocable en `ui/` y cómo forkear. **Tiene cuatro trampas que ya costaron tiempo cada una**: el `mb-4` de `AccordionContent`, el `SelectValue` que muestra el texto del item, el `text-transform` que reescribe los símbolos de KaTeX, y el patrón "mounted" (`useState` + `useEffect`) que rompe el criterio de lint del repo.
-5. [`docs/git-workflow.md`](./git-workflow.md) — commits directos a `main`, Conventional Commits.
+4. [`docs/errores.md`](./errores.md) — **obligatorio antes de tocar algo que produzca, transporte o muestre un error**: el contrato de hoy y las cuatro trampas del sistema del original (el catálogo que no era fuente, el tercio de errores que no llegaba a la pantalla, la validación duplicada, y el "debouncer" que no era un debounce).
+5. [`docs/components.md`](./components.md) — qué es intocable en `ui/` y cómo forkear. **Tiene cuatro trampas que ya costaron tiempo cada una**: el `mb-4` de `AccordionContent`, el `SelectValue` que muestra el texto del item, el `text-transform` que reescribe los símbolos de KaTeX, y el patrón "mounted" (`useState` + `useEffect`) que rompe el criterio de lint del repo.
+6. [`docs/git-workflow.md`](./git-workflow.md) — commits directos a `main`, Conventional Commits.
 
 **Y antes de tocar `/armaduras-2d`**: [`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md), que es la lista de trabajo activa — qué sigue, en qué orden, qué quedó afuera y por qué.
 

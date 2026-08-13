@@ -153,6 +153,8 @@ Dos cosas a mirar antes: que los videos **sigan siendo válidos** —la UI de v2
 
 Sale del barrido del **2026-08-13**: el usuario pidió revisar cómo manejaba los errores v1 —tres átomos derivados que se concatenan, un catálogo de códigos y un "debouncer"— y qué valía la pena rescatar.
 
+> **El análisis completo está en [`docs/errores.md`](./errores.md)**: el contrato de v2, las cuatro trampas del original, qué era realmente el "debouncer" y el bug de input que tapaba. Acá quedan solo las **dos decisiones abiertas** que salieron de ahí.
+
 **El veredicto corto**: la arquitectura de v1 era correcta y v2 ya la tiene (errores como átomo **derivado** del estado, nunca imperativo; mensajes que nombran la fila; resultados bloqueados mientras hay errores). Lo que v1 tenía y v2 **no** son dos ideas, las dos con el cableado mal hecho en el original — o sea que no se copian: se rehacen bien.
 
 | # | Qué | Decisión abierta | Tamaño |
