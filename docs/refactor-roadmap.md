@@ -2,7 +2,7 @@
 
 Este documento diagnostica el estado real de `thesis-structures` (el proyecto anterior, en `D:\programming\repos_clonados\thesis-structures`) y propone un orden concreto para refactorizarlo en este repo. Es un plan vivo: se actualiza a medida que cada fase se completa o cambia de alcance.
 
-> **¿Retomando el trabajo en frío?** Andá directo a **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** (al final del documento): estado actual, qué leer, qué falta y qué está verificado, todo junto. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
+> **¿Retomando el trabajo en frío?** El **trabajo activo** está en [`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md) — cerrar `/armaduras-2d` por completo antes de propagar, ya ordenado y autosuficiente. Para el contexto general del proyecto, **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** (al final de este documento): estado actual, qué leer, qué falta y qué está verificado. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
 
 ## Resumen ejecutivo
 
@@ -167,9 +167,13 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-12, sesión de comparación con el proyecto original y recuperación de la narrativa de `/armaduras-2d`**.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-12, sesión del shell de la app (S1 + S3)**.
 
-**Ninguna de las tres últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
+> **Antes que nada: hay una lista de trabajo activa.** El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**, y todo lo pendiente de ese sistema —que estaba repartido entre las deudas de acá abajo y los grupos U y N de [`pendientes-comparacion.md`](./pendientes-comparacion.md)— se juntó y se ordenó en **[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)**. Ese documento es de dónde se sigue. Esta sección es el contexto.
+>
+> Los dos primeros puntos ya están hechos (**S1** nombre/idioma/metadata y **S3** modo oscuro, commits `b1ee999` y `b9468e0`). El siguiente es el **entorno DOM para tests de componentes**.
+
+**Ninguna de las cuatro últimas sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Las tres trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
 
 ### Qué pasó en las últimas tres sesiones
 
@@ -188,6 +192,13 @@ De ahí salieron tres cosas, y las tres importan para seguir:
 3. **Aparecieron tres componentes compartidos nuevos** (`custom/math.tsx`, `custom/matrix-equation.tsx`, y el prop `cellClass` de `MatrixTable`) que sirven a los cuatro sistemas aunque hoy solo los use uno.
 
 Dejó la deuda **D10** y **agrandó mucho la superficie del hilo C** (ver el punto 3): propagar ya no son dos funciones, son cinco.
+
+**2026-08-12, tercera parte** (commits `b1ee999`, `b9468e0`) — **el shell de la app**, y la decisión de orden que manda hoy. El usuario pidió revisar todo lo pendiente de `/armaduras-2d` y decidió **terminarlo por completo antes de saltar a otro sistema**, con todo adentro: las deudas de render, el grupo U entero, el grupo N entero, y un entorno DOM para poder probar clicks. Eso quedó ordenado en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md). De paso se hicieron los dos puntos del shell que lo destrababan:
+
+- **S1**: la app se llama **Eder Estructuras**, `lang="es"`, y nombre/descripción centralizados en `src/lib/site-config.ts`.
+- **S3**: `next-themes` **montado por fin** — estaba instalado desde el principio pero nunca se había montado, así que los tokens `.dark` eran código muerto. Con una **navbar provisional**, porque el toggle tenía que vivir en algún lado y S2 sigue sin decidirse.
+
+Y la primera verificación en oscuro que se hizo nunca (ver el punto 5): los cuatro colores de zona de la partición **funcionan**, y el intento de juzgarlos a ojo **falló** — hubo que medir.
 
 > **La validación del usuario sobre la UI de decimales sigue abierta.** Aprobó los arreglos puntuales que encontró, nunca el conjunto. **Preguntá antes de propagar nada a los otros tres sistemas.**
 
@@ -227,8 +238,10 @@ Consecuencia práctica: **si vas a tocar la UI de otro sistema, mirá primero c�
 1. Este documento — el porqué del orden de trabajo y el diagnóstico del proyecto original.
 2. [`docs/state-pattern.md`](./state-pattern.md) — **obligatorio antes de armar la página de un sistema nuevo**.
 3. [`docs/diagram-pattern.md`](./diagram-pattern.md) si tocás visualización de un sistema **plano**; [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md) si es **espacial**. Son módulos hermanos, ninguno importa del otro.
-4. [`docs/components.md`](./components.md) — qué es intocable en `ui/` y cómo forkear. **Tiene tres trampas de CSS que ya costaron tiempo cada una**: el `mb-4` de `AccordionContent`, el `SelectValue` que muestra el texto del item, y el `text-transform` que reescribe los símbolos de KaTeX.
+4. [`docs/components.md`](./components.md) — qué es intocable en `ui/` y cómo forkear. **Tiene cuatro trampas que ya costaron tiempo cada una**: el `mb-4` de `AccordionContent`, el `SelectValue` que muestra el texto del item, el `text-transform` que reescribe los símbolos de KaTeX, y el patrón "mounted" (`useState` + `useEffect`) que rompe el criterio de lint del repo.
 5. [`docs/git-workflow.md`](./git-workflow.md) — commits directos a `main`, Conventional Commits.
+
+**Y antes de tocar `/armaduras-2d`**: [`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md), que es la lista de trabajo activa — qué sigue, en qué orden, qué quedó afuera y por qué.
 
 Los dos de la comparación con el original se leen **cuando toque ese tema**, no antes: [`docs/armaduras-2d-plan.md`](./armaduras-2d-plan.md) si vas a replicar la narrativa pedagógica en otro sistema (ahí está el porqué de cada decisión y lo que salió mal al implementarla), y [`docs/pendientes-comparacion.md`](./pendientes-comparacion.md) si vas a decidir sobre shell, unidades, persistencia o numeración de DOF.
 
@@ -236,7 +249,9 @@ Regla general: **ante una discrepancia, gana el código**. Estos documentos pued
 
 ### 3. Los hilos pendientes
 
-Ninguno depende de otro. **Si el usuario ya dio el visto bueno a la UI de decimales de `/armaduras-2d`, arrancá por el C**, que es corto y cierra una asimetría molesta. Si no, arrancá por el **A**, que cierra el Tren C y deja los 5 sistemas base completos.
+> **Los tres están en pausa.** Desde el 2026-08-12 el trabajo activo es cerrar `/armaduras-2d` ([`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)); estos hilos se retoman después. Se dejan acá porque el porqué de cada uno no está en ningún otro lado, y porque el hilo C **cambia de tamaño** con cada cosa que se agregue a `/armaduras-2d`.
+
+Ninguno depende de otro. Cuando se retomen: el **A** cierra el Tren C y deja los 5 sistemas base completos; el **C** conviene hacerlo recién con `/armaduras-2d` terminado, que es justamente la decisión vigente.
 
 **Hilo A — `frame2d-seismic` (segunda mitad del Tren C).** Como extensión real sobre `frame2d`, **no un fork copiado**: ese fue el bug de duplicación diagnosticado en el original, donde `frame2D.ts` de ambos programas era casi idéntico letra por letra. Antes de escribir nada: revisar `D:\programming\repos_clonados\thesis-structures\src\programs\frame2d-seismic\` y **diffearlo contra `frame2d`** para aislar qué agrega de verdad el caso sísmico. Lo que quede en común no se copia — se reusa. El orden probado sigue siendo: motor primero, validado con un test de regresión, antes de tocar estado/UI.
 
@@ -269,7 +284,7 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D2 | `element-table.tsx` de `/armaduras-2d` y `/armaduras-3d` **eran** byte-idénticos salvo el import del store, y se dejaron duplicados a propósito (el tercer caso dispara la extracción a `src/components/custom/`). Divergieron el 2026-08-10: la de 2D recibió el botón de insertar por fila. Al propagar **D7** vuelven a coincidir, y ahí conviene decidir si se extraen | `src/app/armaduras-{2d,3d}/components/element-table.tsx` | chico |
 | D3 | La forma deformada de `frame2d` es una recta entre nudos. Con flexión el tramo real es una cúbica de Hermite gobernada por los giros de los extremos — mejora pedagógica clara, pero hay que muestrear con las funciones de forma del elemento, no solo mover los extremos | `diagram-2d/deformed-diagram.tsx` | mediano |
 | D4 | Los diagramas de corte y momento a lo largo de la barra (`graphShear`/`graphMoment` del original) no se portaron. Son otra vista, no una variante de la deformada | — | mediano |
-| D5 | Verificación visual pendiente — ver punto 5. Ya no es "todo": `/armaduras-2d` y el esquema de `/frame2d` se miraron; falta la deformada de `/frame2d`, `/armaduras-3d` y el modo oscuro | — | chico |
+| D5 | Verificación visual pendiente — ver punto 5. Ya no es "todo": `/armaduras-2d` se miró entera **y en los dos temas**, y el esquema de `/frame2d` también; falta la deformada de `/frame2d` y `/armaduras-3d` (que en oscuro importa más que el resto, porque sus colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS) | — | chico |
 | D6 | Las etiquetas de valor de las flechas (`force-arrow.tsx`) se dibujan a una distancia fija de la punta y **se superponen con las barras y entre sí** cuando el nudo tiene carga en x y en z a la vez (visible en el nudo `v3` del esquema semilla de `/armaduras-2d`). Se detectó mirando, no calculando. Arreglo posible: correr la etiqueta perpendicular al eje de la flecha, o darle un `paint-order: stroke` con halo del color de fondo | `diagram-2d/force-arrow.tsx` | chico |
 | D7 | El botón de **insertar una fila en el medio** (`+` por fila) solo está en `/armaduras-2d`. `/springs`, `/frame2d` y `/armaduras-3d` siguen con el `+` del encabezado nada más, o sea solo se puede agregar al final. Es una regresión del port, no una decisión. La lógica ya está lista y probada en `src/lib/row-names.ts`: falta pasar el `afterId` en cada `atomAdd*` y sumar la columna en cada tabla | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
 | D8 | La **cascada de decimales** (página → bloque → tabla) solo está cableada en `/armaduras-2d`. Los otros 3 sistemas siguen con el selector único de página: funcionan igual que antes porque `useDecimals()` cae en `atomDecimals` fuera de todo scope, pero no tienen control por bloque ni por tabla. Se propaga envolviendo cada `AccordionItem` de su `results-panel.tsx` y cambiando su `internal-forces-table.tsx` — ver la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md) | `src/app/{springs,frame2d,armaduras-3d}/` | chico |
@@ -321,13 +336,21 @@ Dos cosas del método que sirven para la próxima:
 - **KaTeX hay que mirarlo, no leerlo.** Contar los `class="katex"` del HTML no prueba nada: si el CSS o las fuentes no resuelven, el DOM sale perfecto y la pantalla muestra tipografía del sistema con los símbolos apilados mal. Lo que sí sirve como chequeo rápido en el HTML es `katex-error`, que cuenta las fórmulas que no parsearon (debe dar 0).
 - **El dev server puede estar ya levantado.** Si `pnpm dev` falla con "Another next dev server is already running", es el del usuario en el 3000 sirviendo este mismo repo: usalo, no lo mates.
 
+**Lo que se miró el 2026-08-12, tercera parte** (headless, al montar el shell): `/armaduras-2d` entera **en los dos temas**, forzando cada uno. Resultado y método, que es lo que sirve para la próxima:
+
+- **Los cuatro colores de zona de la partición funcionan en oscuro.** Es lo que hasta ese día figuraba acá mismo como afirmado *por construcción y no por captura*. Distancias RGB medidas contra el fondo: sky 80, emerald 61, amber 80, violet 90 — se distinguen del fondo y entre sí.
+- **Y el ojo se equivocó.** A simple vista parecía que `Kff` (sky) se perdía contra el fondo; medir lo desmintió. Es la misma lección del `mb-4`, ahora en color: **sobre una captura hay que medir, no mirar**. La receta es la moda de color de la zona contra la moda del fondo, con `collections.Counter` sobre los píxeles (está escrita en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)).
+- **Para forzar un tema en headless**: agregarle `forcedTheme="light"` o `"dark"` al `<ThemeProvider>` de `layout.tsx`, capturar y **revertir**. Sin eso, headless resuelve `prefers-color-scheme` por su cuenta y no necesariamente da el tema que se quiere ver.
+- **Truco que ahorra tiempo**: para mirar una sección del acordeón, abrir *solo* esa en el `defaultValue`. Queda arriba y se recorta sin buscarla dentro de una captura de 16000 px.
+
 **Lo que sigue sin mirarse:**
 
 - **`/frame2d`**, sección "5. Forma deformada": el arco de momento (`moment-arc.tsx`) sobre las reacciones de los empotramientos. El esquema de esa ruta sí se vio.
 - **`/armaduras-3d`**: la escena entera. Sí se comprobó que la ruta responde 200 con las tablas y las matrices locales ya calculadas en el HTML, que `pnpm build` la prerrenderiza, y que `src/app/armaduras-3d/store/results.test.ts` fija que el store arma los vectores de 3 componentes en el orden correcto (cruzar `y` con `z` daría números plausibles pero falsos, y ninguna revisión visual lo detectaría). Falta lo puramente visual: encuadre inicial de la cámara, legibilidad de los glifos de apoyo, y que las etiquetas DOM (`<Html>` de drei) queden donde deben.
-- **Modo oscuro, en ningún sistema**: el repo define los tokens `.dark` en `globals.css` pero no monta ningún switch de tema, así que nunca se activó (es el punto **S3** de [`docs/pendientes-comparacion.md`](./pendientes-comparacion.md)). Para la escena 3D esto importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS. Y desde el 2026-08-12 hay un caso más: **los cuatro colores de zona de la partición** (`sky/emerald/amber/violet` al 20%) se eligieron para funcionar en ambos temas, pero **eso se afirmó por construcción, no por captura**.
+- **Modo oscuro en `/springs`, `/frame2d` y `/armaduras-3d`.** Desde el 2026-08-12 el tema **se puede activar** (`next-themes` montado, punto **S3** ya hecho), y `/armaduras-2d` se miró entera en oscuro — pero los otros tres no. Para la escena 3D importa más que en SVG, porque los colores pasan por la conversión `oklch → sRGB` de `theme-colors.ts` en vez de por clases de CSS: eso es una lectura, no una suscripción, así que **hay que verificar que la escena se repinte al cambiar de tema**, no asumirlo.
 - **El desplegable de sección en estado `Fijo (n)`.** Se vio en `Auto (n)`, que era el estado roto. La rama fijada es el mismo camino de código con un rótulo de largo equivalente en una caja de ancho fijo, pero por construcción, no por captura: verla requiere sembrar `atomDecimalsByScope` (ver el truco más abajo).
-- **Ningún click, en ninguna parte.** Headless saca capturas pero no interactúa, y el repo **no tiene entorno DOM** para tests de componentes (no hay `jsdom`/`happy-dom` ni testing-library). O sea: de toda la UI nueva de `/armaduras-2d` se verificó *el resultado del estado*, nunca *el evento que lo cambia*. Sin probar quedaron: los botones `+`/`−` de las tablas de entrada, los `− / +`, el `↺` y el desplegable de los decimales, y **el botón "Aplicar a las N barras"** que agregó la sesión del 2026-08-12 (su lógica sí está cubierta: es un `set` sobre un átomo, pero el click no se ejercitó). Ojo con lo que esto implica para los arreglos del 2026-08-12: que el `+` ya **no** se corra del cursor se sigue del layout (el stepper depende del ancho del rótulo, no de la tabla) y se vio en captura, pero **la secuencia de tres clicks seguidos no se ejercitó nunca**. La forma de probarlos hoy es sembrar el estado a mano (ver abajo); la forma de probarlos de verdad es agregar un entorno DOM, que es una decisión aparte y no se tomó.
+- **El click del toggle de tema.** Se verificó que la app rinde bien en los dos temas forzándolos, que es otra cosa: que el botón efectivamente los cambie no se ejercitó. Es el primer caso a cubrir con el entorno DOM.
+- **Ningún click, en ninguna parte.** Headless saca capturas pero no interactúa, y el repo **no tiene entorno DOM** para tests de componentes (no hay `jsdom`/`happy-dom` ni testing-library). **Dejó de ser una decisión pendiente**: el usuario decidió el 2026-08-12 montarlo, y es el punto 1 de [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md). O sea: de toda la UI nueva de `/armaduras-2d` se verificó *el resultado del estado*, nunca *el evento que lo cambia*. Sin probar quedaron: los botones `+`/`−` de las tablas de entrada, los `− / +`, el `↺` y el desplegable de los decimales, y **el botón "Aplicar a las N barras"** que agregó la sesión del 2026-08-12 (su lógica sí está cubierta: es un `set` sobre un átomo, pero el click no se ejercitó). Ojo con lo que esto implica para los arreglos del 2026-08-12: que el `+` ya **no** se corra del cursor se sigue del layout (el stepper depende del ancho del rótulo, no de la tabla) y se vio en captura, pero **la secuencia de tres clicks seguidos no se ejercitó nunca**. La forma de probarlos hoy es sembrar el estado a mano (ver abajo); la forma de probarlos de verdad es agregar un entorno DOM, que es una decisión aparte y no se tomó.
 
 **Truco para verificar sin poder clickear**: sembrar temporalmente el estado inicial del átomo, sacar la captura y revertir. Con `atomDecimalsByScope` en `src/components/custom/decimals.ts`, por ejemplo:
 

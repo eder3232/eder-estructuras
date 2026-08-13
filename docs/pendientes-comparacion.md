@@ -5,7 +5,11 @@ El **2026-08-12** se comparó `/armaduras-2d` contra el `armor2d` del proyecto o
 - Lo **pedagógico**, que sí se va a hacer ahora y está planificado en [`docs/armaduras-2d-plan.md`](./armaduras-2d-plan.md).
 - Todo lo demás, que es **este documento**: lo que la comparación encontró y se decidió no abordar todavía, con la decisión que hay que tomar en cada caso.
 
-Nada de acá está en curso. Existe para no volver a descubrirlo dentro de seis meses, y para que cuando le llegue el turno a cada punto la discusión arranque de donde quedó y no de cero.
+> **Actualización del 2026-08-12.** Buena parte de este documento **dejó de estar en espera**: el usuario decidió cerrar `/armaduras-2d` por completo antes de propagar, y con eso **los grupos U y N entraron enteros en la lista de trabajo activa**, que es [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md). Del grupo S ya se hicieron **S1** y **S3**. Lo que sigue realmente en espera es **S2** (la navegación definitiva) y el **grupo M** entero.
+>
+> Los puntos se dejan escritos acá igual, porque este documento es donde vive **la decisión abierta de cada uno** — el orden y el estado están en el otro.
+
+Existe para no volver a descubrirlo dentro de seis meses, y para que cuando le llegue el turno a cada punto la discusión arranque de donde quedó y no de cero.
 
 **Cómo leerlo.** Cada punto tiene un id estable (`S`hell, `M`otor, `U`sabilidad, `N`uevo) y, sobre todo, **la decisión abierta** — que es lo que no se puede reconstruir mirando el código. El *qué falta* casi siempre es obvio; el *por qué no se hizo así nomás*, no.
 
@@ -19,9 +23,9 @@ Alcanza a los cuatro sistemas. Es lo más barato de la lista y lo más visible: 
 
 | # | Qué falta | Decisión abierta | Tamaño |
 |---|---|---|---|
-| **S1** | `src/app/layout.tsx` declara `lang="en"` en una app enteramente en castellano, y su `metadata.title` sigue siendo **"Create Next App"** | Ninguna técnica: hay que **elegir un nombre y una descripción** para la app. El original los tenía centralizados en un `siteConfig` | chico |
-| **S2** | No hay navbar ni footer. Desde cualquier sistema no se vuelve a `/` salvo con el botón del navegador | Ver abajo | chico/mediano |
-| **S3** | **`next-themes` está en `package.json` pero nunca se monta** — solo aparece dentro de `ui/sonner.tsx`. Los tokens `.dark` de `globals.css` son código muerto y el modo oscuro nunca se pudo activar en ningún sistema | Ver abajo | chico |
+| **S1** | ✅ **Hecho el 2026-08-12** (commit `b1ee999`). La app se llama **Eder Estructuras**, `lang="es"`, y el nombre y la descripción viven en `src/lib/site-config.ts` — que también exporta `systemLinks` | — | chico |
+| **S2** | **Parcial.** Hay una navbar **provisional** desde el 2026-08-12 (el toggle de tema necesitaba vivir en algún lado): nombre, los cuatro sistemas y el toggle, sin estado de link activo y sin footer. La decisión de fondo sigue abierta | Ver abajo — **no cambió** | chico/mediano |
+| **S3** | ✅ **Hecho el 2026-08-12** (commit `b9468e0`). `next-themes` montado con `attribute="class"`, y `/armaduras-2d` verificada en oscuro por captura. Faltan los otros tres sistemas en oscuro | Ver abajo — lo que queda es la verificación, no la decisión | chico |
 
 ### S2 · Qué forma tiene la navegación
 
@@ -33,7 +37,9 @@ Lo que hay que decidir no es "poner una navbar", es **si el layout de los sistem
 
 ### S3 · Modo oscuro: montar el provider no alcanza
 
-Montar `ThemeProvider` y un toggle es de una tarde. Lo que hay que tener en cuenta es que **nunca se miró ningún sistema en oscuro** (deuda D5 del roadmap), así que activar el switch es el principio del trabajo, no el final.
+> **Montado el 2026-08-12**, y la advertencia de abajo se confirmó: activar el switch fue el principio del trabajo. `/armaduras-2d` se miró entera en oscuro y quedó bien —incluidos los cuatro colores de zona de la partición, medidos—, pero **los otros tres sistemas siguen sin mirarse**.
+
+Montar `ThemeProvider` y un toggle es de una tarde. Lo que había que tener en cuenta es que **nunca se había mirado ningún sistema en oscuro** (deuda D5 del roadmap), así que activar el switch es el principio del trabajo, no el final.
 
 El caso delicado es `/armaduras-3d`: los materiales de three.js no aceptan clases de CSS, así que los colores se leen de los tokens `oklch` y se convierten en `src/components/custom/diagram-3d/theme-colors.ts`. Eso es una lectura, no una suscripción — **hay que verificar que la escena se repinte al cambiar de tema**, y no asumirlo. Está explicado en [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md).
 
@@ -136,6 +142,6 @@ O sea que hoy esto es sobre todo cablear un `onMouseEnter`. Y lo que responde �
 
 ## Cuándo volver a este documento
 
-- **Ahora mismo** (el P0 se terminó el 2026-08-12): **N4** quedó a un paso —tiene todas sus piezas puestas— y **U4** se puede evaluar junto con la deuda D6.
-- **Antes de arrancar la Fase 8** (contenido educativo): S2 y N6 se condicionan mutuamente.
-- **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para los grupos S y M, que alcanzan a todos.
+- **Durante el cierre de `/armaduras-2d`**: los grupos **U** y **N** están todos ahí adentro, así que este documento es el que tiene *por qué* de cada uno. El orden y el estado están en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md).
+- **Antes de arrancar la Fase 8** (contenido educativo): **S2** y **N6** se condicionan mutuamente, y la navbar de hoy es provisional justamente para no adelantar esa decisión.
+- **Al cerrar el Tren C** (`frame2d-seismic`), cuando los cinco sistemas base estén completos: es el momento natural para el **grupo M**, que alcanza a todos y toca motor y stores.

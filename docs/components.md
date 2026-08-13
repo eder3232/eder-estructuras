@@ -104,6 +104,25 @@ Ya está resuelto en el componente: `Math` y `MathBlock` se aplican `normal-case
 
 Regla general: si un componente genera texto que representa símbolos, tiene que ser inmune a las transformaciones tipográficas del contenedor. Es lo mismo que ya pasó con `vector-effect` en los SVG (ver [`docs/diagram-pattern.md`](./diagram-pattern.md)): una propiedad heredada que rompe algo que el markup muestra correcto.
 
+## Trampa conocida: el patrón "mounted" rompe el lint del repo
+
+El truco habitual para un componente que depende de algo que no existe en el servidor —el tema elegido, `localStorage`, el ancho de la ventana— es renderizar un placeholder hasta montar:
+
+```tsx
+const [mounted, setMounted] = useState(false)
+useEffect(() => setMounted(true), [])   // ❌ acá salta el lint
+```
+
+**En este repo eso es un error de lint**, no un estilo: la regla `react-hooks/set-state-in-effect` lo marca. Y no es un detalle cosmético — los **2 errores preexistentes** de `pnpm lint` son exactamente de esa regla, en archivos de `ui/` que son intocables por convención. El criterio del README es que **un tercer error es una regresión nueva**; introducirlo a propósito destruye ese criterio, que es lo único que hace útil correr el linter en un repo que nunca da cero.
+
+Salidas, en orden de preferencia:
+
+1. **Que el markup no dependa del estado del cliente.** Es lo que hace `custom/theme-toggle.tsx`: dibuja los dos iconos, siempre, y deja que la variante `dark:` decida cuál se ve. El HTML del servidor y el del cliente son idénticos, así que no hay desajuste que ocultar ni parpadeo que tapar — y de paso no hace falta `suppressHydrationWarning` en el componente.
+2. **Leer el valor solo dentro de un handler**, que corre después de montar y nunca participa del render (el `resolvedTheme` del mismo toggle).
+3. Recién si ninguna alcanza, un `useLayoutEffect` — que corre antes del paint y no dispara la regla.
+
+La regla general es la misma de las otras tres trampas de este documento: **preferí que el problema no exista a taparlo después**.
+
 ## Resumen rápido
 
 | Carpeta      | Origen                        | ¿Se edita a mano? | ¿Se puede sobrescribir con `shadcn add`? |
