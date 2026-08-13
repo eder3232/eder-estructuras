@@ -19,9 +19,9 @@ import { UnitDisplacement } from "./unit-displacement";
 afterEach(cleanup);
 
 const nodes: NodeRow[] = [
-  { id: "v1", name: "v1", x: 0, z: 0, forceX: 0, forceZ: 0, displacementX: 0, displacementZ: 0, restrainedX: true, restrainedZ: true },
-  { id: "v2", name: "v2", x: 3, z: 0, forceX: 0, forceZ: 0, displacementX: 0, displacementZ: 0, restrainedX: true, restrainedZ: true },
-  { id: "v3", name: "v3", x: 0, z: 4, forceX: 0, forceZ: -10, displacementX: 0, displacementZ: 0, restrainedX: false, restrainedZ: false },
+  { id: "v1", name: "v1", x: 0, z: 0, forceX: 0, forceZ: 0, displacementX: 0, displacementZ: 0, restrainedX: true, restrainedZ: true, dofNumberX: 0, dofNumberZ: 0 },
+  { id: "v2", name: "v2", x: 3, z: 0, forceX: 0, forceZ: 0, displacementX: 0, displacementZ: 0, restrainedX: true, restrainedZ: true, dofNumberX: 0, dofNumberZ: 0 },
+  { id: "v3", name: "v3", x: 0, z: 4, forceX: 0, forceZ: -10, displacementX: 0, displacementZ: 0, restrainedX: false, restrainedZ: false, dofNumberX: 0, dofNumberZ: 0 },
 ];
 
 const elements: ElementRow[] = [

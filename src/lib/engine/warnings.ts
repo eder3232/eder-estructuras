@@ -20,7 +20,7 @@ export interface SolveWarning {
   /** Id de la fila señalada, o `"-"` si `source` es `system`. */
   refId: string;
   /** Identidad estable de la advertencia, para poder distinguirlas sin mirar el texto. */
-  code: "unconnected-node" | "ill-conditioned";
+  code: "unconnected-node" | "ill-conditioned" | "dof-order-adjusted";
   /**
    * El texto para el usuario. **No nombra la fila**: el motor solo conoce ids,
    * y un id crudo en pantalla no le dice nada a nadie. Quien lo muestra tiene
@@ -53,6 +53,42 @@ export function illConditionedWarning(condition: number): SolveWarning | null {
       `La matriz de rigidez está mal condicionada (número de condición ≈ 10^${digits}). ` +
       `Se pudo resolver, pero los últimos dígitos de los desplazamientos no son confiables: ` +
       `suele pasar cuando conviven barras de rigideces muy distintas, o cuando una es mucho más corta que el resto.`,
+  };
+}
+
+/**
+ * La numeración que cargó el alumno no es una permutación de 1..n.
+ *
+ * **No es un error, y ese es el punto**: el número se usa como criterio de
+ * orden, así que con repetidos o con saltos igual sale un orden — solo que no
+ * el que el alumno cree. Un repetido se desempata por el orden de la tabla, y
+ * un salto no deja ningún hueco en la matriz. Conviene decirlo porque el caso
+ * de uso de esta función es *cotejar contra el ejercicio del profesor*, y ahí
+ * una numeración mal copiada da matrices que no coinciden por una razón que no
+ * se ve.
+ *
+ * `null` si numeró 1..n sin repetir, que es lo normal.
+ */
+export function dofNumberingWarning(numbers: readonly number[]): SolveWarning | null {
+  if (numbers.length === 0) return null;
+  // Nadie numeró todavía: el orden es el de la tabla y no hay nada que avisar.
+  if (numbers.every((n) => n === 0)) return null;
+
+  const esperado = numbers.map((_, i) => i + 1);
+  const ordenados = [...numbers].sort((a, b) => a - b);
+  if (ordenados.every((n, i) => n === esperado[i])) return null;
+
+  const repetidos = ordenados.filter((n, i) => i > 0 && n === ordenados[i - 1]);
+  const detalle = repetidos.length > 0 ? `hay números repetidos (${[...new Set(repetidos)].join(", ")})` : "hay saltos";
+
+  return {
+    source: "system",
+    refId: "-",
+    code: "dof-order-adjusted",
+    message:
+      `La numeración de grados de libertad no va de 1 a ${numbers.length} sin repetir: ${detalle}. ` +
+      `Se usó igual como criterio de orden —los repetidos se desempatan por el orden de la tabla— así que los ` +
+      `resultados son correctos, pero si estás cotejando contra un ejercicio resuelto las filas pueden no coincidir.`,
   };
 }
 

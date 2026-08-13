@@ -1,7 +1,7 @@
 import { add, inv, multiply, subtract, zeros } from "mathjs";
 import { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, zeroStiffnessRows } from "./mechanism";
 import type { MechanismDiagnosis, MechanismDof } from "./mechanism";
-import { illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
+import { dofNumberingWarning, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
 import type { SolveWarning } from "./warnings";
 import type { Element } from "./element";
 import type { Node } from "./node";
@@ -11,6 +11,8 @@ export interface AddNodeInput {
   restrained: boolean[];
   force?: number[];
   displacement?: number[];
+  /** Ver `Node.dofNumbers`: la numeración que pidió el alumno, si la pidió. */
+  dofNumbers?: number[];
 }
 
 export interface DofOrderEntry {
@@ -60,6 +62,22 @@ export interface AssemblyResult {
 export interface DofOrderOptions {
   /** `false` (el valor por defecto) numera por orden de inserción de los nudos. */
   restrainedFirst?: boolean;
+  /**
+   * Si se usa la numeración que cargó el alumno (`Node.dofNumbers`) para
+   * ordenar los grados de libertad. **Cuando está encendida, manda ella**:
+   * `restrainedFirst` deja de aplicar al ensamblaje (sigue decidiendo cómo se
+   * agrupa la partición al mostrarla).
+   *
+   * Existe porque el profesor a veces numera de una forma rara a propósito,
+   * para ver si el alumno entendió el método — y el alumno quiere cotejar sus
+   * matrices contra las de la pantalla término a término.
+   *
+   * **Se respeta tal cual, aunque mezcle restringidos con libres.** El original
+   * no podía: cortaba la matriz por posición, así que necesitaba los dos grupos
+   * contiguos y usaba el número solo como desempate dentro de cada uno. Acá la
+   * partición junta por lista de índices, así que no hace falta.
+   */
+  useDofNumbers?: boolean;
 }
 
 export interface SolveResult {
@@ -75,11 +93,21 @@ export interface SolveResult {
   warnings: SolveWarning[];
 }
 
+interface DofEntry {
+  nodeId: string;
+  localDof: number;
+  restrained: boolean;
+  /** El número que pidió el alumno, o 0 si no pidió ninguno. */
+  number: number;
+}
+
 interface DofIndex {
   /** Índice global (0..t-1) por nodo, uno por grado de libertad local. */
   byNode: Map<string, number[]>;
   free: number[];
   restrained: number[];
+  /** Los números que pidió el alumno, en el orden que salieron. Vacío si no numeró. */
+  numbers: number[];
 }
 
 export class System {
@@ -92,7 +120,7 @@ export class System {
     }
   }
 
-  addNode({ id, restrained, force, displacement }: AddNodeInput): void {
+  addNode({ id, restrained, force, displacement, dofNumbers }: AddNodeInput): void {
     if (this.nodes.has(id)) {
       throw new Error(`El nodo ${id} ya existe.`);
     }
@@ -127,7 +155,7 @@ export class System {
       };
     });
 
-    this.nodes.set(id, { id, dof });
+    this.nodes.set(id, { id, dof, dofNumbers });
   }
 
   addElement(element: Element): void {
@@ -151,20 +179,35 @@ export class System {
    * (El proyecto original cortaba la matriz **por posición**, y por eso el
    * mismo cambio le costaba duplicar la función que la partía.)
    */
-  private buildDOFOrder({ restrainedFirst = false }: DofOrderOptions): DofIndex {
-    const entries: { nodeId: string; localDof: number; restrained: boolean }[] = [];
+  private buildDOFOrder({ restrainedFirst = false, useDofNumbers = false }: DofOrderOptions): DofIndex {
+    const entries: DofEntry[] = [];
     for (const node of this.nodes.values()) {
       node.dof.forEach((dof, localDof) =>
-        entries.push({ nodeId: node.id, localDof, restrained: dof.restrained }),
+        entries.push({
+          nodeId: node.id,
+          localDof,
+          restrained: dof.restrained,
+          number: useDofNumbers ? (node.dofNumbers?.[localDof] ?? 0) : 0,
+        }),
       );
     }
 
-    // La partición en dos grupos es lo único que se reordena, y **el orden de
-    // inserción se conserva dentro de cada uno**: mover un nudo de lugar en la
-    // tabla tiene que seguir significando lo mismo.
-    const ordered = restrainedFirst
-      ? [...entries.filter((e) => e.restrained), ...entries.filter((e) => !e.restrained)]
-      : entries;
+    // `sort` es estable desde ES2019, así que empatar —o no numerar nada— deja
+    // el orden de inserción intacto.
+    const byNumber = (list: DofEntry[]) => [...list].sort((a, b) => a.number - b.number);
+
+    // **Si el alumno numeró, el alumno manda: se respeta tal cual, aunque
+    // mezcle restringidos con libres.** El original no podía hacer esto —cortaba
+    // la matriz por posición, así que necesitaba los dos grupos contiguos y
+    // terminaba usando el número solo como desempate dentro de cada grupo—.
+    // Acá la partición junta por lista de índices, así que no necesita
+    // contigüidad: el paso de reordenar para partir ya existe y se muestra
+    // aparte, que es justamente lo que hay que entender.
+    const ordered = useDofNumbers
+      ? byNumber(entries)
+      : restrainedFirst
+        ? [...entries.filter((e) => e.restrained), ...entries.filter((e) => !e.restrained)]
+        : entries;
 
     const byNode = new Map<string, number[]>();
     const free: number[] = [];
@@ -177,7 +220,7 @@ export class System {
       (entry.restrained ? restrained : free).push(globalIndex);
     });
 
-    return { byNode, free, restrained };
+    return { byNode, free, restrained, numbers: useDofNumbers ? ordered.map((e) => e.number) : [] };
   }
 
   private elementDofMap(element: Element, dofIndex: DofIndex): number[] {
@@ -256,6 +299,9 @@ export class System {
       [...this.nodes.keys()],
       [...this.elements.values()],
     );
+
+    const numbering = dofNumberingWarning(dofIndex.numbers);
+    if (numbering) warnings.push(numbering);
 
     const nodesInOrder = [...this.nodes.values()];
     const t = nodesInOrder.length * this.dofPerNode;

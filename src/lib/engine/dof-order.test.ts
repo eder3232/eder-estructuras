@@ -88,6 +88,84 @@ describe("orden de los grados de libertad", () => {
     }
   });
 
+  it("si el alumno numeró, manda su numeración — aunque mezcle los grupos", () => {
+    const area = 10 * 10 ** -4;
+    const elasticity = 2 * 10 ** 7;
+    const system = new System(2);
+    // Una numeración "rara" a propósito, de las que pone el profesor para ver
+    // si el alumno entendió: v3 primero, y los ejes de v1 separados.
+    system.addNode({ id: "v1", restrained: [true, true], dofNumbers: [3, 6] });
+    system.addNode({ id: "v2", restrained: [true, true], dofNumbers: [4, 5] });
+    system.addNode({ id: "v3", restrained: [false, false], force: [1, -2], dofNumbers: [1, 2] });
+    system.addElement(
+      new TrussElement2D("e1", { id: "v1", x: 0, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+    );
+    system.addElement(
+      new TrussElement2D("e2", { id: "v2", x: 3, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+    );
+
+    const { assembly } = system.solve({ useDofNumbers: true });
+
+    // Exactamente lo pedido: los libres (v3) arriba, y v1z al final, entre
+    // medio de los otros restringidos. **El original no podía hacer esto**:
+    // cortaba la matriz por posición, así que forzaba los dos grupos contiguos.
+    expect(assembly.dofOrder.map((d) => `${d.nodeId}${d.localDof}`)).toEqual([
+      "v30", "v31", "v10", "v20", "v21", "v11",
+    ]);
+  });
+
+  it("numerar tampoco cambia los resultados", () => {
+    const area = 10 * 10 ** -4;
+    const elasticity = 2 * 10 ** 7;
+    const build = (dofNumbers: boolean) => {
+      const system = new System(2);
+      system.addNode({ id: "v1", restrained: [true, true], dofNumbers: dofNumbers ? [3, 6] : undefined });
+      system.addNode({ id: "v2", restrained: [true, true], dofNumbers: dofNumbers ? [4, 5] : undefined });
+      system.addNode({
+        id: "v3",
+        restrained: [false, false],
+        force: [1, -2],
+        dofNumbers: dofNumbers ? [1, 2] : undefined,
+      });
+      system.addElement(
+        new TrussElement2D("e1", { id: "v1", x: 0, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+      );
+      system.addElement(
+        new TrussElement2D("e2", { id: "v2", x: 3, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+      );
+      return system.solve(dofNumbers ? { useDofNumbers: true } : {});
+    };
+
+    const base = build(false);
+    const numerado = build(true);
+
+    for (const id of ["v1", "v2", "v3"]) {
+      expect(numerado.displacements.get(id)).toEqual(base.displacements.get(id));
+      expect(numerado.reactions.get(id)).toEqual(base.reactions.get(id));
+    }
+  });
+
+  it("avisa —sin bloquear— si la numeración tiene repetidos o saltos", () => {
+    const area = 10 * 10 ** -4;
+    const elasticity = 2 * 10 ** 7;
+    const system = new System(2);
+    system.addNode({ id: "v1", restrained: [true, true], dofNumbers: [1, 1] });
+    system.addNode({ id: "v2", restrained: [true, true], dofNumbers: [3, 4] });
+    system.addNode({ id: "v3", restrained: [false, false], force: [1, -2], dofNumbers: [5, 6] });
+    system.addElement(
+      new TrussElement2D("e1", { id: "v1", x: 0, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+    );
+    system.addElement(
+      new TrussElement2D("e2", { id: "v2", x: 3, z: 0 }, { id: "v3", x: 0, z: 4 }, area, elasticity),
+    );
+
+    const solved = system.solve({ useDofNumbers: true });
+
+    expect(solved.warnings.map((w) => w.code)).toContain("dof-order-adjusted");
+    // Y sigue habiendo resultados: es una advertencia, no un error.
+    expect(solved.displacements.get("v3")).toBeDefined();
+  });
+
   it("con un modelo donde los grupos se intercalan, el reordenamiento se nota", () => {
     // v1 libre, v2 restringido, v3 libre: en orden de inserción los grupos
     // quedan mezclados, que es el caso donde el toggle hace algo visible.

@@ -2,7 +2,7 @@ import { atom } from "jotai";
 import { SingularStiffnessError, System, TrussElement2D, type SolveResult, type SolveWarning } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
 import { atomElements, type ElementRow } from "./elements";
-import { atomRestrainedFirst } from "./dof-order";
+import { atomRestrainedFirst, atomUseDofNumbers } from "./dof-order";
 
 import type { DomainError, DomainIssue } from "@/components/custom/errors-panel";
 
@@ -53,6 +53,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
   const nodes = get(atomNodes);
   const elements = get(atomElements);
   const restrainedFirst = get(atomRestrainedFirst);
+  const useDofNumbers = get(atomUseDofNumbers);
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
 
   // Antes de armar el sistema, y el orden importa. Un modelo con nudos y sin
@@ -78,6 +79,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
         restrained: [node.restrainedX, node.restrainedZ],
         force: [node.forceX, node.forceZ],
         displacement: [node.displacementX, node.displacementZ],
+        dofNumbers: [node.dofNumberX, node.dofNumberZ],
       });
     } catch (e) {
       errors.push({
@@ -122,7 +124,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
   }
 
   try {
-    const solved = system.solve({ restrainedFirst });
+    const solved = system.solve({ restrainedFirst, useDofNumbers });
     return { status: "ok", solved, warnings: toIssues(solved.warnings, nodesById, elements), nodesById };
   } catch (e) {
     return {

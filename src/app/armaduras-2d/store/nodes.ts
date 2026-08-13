@@ -16,6 +16,13 @@ export interface NodeRow {
   displacementZ: number;
   restrainedX: boolean;
   restrainedZ: boolean;
+  /**
+   * El número que el alumno le pone a cada grado de libertad. Solo se usa si
+   * la numeración manual está encendida (`atomUseDofNumbers`); el `0` es "sin
+   * numerar" y deja el orden de la tabla.
+   */
+  dofNumberX: number;
+  dofNumberZ: number;
 }
 
 export const seedNodeIds = {
@@ -37,6 +44,8 @@ const initialNodes: NodeRow[] = [
     displacementZ: 0,
     restrainedX: true,
     restrainedZ: true,
+    dofNumberX: 0,
+    dofNumberZ: 0,
   },
   {
     id: seedNodeIds.v2,
@@ -49,6 +58,8 @@ const initialNodes: NodeRow[] = [
     displacementZ: 0,
     restrainedX: true,
     restrainedZ: true,
+    dofNumberX: 0,
+    dofNumberZ: 0,
   },
   {
     id: seedNodeIds.v3,
@@ -61,6 +72,8 @@ const initialNodes: NodeRow[] = [
     displacementZ: 0,
     restrainedX: false,
     restrainedZ: false,
+    dofNumberX: 0,
+    dofNumberZ: 0,
   },
   {
     id: seedNodeIds.v4,
@@ -73,10 +86,14 @@ const initialNodes: NodeRow[] = [
     displacementZ: 0,
     restrainedX: false,
     restrainedZ: false,
+    dofNumberX: 0,
+    dofNumberZ: 0,
   },
 ];
 
-const atomNodesBase = atom<NodeRow[]>(initialNodes);
+// Exportado —y solo para `dof-order.ts`— porque encender la numeración manual
+// tiene que poder sembrarla; ver el porqué ahí.
+export const atomNodesBase = atom<NodeRow[]>(initialNodes);
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
@@ -104,6 +121,8 @@ export const atomAddNode = atom(null, (get, set, afterId?: string) => {
         displacementZ: 0,
         restrainedX: false,
         restrainedZ: false,
+        dofNumberX: 0,
+        dofNumberZ: 0,
       });
     }),
   );
@@ -119,7 +138,15 @@ export const atomRemoveNode = atom(null, (get, set, id: string) => {
   );
 });
 
-type NumericField = "x" | "z" | "forceX" | "forceZ" | "displacementX" | "displacementZ";
+type NumericField =
+  | "x"
+  | "z"
+  | "forceX"
+  | "forceZ"
+  | "displacementX"
+  | "displacementZ"
+  | "dofNumberX"
+  | "dofNumberZ";
 
 export const atomUpdateNodeField = atom(
   null,

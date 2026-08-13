@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { atomToggleUseDofNumbers, atomUseDofNumbers } from "../store/dof-order";
 import {
   atomAddNode,
   atomNodes,
@@ -18,13 +20,33 @@ import {
 
 export function NodeTable() {
   const [nodes] = useAtom(atomNodes);
+  const [useDofNumbers] = useAtom(atomUseDofNumbers);
   const addNode = useSetAtom(atomAddNode);
   const removeNode = useSetAtom(atomRemoveNode);
   const toggleRestrained = useSetAtom(atomToggleNodeRestrained);
   const updateField = useSetAtom(atomUpdateNodeField);
+  const toggleUseDofNumbers = useSetAtom(atomToggleUseDofNumbers);
 
   return (
-    <div className="max-w-full overflow-x-auto">
+    <div className="flex flex-col gap-3">
+      {/* El interruptor va **arriba de la tabla** porque lo que hace es agregarle
+          columnas: su efecto está acá, no en los resultados. El otro control de
+          orden —"los restringidos van arriba"— vive en el panel de resultados
+          por la misma razón, que es donde reordena las matrices. */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Checkbox id="use-dof-numbers" checked={useDofNumbers} onCheckedChange={() => toggleUseDofNumbers()} />
+          <Label htmlFor="use-dof-numbers" className="font-normal">
+            Numerar los grados de libertad a mano
+          </Label>
+        </div>
+        <p className="max-w-3xl text-xs text-muted-foreground">
+          Para cotejar contra un ejercicio resuelto: si el profesor numeró de otra forma, cargá su numeración y las
+          matrices de la pantalla van a quedar como las del papel. Los resultados no cambian.
+        </p>
+      </div>
+
+      <div className="max-w-full overflow-x-auto">
       <Table className="border">
         {/*
           Encabezado de dos niveles: la magnitud arriba y el eje abajo. Nueve
@@ -62,6 +84,11 @@ export function NodeTable() {
             <TableHead colSpan={2} className="h-9 border-l text-center">
               Restringido
             </TableHead>
+            {useDofNumbers && (
+              <TableHead colSpan={2} className="h-9 border-l text-center">
+                Grado de libertad
+              </TableHead>
+            )}
           </TableRow>
           <TableRow>
             <TableHead className="h-8 border-l text-center">X</TableHead>
@@ -72,6 +99,12 @@ export function NodeTable() {
             <TableHead className="h-8 text-center">Z</TableHead>
             <TableHead className="h-8 border-l text-center">X</TableHead>
             <TableHead className="h-8 text-center">Z</TableHead>
+            {useDofNumbers && (
+              <>
+                <TableHead className="h-8 border-l text-center">X</TableHead>
+                <TableHead className="h-8 text-center">Z</TableHead>
+              </>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,10 +188,31 @@ export function NodeTable() {
                   aria-label={`Restringir ${node.name} en z`}
                 />
               </TableCell>
+              {useDofNumbers && (
+                <>
+                  <TableCell className="border-l">
+                    <FormulaInput
+                      className="w-16"
+                      decimals={0}
+                      value={node.dofNumberX}
+                      onChange={(value) => updateField({ id: node.id, field: "dofNumberX", value })}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <FormulaInput
+                      className="w-16"
+                      decimals={0}
+                      value={node.dofNumberZ}
+                      onChange={(value) => updateField({ id: node.id, field: "dofNumberZ", value })}
+                    />
+                  </TableCell>
+                </>
+              )}
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+        </Table>
+      </div>
     </div>
   );
 }

@@ -23,11 +23,14 @@ function NodesProbe() {
   return (
     <ul data-testid="probe">
       {nodes.map((n) => (
-        <li key={n.id}>{`${n.name}:${n.restrainedX}:${n.restrainedZ}`}</li>
+        <li key={n.id}>{`${n.name}:${n.restrainedX}:${n.restrainedZ}:${n.dofNumberX}:${n.dofNumberZ}`}</li>
       ))}
     </ul>
   );
 }
+
+/** Los números de grado de libertad, en el orden de la tabla. */
+const numeros = () => rows().flatMap((row) => row.split(":").slice(3));
 
 function renderTable() {
   render(
@@ -61,11 +64,26 @@ describe("NodeTable", () => {
     renderTable();
 
     // v3 es el nudo libre de la semilla.
-    expect(rows()[2]).toBe("v3:false:false");
+    expect(rows()[2]).toBe("v3:false:false:0:0");
 
     await user.click(screen.getByRole("checkbox", { name: "Restringir v3 en x" }));
 
-    expect(rows()[2]).toBe("v3:true:false");
+    expect(rows()[2]).toBe("v3:true:false:0:0");
+  });
+
+  it("la numeración manual arranca escondida, y al encenderla siembra el orden actual", async () => {
+    const user = userEvent.setup();
+    renderTable();
+
+    // El grupo de columnas no está hasta que se pide.
+    expect(screen.queryByText("Grado de libertad")).toBeNull();
+
+    await user.click(screen.getByRole("checkbox", { name: /Numerar los grados de libertad a mano/i }));
+
+    expect(screen.getByText("Grado de libertad").getAttribute("colspan")).toBe("2");
+    // Sembrado con el orden que había, no en cero: con ceros habría que tipear
+    // los ocho números antes de que la tabla vuelva a tener sentido.
+    expect(numeros()).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"]);
   });
 
   it("el + de una fila inserta debajo de esa fila, no al final", async () => {

@@ -12,7 +12,7 @@ export type {
 } from "./system";
 export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompatibility, nullMode, nullSpace, spectrum, zeroStiffnessRows } from "./mechanism";
 export type { LoadCompatibility, LoadVerdict, MechanismDiagnosis, MechanismDof } from "./mechanism";
-export { CONDITION_WARNING, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
+export { CONDITION_WARNING, dofNumberingWarning, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
 export type { SolveWarning } from "./warnings";
 export { ldl } from "./factorization";
 export type { LdlResult, LdlOk, LdlFailure } from "./factorization";

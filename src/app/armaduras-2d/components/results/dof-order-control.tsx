@@ -4,7 +4,7 @@ import { useAtom, useSetAtom } from "jotai";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { atomRestrainedFirst, atomToggleRestrainedFirst } from "../../store/dof-order";
+import { atomRestrainedFirst, atomToggleRestrainedFirst, atomUseDofNumbers } from "../../store/dof-order";
 
 /**
  * El primero de los dos controles de orden que tenía el proyecto original.
@@ -21,6 +21,7 @@ import { atomRestrainedFirst, atomToggleRestrainedFirst } from "../../store/dof-
  */
 export function DofOrderControl() {
   const [restrainedFirst] = useAtom(atomRestrainedFirst);
+  const [useDofNumbers] = useAtom(atomUseDofNumbers);
   const toggle = useSetAtom(atomToggleRestrainedFirst);
 
   return (
@@ -31,9 +32,25 @@ export function DofOrderControl() {
           Los grados de libertad restringidos van arriba
         </Label>
       </div>
+      {/*
+        Con la numeración manual encendida este control **deja de decidir el
+        ensamblaje** —manda la numeración del alumno— pero no queda inútil:
+        sigue eligiendo qué bloque va arriba al partir la matriz. Decirlo es
+        más honesto que deshabilitarlo, y evita el clásico "toco esto y no
+        pasa nada".
+      */}
       <p className="text-xs text-muted-foreground">
-        Cambia el orden en que se numeran y se ensambla la matriz global, para que se parezca a como lo hace tu
-        profesor. Los resultados son los mismos: es la misma matriz con las filas y columnas permutadas.
+        {useDofNumbers ? (
+          <>
+            Como estás numerando los grados de libertad a mano, el ensamblaje sigue <em>tu</em> numeración. Esto
+            decide nada más qué bloque queda arriba al partir la matriz: los restringidos o los libres.
+          </>
+        ) : (
+          <>
+            Cambia el orden en que se numeran y se ensambla la matriz global, para que se parezca a como lo hace tu
+            profesor. Los resultados son los mismos: es la misma matriz con las filas y columnas permutadas.
+          </>
+        )}
       </p>
     </div>
   );

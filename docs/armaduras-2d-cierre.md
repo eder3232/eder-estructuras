@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **7 puntos**, ordenados abajo, y el siguiente es **M1b**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **6 puntos**, ordenados abajo, y el siguiente es **U5**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2 y M1a. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a y M1b. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -320,6 +320,25 @@ El átomo vive en `store/dof-order.ts` y no al lado de `atomDecimals`, por la de
 
 **177 tests.**
 
+### ✅ M1b · Numeración del alumno
+
+El segundo checkbox del original. **Existe porque el profesor a veces numera los grados de libertad de una forma rara a propósito**, para ver si el alumno entendió el método — y el alumno quiere cotejar sus matrices contra las de la pantalla término a término.
+
+**Y acá el plan cambió al implementarlo, para mejor.** El plan decía que el número era una *sugerencia*: que la app la respetara solo si los restringidos y los libres quedaban agrupados, y si no la usara como desempate dentro de cada grupo, avisando. Eso era la semántica de v1 — **y es una limitación de v1, no del método**. El original cortaba la matriz **por posición**, así que necesitaba los dos grupos contiguos sí o sí. Acá la partición **junta por lista de índices**, así que no los necesita: el paso de "reordenar para partir" ya existe y se muestra aparte.
+
+Entonces: **si el alumno numeró, el alumno manda.** Se respeta tal cual, aunque mezcle restringidos con libres. Es más fiel al método que lo que hacía v1 —el estudiante ve su matriz global tal como la escribió, y después ve cómo la partición la reordena— y hace desaparecer el caso de "no se pudo respetar".
+
+**El aviso pasó a ser otro, y sigue siendo útil**: cuando la numeración no es una permutación de 1..n (repetidos o saltos). No bloquea —con repetidos igual sale un orden, desempatado por la tabla— pero conviene decirlo, porque el caso de uso es cotejar contra un ejercicio y una numeración mal copiada da matrices que no coinciden por una razón que no se ve.
+
+**Cuatro cosas de implementación:**
+
+1. **Al encender la numeración se siembra con el orden actual** (1, 2, 3…), no con ceros. Con ceros el alumno tendría que tipear los ocho números antes de que la tabla vuelva a tener sentido, y mientras tanto el orden salta en cada tecla.
+2. **Las columnas entran en el grupo `Grado de libertad`** que U1 había dejado reservado en el encabezado de dos niveles. Esa era la dependencia `U1 → M1b` del plan, y funcionó: fue agregar un grupo, no rehacer la cabecera.
+3. **`atomNodesBase` se exporta** —solo para `dof-order.ts`— porque encender la numeración tiene que poder sembrarla.
+4. **Los dos controles interactúan**, y el que se ve tiene que decirlo: con la numeración encendida, «los restringidos van arriba» **deja de decidir el ensamblaje** (manda la numeración) pero sigue eligiendo qué bloque queda arriba al partir. El texto del control cambia para explicarlo, en vez de deshabilitarlo — que sería el clásico "toco esto y no pasa nada".
+
+Tests: el orden que sale es exactamente el pedido **aunque intercale los grupos**, los resultados no cambian al numerar, y el aviso aparece sin bloquear. **182 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -333,9 +352,8 @@ El átomo vive en `store/dof-order.ts` y no al lado de `atomDecimals`, por la de
 
 | Bloque | Puntos |
 |---|---|
-| Orden de los grados de libertad | 1 · **M1b** |
-| Lo que se lee | 2 · **U5** — 3 · **N4** — 4 · **N3** — 5 · **N5** |
-| Estado persistente | 6 · **N1** — 7 · **N2** |
+| Lo que se lee | 1 · **U5** — 2 · **N4** — 3 · **N3** — 4 · **N5** |
+| Estado persistente | 5 · **N1** — 6 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -347,35 +365,29 @@ El átomo vive en `store/dof-order.ts` y no al lado de `atomDecimals`, por la de
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · M1b · Numeración del alumno ⬅️ **acá se retoma**
-
-Existe porque **el profesor a veces numera los DOF de una forma rara a propósito**, para ver si el alumno entendió el método. `NodeRow` gana la numeración por eje (es parte del modelo, decisión 2) y las columnas aparecen en el grupo que U1 dejó reservado.
-
-**La semántica es la del original y es lo que la hace valiosa**: el número es una **sugerencia, no una orden**. Se usa como criterio de orden **dentro de cada grupo** (restringidos / libres); si la numeración pedida mezcla los grupos se respeta lo que se pueda y **se avisa por el canal de E2**, explicando por qué. Ese aviso es la parte pedagógica.
-
-### 2 · U5 · Unidades rotuladas
+### 1 · U5 · Unidades rotuladas ⬅️ **acá se retoma**
 
 Que una app de análisis estructural no diga si un `20000000` es kN/m² o kgf/cm² es lo que un profesor marca. **Alcance decidido: rotular con un sistema fijo y documentado (kN, m, kN/m²)** en encabezados y resultados. Sin estado nuevo. La conversión entre sistemas queda para cuando alguien la pida.
 
-### 3 · N4 · Vincular matriz ↔ modelo
+### 2 · N4 · Vincular matriz ↔ modelo
 
 **El de mejor retorno de toda la lista**, y ya tiene sus tres piezas puestas: las etiquetas nudo+eje existen en todas las matrices, `MatrixTable` tiene `cellClass` (lo agregó el P0) y `assembly.steps` ya sabe qué barra tocó qué celdas. Pasar el mouse por una celda de `K` resalta los dos grados de libertad y las barras que aportan ahí. Responde *¿por qué aparece un número en esta celda y no en la de al lado?*, que es lo que no se entiende del método matricial.
 
 **Decisión abierta, y se resuelve acá y no después**: dónde vive el estado de resaltado (átomo por sistema o contexto local). N3 lo reusa. Precedente útil: el resaltado de la celda simétrica es **local al componente** a propósito, justamente para no tomar esta decisión de costado.
 
-### 4 · N3 · Vincular tabla ↔ diagrama
+### 3 · N3 · Vincular tabla ↔ diagrama
 
 Pasar el mouse por una fila resalta el nudo o la barra en el esquema, y al revés. Reusa el mecanismo que decidió N4. Es transversal a los cuatro sistemas y a los dos módulos de diagrama, así que conviene definirlo una vez y bien.
 
-### 5 · N5 · Verificación de equilibrio
+### 4 · N5 · Verificación de equilibrio
 
 ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
 
-### 6 · N1 · Persistencia en `localStorage`
+### 5 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 7 · N2 · Ejemplos precargados
+### 6 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 

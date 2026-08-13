@@ -6,6 +6,7 @@ import { Provider, createStore, useAtomValue } from "jotai";
 
 import { DofOrderTable } from "@/components/custom/dof-order-table";
 import { atomToggleNodeRestrained, atomUpdateNodeField, seedNodeIds } from "../../store/nodes";
+import { atomToggleUseDofNumbers } from "../../store/dof-order";
 import { atomResults } from "../../store/results";
 import { DofOrderControl } from "./dof-order-control";
 
@@ -79,6 +80,30 @@ describe("DofOrderControl", () => {
     // relativo, que es lo que hace que mover una fila en la tabla siga
     // significando lo mismo.
     expect(ordenDeNudos()).toEqual(["v1", "v1", "v2", "v2", "v4", "v4", "v3", "v3"]);
+  });
+
+  it("con la numeración manual encendida, manda la numeración del alumno", () => {
+    const store = createStore();
+    // El profesor numeró al revés: v4 primero, v1 último.
+    const numeros: [string, number, number][] = [
+      [seedNodeIds.v1, 7, 8],
+      [seedNodeIds.v2, 5, 6],
+      [seedNodeIds.v3, 3, 4],
+      [seedNodeIds.v4, 1, 2],
+    ];
+    for (const [id, x, z] of numeros) {
+      store.set(atomUpdateNodeField, { id, field: "dofNumberX", value: x });
+      store.set(atomUpdateNodeField, { id, field: "dofNumberZ", value: z });
+    }
+    store.set(atomToggleUseDofNumbers);
+
+    render(
+      <Provider store={store}>
+        <OrderTable />
+      </Provider>,
+    );
+
+    expect(ordenDeNudos()).toEqual(["v4", "v4", "v3", "v3", "v2", "v2", "v1", "v1"]);
   });
 
   it("y se puede volver", async () => {
