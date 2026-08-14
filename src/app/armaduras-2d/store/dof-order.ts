@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 
 import { atomNodes, atomNodesBase, type NodeRow } from "./nodes";
+import { storedModel } from "./persisted-model";
 
 /**
  * Si los grados de libertad restringidos van arriba en la matriz global.
@@ -15,7 +16,9 @@ import { atomNodes, atomNodesBase, type NodeRow } from "./nodes";
  * Por eso vive en `store/` junto a los nudos y las barras, y no al lado de
  * `atomDecimals`.
  */
-const atomRestrainedFirstBase = atom(false);
+// Exportados solo para `persistence.ts`: el reset y el "deshacer" tienen que
+// poder ponerlos en un valor concreto, no togglearlos.
+export const atomRestrainedFirstBase = atom(storedModel?.restrainedFirst ?? false);
 
 export const atomRestrainedFirst = atom((get) => get(atomRestrainedFirstBase));
 
@@ -31,7 +34,7 @@ export const atomToggleRestrainedFirst = atom(null, (get, set) => {
  * matrices contra las de la pantalla término a término. Es parte del modelo por
  * la misma razón que el orden: lo decidió el enunciado, no el que mira.
  */
-const atomUseDofNumbersBase = atom(false);
+export const atomUseDofNumbersBase = atom(storedModel?.useDofNumbers ?? false);
 
 export const atomUseDofNumbers = atom((get) => get(atomUseDofNumbersBase));
 

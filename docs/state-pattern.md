@@ -87,6 +87,18 @@ Tres componentes compartidos, todos usables por cualquier sistema:
 - **`custom/matrix-equation.tsx`** — `<MatrixEquation>` con `<EquationTerm>` y `<MathOp>` adentro: operandos en fila con operadores en el medio. Nunca envuelve; si no entra, scrollea.
 - **`cellClass` de `MatrixTable`** — clase por celda, para cuando el resaltado no es binario (las cuatro zonas de la partición). `highlight` sigue existiendo para el caso binario del ensamblaje.
 
+## Persistencia del modelo (N1, 2026-08-13)
+
+Hoy solo la tiene `/armaduras-2d`. Lo genérico está en `src/lib/persistence.ts` (el sobre: versión adentro del payload, descarte de lo que no se entiende, y nunca romper) y en `src/hooks/use-hydrated.ts`; lo de cada sistema son tres archivos chicos, que es lo que hay que replicar al propagar:
+
+1. **`store/persisted-model.ts`** — la clave, la versión, la guarda de forma escrita a mano, y la lectura. **Se lee al evaluarse el módulo**, y de ahí salen los valores iniciales de los átomos: leerlo en un efecto obligaría a *setear* estado después del primer render, que es la regla `react-hooks/set-state-in-effect`.
+2. **`store/persistence.ts`** — un átomo derivado con el modelo entero (lo que se guarda), más `atomResetModel` —que **devuelve lo que había**, y eso es lo que hace posible el "deshacer"— y `atomRestoreModel`. Se observa el derivado en vez de agregarle un `saveModel()` a cada acción del store: esa es una lista que alguien olvida de actualizar.
+3. **`components/model-persistence.tsx`** — el efecto que escribe (escribir sí es sincronizar con un sistema externo, que es para lo que existen los efectos) y el botón de reset con su toast.
+
+Y en la página, **el contenido que depende del modelo no se dibuja hasta hidratar**: `localStorage` no existe en el servidor, así que el HTML prerrenderizado solo podría traer el ejemplo inicial, y verlo aparecer y cambiar se lee como *se perdió mi trabajo*. Se reserva el espacio con alturas medidas.
+
+**Qué entra y qué no**: el modelo y los flags de orden de grados de libertad (son del ejercicio, los puso el profesor). **No** los decimales, la notación compacta ni el modo práctica: son preferencias, valen para los cuatro sistemas a la vez y por lo tanto van en otra clave con su propio versionado.
+
 ## Piezas genéricas vs. específicas de cada sistema
 
 **Genéricas — ya extraídas a `src/components/custom/`, no duplicar por sistema:**

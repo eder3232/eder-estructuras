@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 
 import { insertIndex, nextRowName } from "@/lib/row-names";
+import { storedModel } from "./persisted-model";
 
 export interface NodeRow {
   /** Identificador estable, nunca editable — lo referencian los elementos. */
@@ -91,9 +92,17 @@ const initialNodes: NodeRow[] = [
   },
 ];
 
-// Exportado —y solo para `dof-order.ts`— porque encender la numeración manual
-// tiene que poder sembrarla; ver el porqué ahí.
-export const atomNodesBase = atom<NodeRow[]>(initialNodes);
+/**
+ * El ejemplo inicial, siempre en una copia nueva: es también a donde vuelve el
+ * botón de reset, y devolver el array de módulo dejaría que una edición
+ * posterior lo mutara.
+ */
+export const seedNodes = (): NodeRow[] => initialNodes.map((node) => ({ ...node }));
+
+// Exportado —y solo para `dof-order.ts` y `persistence.ts`— porque encender la
+// numeración manual tiene que poder sembrarla y el reset tiene que poder
+// pisarla; ver el porqué ahí.
+export const atomNodesBase = atom<NodeRow[]>(storedModel?.nodes ?? seedNodes());
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 

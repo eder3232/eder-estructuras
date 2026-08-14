@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **2 puntos**, ordenados abajo, y el siguiente es **N1**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Queda **1 punto**, abajo, y es **N2**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3 y N5. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3, N5 y N1. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -417,6 +417,35 @@ Las cinco secciones anteriores muestran **cómo se llega** al resultado y ningun
 
 Tests: cinco de motor (que cierra, que las barras se cancelan de a pares, que el nudo cargado recibe la carga cambiada de signo, que un desplazamiento falseado **rompe** el control —si no, no estaría comprobando nada— y que sirve para 1 DOF por nudo) y cuatro de UI. **204 tests.**
 
+### ✅ N1 · Persistencia en `localStorage`
+
+Recargar la página ya no pierde nada. Salió barato por una decisión vieja: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya era serializable por diseño.
+
+**Las decisiones del usuario**, que son las que no se deducen del código:
+
+1. **El reset vuelve al ejemplo inicial, no vacía.** Una página en blanco no le enseña nada a nadie, y borrar las filas a mano ya se puede.
+2. **Con «Deshacer», no con un diálogo de confirmación.** Un diálogo frena al que sabe lo que quiere y no salva más que el undo, que salva también al que se dio cuenta tres segundos después. El estado anterior viaja en el cierre del toast — y es **el mismo mecanismo que va a necesitar N2** para cargar un ejemplo encima de lo que el usuario tenía.
+3. **Se espera a leer lo guardado antes de dibujar** (la decisión que se ve). El modelo vive en `localStorage`, que en el servidor no existe, así que el HTML prerrenderizado no puede tenerlo: si las tablas se dibujaran igual, el alumno vería el ejemplo inicial un instante y después el suyo, que se lee como *se perdió mi trabajo*. Se reserva el espacio con alturas **medidas sobre el modelo semilla**.
+4. **Chrome únicamente.** No hay `try/catch` defensivo alrededor del almacenamiento: el único escenario real ahí es que el usuario bloquee los datos del sitio.
+
+**El versionado, que era la decisión abierta**: la versión va **adentro del payload** (`{ v: 1, data }`) y no en la clave. Con la versión en la clave, un modelo viejo queda huérfano y nadie se entera; adentro hay que mirarlo y decidir. Ante versión desconocida —vieja **o más nueva que este código**, que pasa con otra pestaña abierta—, JSON roto o forma inválida: se descarta, se arranca con el ejemplo inicial y **se avisa**. La guarda de forma se escribió a mano: son dos arrays de campos planos y una dependencia de validación no se paga sola. **Un solo campo mal descarta el modelo entero**, a propósito: un modelo a medio validar produce matrices con `NaN` que el alumno no puede corregir porque no las causó él.
+
+**Tres cosas de implementación que conviene saber antes de propagarlo:**
+
+1. **Lo guardado se lee al evaluarse el módulo**, no en un efecto, y de ahí salen los valores iniciales de los átomos. Leerlo en un efecto obligaría a *setear* estado después del primer render — la regla `react-hooks/set-state-in-effect`, que el repo usa como señal de regresión.
+2. **`useHydrated()` va con `useSyncExternalStore`** (`src/hooks/use-hydrated.ts`) y no con el `useState` + `useEffect` de "mounted", por lo mismo. React hace el segundo render solo, sin estado de por medio, y el lint sigue en 2.
+3. **Escribir sí es un efecto, y está bien**: sincronizar con un sistema externo es para lo que existen. Se observa un átomo derivado con el modelo entero en vez de agregarle un `saveModel()` a cada una de la docena de acciones del store — esa es una lista que alguien iba a olvidar de actualizar. **Sin debounce**: son un par de kB, `localStorage` es síncrono, y el "debouncer" de v1 ya enseñó lo suyo (ver [`errores.md`](./errores.md)).
+
+**Lo que quedó afuera a propósito**: los decimales, la notación compacta y el modo práctica. Son preferencias, valen para los cuatro sistemas a la vez y por lo tanto son **otra clave con su propio versionado**; un test fija que no se cuelen en la del modelo. Descargar/subir JSON y la URL compartible siguen para después.
+
+**Lo que encontró la captura, y es otra vez el mismo tipo de hallazgo**: el `Toaster` **nunca se había usado en este repo** —igual que la variante `warning` del `Alert` en E2— y al estrenarlo aparecieron dos cosas. El toast salía en **sans-serif** mientras toda la app es monoespaciada (`sonner` trae su propia familia en el CSS que inyecta; se alinea desde `layout.tsx`, sin tocar `ui/`), y con la tipografía ya en mono **la descripción chocaba con el botón «Deshacer»** — se sacó la descripción de ese toast: el título ya lo dice y el botón dice el resto.
+
+**Y una corrección al método de verificación del repo**, que vale más que el hallazgo: **`forcedTheme` no sirve para capturar nada que involucre al `Toaster`**. `ui/sonner.tsx` le pasa a `sonner` el `theme` de next-themes —la *preferencia*, no el tema resuelto—, así que con `forcedTheme="light"` la app queda clara y el toast se pinta oscuro: la descripción medía **1.23:1**. Con el tema elegido como lo hace un usuario (`defaultTheme="light"`, sin `enableSystem`) la misma descripción mide **10.53:1**, y en oscuro **14.63:1**. El número alarmante era del método, no de la app.
+
+**Cómo se probó el viaje de ida y vuelta en Chrome de verdad**, que headless no puede tipear: `--user-data-dir` **persiste el `localStorage` entre corridas**. Se carga la página una vez con un perfil nuevo (que guarda), se **cambia la semilla en el código**, y se vuelve a cargar con el mismo perfil: sale `v1` —lo guardado— y no la semilla nueva, mientras que un perfil limpio sí muestra la semilla nueva. Es la técnica para verificar persistencia sin poder interactuar.
+
+Tests: seis del sobre genérico (`lib/persistence.test.ts`), nueve del modelo —la guarda, el reset con su vuelta atrás, y que **los átomos arrancan con lo guardado**, que se prueba recargando el módulo con `vi.resetModules()`— y cuatro de UI, incluido el «Deshacer» pasando por el toast de verdad. **223 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -431,7 +460,7 @@ Tests: cinco de motor (que cierra, que las barras se cancelan de a pares, que el
 | Bloque | Puntos |
 |---|---|
 | Lo que se lee | ~~N3~~ — ~~N5~~ |
-| Estado persistente | 1 · **N1** — 2 · **N2** |
+| Estado persistente | ~~N1~~ — 1 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -443,20 +472,18 @@ Tests: cinco de motor (que cierra, que las barras se cancelan de a pares, que el
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · N1 · Persistencia en `localStorage`
+### 1 · N2 · Ejemplos precargados ⬅️ **acá se retoma, y es el último**
 
-Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
+Dos o tres armaduras clásicas elegibles de una lista. Lo que N1 dejó resuelto: **cargar un ejemplo pisa lo que el usuario tenía, y el mecanismo para eso ya está** — `atomRestoreModel` más el toast con «Deshacer», que es exactamente el mismo camino del reset. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
-### 2 · N2 · Ejemplos precargados
-
-Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
+Queda por decidir **cuáles**, que es lo único que no sale del código: conviene que cada una muestre algo distinto del método (una isostática simple, una hiperestática, y una donde el orden de los grados de libertad se note).
 
 ## Cómo verificar
 
 Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no). Lo específico de esta tanda:
 
 - `pnpm test` · `npx tsc --noEmit` · `pnpm build`. **`pnpm lint` da 2 errores preexistentes en `ui/`**; un tercero sí es nuevo.
-- **Mirar la app no es opcional.** Van **ocho** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Mirar la app no es opcional.** Van **nueve** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
 - **Para verificar algo que solo existe con el mouse encima** —N4, N3— hay que sembrar el estado: darle al `useState` del `HighlightProvider` un valor inicial fijo, capturar y **revertir**. Es la misma técnica de sembrar un modelo distinto, aplicada al estado de vista.
 - **Y los tests tampoco.** En esta última tanda un test encontró lo que la captura no podía —que Base UI no selecciona el texto del input al enfocarlo, y headless no puede tipear— igual que la captura encontró lo que el test no podía. Las dos verificaciones son complementarias.
 - **Para juzgar un texto, la métrica es la razón de contraste WCAG (4.5 para texto normal), no la distancia RGB.** La distancia sirve para "¿esta zona se distingue de aquella?", que es la pregunta de los bloques de la partición. El token `--warning` medía 275 de distancia —parecía bien— y 2.28:1 de contraste, que es la mitad de lo que hace falta.
@@ -465,6 +492,10 @@ Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md
 **Para capturar una sección del acordeón que arranca cerrada**, tocar `defaultValue` del `<Accordion>` en `results-panel.tsx` (hoy `["dof"]`), capturar y **revertir**. Conviene abrir *solo* la sección de interés: así queda arriba y se recorta sin buscarla en una captura de 16000 px.
 
 **Para capturar un tema concreto**, agregarle `forcedTheme="light"` o `"dark"` al `<ThemeProvider>` de `layout.tsx`, capturar y revertir. Sin eso, headless resuelve `prefers-color-scheme` por su cuenta.
+
+> **Excepción, encontrada en N1: `forcedTheme` no sirve si en la captura hay un toast.** `ui/sonner.tsx` le pasa a `sonner` el `theme` de next-themes —la *preferencia*, no el tema resuelto—, así que la app queda clara y el toast se pinta oscuro. Para eso hay que forzarlo como lo haría un usuario: `defaultTheme="light"` **sin** `enableSystem`.
+
+**Para verificar persistencia sin poder interactuar**: `--user-data-dir` **guarda el `localStorage` entre corridas**. Se carga una vez con un perfil nuevo, se cambia la semilla en el código, y se vuelve a cargar con el mismo perfil — si sale lo guardado y no la semilla nueva, el camino funciona de punta a punta.
 
 **Para juzgar un color, medirlo.** El ojo se equivoca sobre una captura —ya pasó con `Kff`—. La moda de color de una zona contra el fondo, con PIL:
 

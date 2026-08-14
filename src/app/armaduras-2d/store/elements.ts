@@ -3,6 +3,7 @@ import { produce } from "immer";
 
 import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
+import { storedModel } from "./persisted-model";
 
 export interface ElementRow {
   id: string;
@@ -25,7 +26,11 @@ const initialElements: ElementRow[] = [
   { id: "seed-e6", name: "e6", fromNodeId: seedNodeIds.v2, toNodeId: seedNodeIds.v3, area: AREA, elasticity: ELASTICITY },
 ];
 
-const atomElementsBase = atom<ElementRow[]>(initialElements);
+/** Ver `seedNodes`: copia nueva, porque es también a donde vuelve el reset. */
+export const seedElements = (): ElementRow[] => initialElements.map((element) => ({ ...element }));
+
+// Exportado solo para `persistence.ts`, que tiene que poder pisarlo entero.
+export const atomElementsBase = atom<ElementRow[]>(storedModel?.elements ?? seedElements());
 
 export const atomElements = atom((get) => get(atomElementsBase));
 

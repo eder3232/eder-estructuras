@@ -138,7 +138,7 @@ Esto es el **P2**: no son regresiones, son las mejoras que harían que el rework
 
 | # | Qué | Decisión abierta | Tamaño |
 |---|---|---|---|
-| **N1** | **Guardar / cargar / compartir un problema.** Hoy un alumno no puede entregar su ejercicio ni retomarlo mañana: recargar la página lo pierde todo | Ver abajo | mediano |
+| ~~**N1**~~ | ✅ **Parcial, 2026-08-13**: hecho el `localStorage` (con reset al ejemplo inicial y «Deshacer»), que era el primero de los tres casos de abajo. Siguen pendientes descargar/subir JSON y la URL compartible. La decisión abierta del versionado quedó tomada: la versión va **adentro del payload** y lo que no se entiende se descarta avisando | — | — |
 | **N2** | **Ejemplos precargados** (dos o tres armaduras clásicas) elegibles de una lista | Cargar un ejemplo pisa lo que el usuario tenía. Necesita confirmación o deshacer — y eso depende de N1. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se pueden cotejar contra valores validados | chico |
 | ~~**N3**~~ | ✅ **Hecho el 2026-08-13**, en `/armaduras-2d`. La decisión abierta ya la había resuelto N4 (contexto, no átomo) y este punto la reusó tal cual: `useHighlightRows()` para las filas y un prop opcional `onHighlight` en el diagrama, así que **los otros tres sistemas no cambian**. Lo nuevo salió de la captura: los apoyos y las flechas se apagan **con su nudo**, y el tinte de la fila lleva **una opacidad por tema** | — |
 | ~~**N4**~~ | ✅ **Hecho el 2026-08-13.** Y la decisión abierta quedó resuelta: el resaltado vive en un **contexto** (`custom/highlight.tsx`), no en un átomo, porque es estado efímero de vista y los átomos son del modelo — que es lo que N1 va a serializar. N3 lo reusa | — | — |
@@ -156,9 +156,9 @@ Esto es el **P2**: no son regresiones, son las mejoras que harían que el rework
 | Entregar el ejercicio | Descargar/subir un JSON | El caso académico real |
 | Mostrárselo al profesor | El modelo serializado en la URL | Compartir sin archivos |
 
-**Recomendación: `localStorage` primero.** Es lo que más molesta hoy y lo más barato.
+**Recomendación: `localStorage` primero.** Es lo que más molesta hoy y lo más barato. ✅ **Hecho el 2026-08-13** — el detalle está en [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md). Los otros dos casos siguen abiertos, y ahora son más baratos: el formato ya está escrito y versionado, así que descargar un JSON es serializar lo mismo que se guarda.
 
-Todo esto es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor** — está en [`docs/state-pattern.md`](./state-pattern.md). O sea que el estado ya es serializable por diseño, y no hay que inventar un formato: es lo que ya está en los átomos. Lo único a definir es el **versionado** del formato, para que un archivo guardado hoy no explote cuando una tabla gane una columna.
+Todo esto es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor** — está en [`docs/state-pattern.md`](./state-pattern.md). O sea que el estado ya es serializable por diseño, y no hay que inventar un formato: es lo que ya está en los átomos. Lo único a definir era el **versionado** del formato, y quedó definido en N1: `{ v, data }` con la versión adentro, guarda de forma escrita a mano, y descarte con aviso ante cualquier cosa que no se entienda.
 
 ### N4 · La vinculación matriz ↔ modelo es la de mejor retorno
 

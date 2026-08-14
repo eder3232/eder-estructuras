@@ -2,13 +2,31 @@
 
 import { HighlightProvider } from "@/components/custom/highlight";
 import { UnitsNote } from "@/components/custom/units-note";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
+import { ModelPersistence, ResetModelButton } from "./components/model-persistence";
 import { NodeTable } from "./components/node-table";
 import { ResultsPanel } from "./components/results-panel";
 import { SchemaDiagram } from "./components/schema-diagram";
 
+/**
+ * El lugar que va a ocupar algo que todavía no se puede dibujar.
+ *
+ * No es un adorno de carga: el modelo vive en `localStorage`, que en el
+ * servidor no existe, así que hasta que React hidrate lo único que se podría
+ * mostrar es el ejemplo inicial — y si el alumno tiene su propio modelo
+ * guardado, verlo aparecer y cambiar se lee como *se perdió mi trabajo*. Se
+ * reserva el espacio y no se muestra un dato que no es suyo ni por un cuadro.
+ */
+function Reserved({ className }: { className: string }) {
+  return <Skeleton className={`rounded-md ${className}`} aria-hidden />;
+}
+
 export default function Armaduras2DPage() {
+  const hydrated = useHydrated();
+
   return (
     /*
       Esta página es **más ancha que las otras tres** (`max-w-5xl` → `84rem`), y
@@ -38,13 +56,19 @@ export default function Armaduras2DPage() {
     // acá arriba.
     <HighlightProvider>
       <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
+        {/* Guarda el modelo en cada cambio. No dibuja nada. */}
+        <ModelPersistence />
+
         <div className="flex flex-col gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">Armaduras 2D</h1>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de la
-              rigidez axial de cada barra según su ángulo.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold">Armaduras 2D</h1>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                Sistema de armaduras planas — 2 grados de libertad por nudo (x, z), con transformación geométrica de
+                la rigidez axial de cada barra según su ángulo.
+              </p>
+            </div>
+            <ResetModelButton />
           </div>
           {/* Arriba de todo y no al lado de una tabla: la regla vale para lo que
               se carga **y** para lo que sale, así que no pertenece a ninguna de
@@ -52,26 +76,37 @@ export default function Armaduras2DPage() {
           <UnitsNote />
         </div>
 
+        {/* Los títulos de sección no dependen del modelo, así que se dibujan
+            desde el primer cuadro: lo que espera es el contenido. */}
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Nudos</h2>
-          <NodeTable />
+          {hydrated ? <NodeTable /> : <Reserved className="h-[25rem] w-full max-w-5xl" />}
         </div>
 
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Barras</h2>
-          <ElementTable />
+          {hydrated ? <ElementTable /> : <Reserved className="h-[32rem] w-full max-w-5xl" />}
         </div>
 
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Esquema</h2>
-          <SchemaDiagram />
+          {hydrated ? <SchemaDiagram /> : <Reserved className="h-80 w-80 md:h-[500px] md:w-[500px]" />}
         </div>
 
-        <ErrorsPanel />
+        {hydrated && <ErrorsPanel />}
 
         {/* El título y los controles de la sección viven adentro del panel: los
-            controles dependen de si hay resultados y el título no. */}
-        <ResultsPanel />
+            controles dependen de si hay resultados y el título no. Por eso acá
+            el título se repite: U3 fijó que la sección **nunca** desaparece, y
+            si el panel no se dibuja todavía, alguien tiene que ponerlo. */}
+        {hydrated ? (
+          <ResultsPanel />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-lg font-semibold">Resultados</h2>
+            <Reserved className="h-96 w-full" />
+          </div>
+        )}
       </div>
     </HighlightProvider>
   );

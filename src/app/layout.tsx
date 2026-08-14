@@ -71,7 +71,17 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             <SiteNavbar />
             {children}
           </TooltipProvider>
-          <Toaster />
+          {/*
+            `font-mono` acá porque toda la app lo es —el `body` lo fija— y
+            `sonner` trae su propia familia sans en el CSS que inyecta: el
+            primer toast del repo salió con otra tipografía que el resto de la
+            pantalla. Lo encontró la captura al estrenar el componente.
+
+            `classNames.toast` se repite porque `ui/sonner.tsx` ya lo pasa y
+            este objeto lo reemplaza entero; `ui/` es intocable, así que se
+            repite acá en vez de tocarlo allá.
+          */}
+          <Toaster toastOptions={{ className: "font-mono", classNames: { toast: "cn-toast" } }} />
         </ThemeProvider>
       </body>
     </html>
