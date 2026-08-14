@@ -1,4 +1,4 @@
-# Plan: cerrar `/armaduras-2d` antes de propagar
+# `/armaduras-2d`: la lista de cierre (terminada)
 
 > **Estado: terminada el 2026-08-14.** No queda ningún punto: `/armaduras-2d` está cerrada y **se destraba el hilo C** —propagar a los otros tres sistemas—, que arranca preguntándole al usuario. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >

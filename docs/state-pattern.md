@@ -99,6 +99,8 @@ Y en la página, **el contenido que depende del modelo no se dibuja hasta hidrat
 
 **Qué entra y qué no**: el modelo y los flags de orden de grados de libertad (son del ejercicio, los puso el profesor). **No** los decimales, la notación compacta ni el modo práctica: son preferencias, valen para los cuatro sistemas a la vez y por lo tanto van en otra clave con su propio versionado.
 
+**Los ejemplos precargados (N2) entran por el mismo camino**: `store/examples.ts` con modelos de la forma que se persiste, y `atomReplaceModel` —que devuelve lo anterior— más un aviso con «Deshacer» adentro. Reemplazar todo el modelo es una sola operación, escrita una vez, con dos disparadores: el reset y los ejemplos.
+
 ## Piezas genéricas vs. específicas de cada sistema
 
 **Genéricas — ya extraídas a `src/components/custom/`, no duplicar por sistema:**

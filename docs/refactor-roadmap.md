@@ -2,7 +2,7 @@
 
 Este documento diagnostica el estado real de `thesis-structures` (el proyecto anterior, en `D:\programming\repos_clonados\thesis-structures`) y propone un orden concreto para refactorizarlo en este repo. Es un plan vivo: se actualiza a medida que cada fase se completa o cambia de alcance.
 
-> **¿Retomando el trabajo en frío?** El **trabajo activo** está en [`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md) — cerrar `/armaduras-2d` por completo antes de propagar, ya ordenado y autosuficiente. Para el contexto general del proyecto, **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** (al final de este documento): estado actual, qué leer, qué falta y qué está verificado. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
+> **¿Retomando el trabajo en frío?** Andá a **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** (al final de este documento): estado actual, qué leer, qué falta y qué está verificado. **No hay una tarea anotada esperando** — `/armaduras-2d` se cerró el 2026-08-14 y lo que sigue es una decisión del usuario. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
 
 ## Resumen ejecutivo
 
@@ -167,15 +167,28 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-13, sesión de cierre de `/armaduras-2d` (8 puntos de la lista + el barrido del proyecto v1)**.
+Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-14, cierre de `/armaduras-2d`**.
 
-> **Antes que nada: hay una lista de trabajo activa.** El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**, y todo lo pendiente de ese sistema —que estaba repartido entre las deudas de acá abajo y los grupos U y N de [`pendientes-comparacion.md`](./pendientes-comparacion.md)— se juntó y se ordenó en **[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)**. Ese documento es de dónde se sigue. Esta sección es el contexto.
+> ### ⬅️ Lo primero: **no hay una tarea anotada esperando**. Hay una decisión.
 >
-> **Terminada el 2026-08-14**: no queda ningún punto y se destraba el **hilo C**. La lista se **replanificó el 2026-08-13**: eran 8, y el barrido de v1 sumó **E2** (canal de advertencias) y **M1a/M1b** (los dos checkboxes de orden de grados de libertad del original). El motor gana la capacidad de ordenar los DOF con el valor por defecto de hoy, así que **los otros tres sistemas no cambian**; la UI va solo en `/armaduras-2d`. Ya están hechos: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, el desplazamiento unitario, D1, la reciprocidad, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3, N5, N1 y N2.
+> El 2026-08-12 el usuario decidió **terminar `/armaduras-2d` por completo antes de saltar a los otros sistemas**. Esa lista —[`docs/armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)— **terminó el 2026-08-14** y no tiene pendientes: es historia con el porqué de cada decisión, no trabajo por hacer.
+>
+> Lo que sigue es **elegir hilo, y lo elige el usuario**. Los tres candidatos están abajo en «Los hilos pendientes». Si retomás en frío: **preguntá cuál, no arranques con uno**. En particular el **hilo C** (propagar) tiene una condición explícita del usuario desde el principio — *preguntar antes de propagar*, porque nunca dio el visto bueno al conjunto de la UI.
 
-**Ninguna de las últimas seis sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Todas trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
+**Ninguna de las últimas nueve sesiones movió un tren.** Los 4 sistemas siguen igual de completos y `frame2d-seismic` sigue sin empezar. Todas trabajaron sobre `/armaduras-2d`, que por eso está bastante más adelante que los otros tres — ver el punto **1.b**, es lo primero que sorprende al abrir otro sistema.
 
-### Qué pasó en la última sesión (2026-08-13, la más larga)
+### Qué pasó en la última sesión (2026-08-14): los últimos cuatro puntos
+
+**N3, N5, N1 y N2**, en cuatro commits. Lo que conviene saber al retomar:
+
+1. **La tabla y el dibujo son el mismo objeto** (N3): pasar el mouse por una fila enciende su nudo o barra en el esquema y al revés, reusando el contexto que había decidido N4. `useHighlightRows()` en `custom/highlight.tsx`.
+2. **Hay verificación de equilibrio** (N5), y **el cálculo es genérico**: `SolveResult.equilibrium` sale para los cuatro sistemas, así que propagarlo no toca motor. El veredicto va en el título de la sección 6 para poder confiar sin desplegar.
+3. **El modelo se guarda en `localStorage`** (N1), con reset al ejemplo inicial y **«Deshacer»** en vez de diálogo de confirmación. Dos cosas que hay que copiar tal cual al propagar: lo guardado se lee **al evaluarse el módulo** (en un efecto habría que setear estado después del primer render, que es la regla de lint que el repo cuida) y el contenido que depende del modelo **no se dibuja hasta hidratar**, con `useHydrated()` (`useSyncExternalStore`, no el patrón "mounted").
+4. **Hay tres ejemplos precargados** (N2), elegidos por lo que enseñan y no por ser otras armaduras. Armarlos corrigió una creencia que conviene no volver a tener: *hiperestática + asentamiento* **no** implica esfuerzos — la primera versión daba cero en todas las barras porque ese descenso era compatible con un movimiento sin deformar.
+
+Y **dos deudas nuevas del módulo de diagramas**, las dos del mismo lugar: **D16** (el esquema no dibuja los desplazamientos prescritos, y hay un ejemplo que existe justamente para eso) y **D17** (las etiquetas de nudo y de barra no se conocen entre sí).
+
+### Qué pasó el 2026-08-13 (la sesión más larga)
 
 Ocho puntos de la lista de cierre —**U3, U1, U2, E2, M1a, M1b, U5, N4**— y, antes de eso, un **barrido del proyecto v1** más allá de `armor2d`, que el usuario pidió con la consigna de *rescatar lo bueno que v2 no esté haciendo mejor*. Lo que conviene saber al retomar, ordenado por lo que más cambia decisiones futuras:
 
@@ -278,9 +291,9 @@ Regla general: **ante una discrepancia, gana el código**. Estos documentos pued
 
 ### 3. Los hilos pendientes
 
-> **Los tres están en pausa.** Desde el 2026-08-12 el trabajo activo es cerrar `/armaduras-2d` ([`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)); estos hilos se retoman después. Se dejan acá porque el porqué de cada uno no está en ningún otro lado, y porque el hilo C **cambia de tamaño** con cada cosa que se agregue a `/armaduras-2d`.
+> **⬅️ Acá está lo que sigue.** `/armaduras-2d` se cerró el **2026-08-14** ([`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md), sin pendientes), así que estos tres hilos son **los candidatos**, y cuál se agarra **lo decide el usuario**. Se dejan acá porque el porqué de cada uno no está en ningún otro lado, y porque el hilo C **cambió de tamaño** varias veces: es lo primero a releer antes de estimarlo.
 
-Ninguno depende de otro. Cuando se retomen: el **A** cierra el Tren C y deja los 5 sistemas base completos; el **C** conviene hacerlo recién con `/armaduras-2d` terminado, que es justamente la decisión vigente.
+Ninguno depende de otro. El **A** cierra el Tren C y deja los 5 sistemas base completos. El **C** ya no tiene nada que esperar —`/armaduras-2d` está terminado, que era su condición— pero **arranca preguntando**.
 
 **Hilo A — `frame2d-seismic` (segunda mitad del Tren C).** Como extensión real sobre `frame2d`, **no un fork copiado**: ese fue el bug de duplicación diagnosticado en el original, donde `frame2D.ts` de ambos programas era casi idéntico letra por letra. Antes de escribir nada: revisar `D:\programming\repos_clonados\thesis-structures\src\programs\frame2d-seismic\` y **diffearlo contra `frame2d`** para aislar qué agrega de verdad el caso sísmico. Lo que quede en común no se copia — se reusa. El orden probado sigue siendo: motor primero, validado con un test de regresión, antes de tocar estado/UI.
 
@@ -288,7 +301,11 @@ Ninguno depende de otro. Cuando se retomen: el **A** cierra el Tren C y deja los
 
 **Hilo C — propagar la UI de `/armaduras-2d` a los otros tres sistemas** (deudas **D7**, **D8** y **D11**). Era el hilo más corto; después de la sesión del 2026-08-12 **ya no lo es**, porque la superficie a propagar creció de dos funciones a cinco. Sigue siendo el que el usuario dejó explícitamente en la puerta: quedó pendiente de que mirara la UI antes de replicarla, y **eso no cambió**.
 
-D7 y D8 son cableado casi idéntico entre sistemas. D11 no: cada sistema tiene su propia álgebra, así que es trabajo de verdad y no copiar y pegar (ver el punto 1.b).
+**La superficie completa, al 2026-08-14** (la lista con su porqué está al final de [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md)): insertar filas (D7), la cascada de decimales (D8), la narrativa pedagógica (D11), el estado vacío (U3), los encabezados agrupados (U1), el combobox buscable (U2), las advertencias (E2), los dos interruptores de orden de grados de libertad (M1a/M1b), la nota de unidades (U5), los dos vínculos por hover (N4 y N3), la verificación de equilibrio (N5), la persistencia con reset y «Deshacer» (N1) y los ejemplos precargados (N2).
+
+**Casi nada de eso pide tocar el motor**, y es por diseño: cada vez que una feature necesitó una capacidad nueva, la capacidad se agregó a `System.solve()` **apagada por defecto** y la UI quedó solo en `/armaduras-2d`. `restrainedFirst`, `useDofNumbers`, `warnings` y `equilibrium` ya están disponibles para los cuatro. Propagar es cablear UI.
+
+D7 y D8 son cableado casi idéntico entre sistemas. D11 no: cada sistema tiene su propia álgebra, así que es trabajo de verdad y no copiar y pegar (ver el punto 1.b). N1 tampoco es mecánico: hay que copiar la forma —lectura al evaluarse el módulo, `useHydrated()` para no dibujar antes de tiempo— y cada sistema necesita **su propia clave y su propia guarda de forma**.
 
 - **D7 (insertar filas)**: en `store/nodes.ts` y `store/elements.ts` de cada sistema, hacer que `atomAdd*` tome un `afterId` opcional y use `insertIndex`/`nextRowName` de [`src/lib/row-names.ts`](../src/lib/row-names.ts) — copiar el cuerpo de `src/app/armaduras-2d/store/nodes.ts`. En las tablas, agregar la columna del `+` por fila.
 - **D8 (cascada de decimales)**: en `results-panel.tsx` de cada sistema, envolver todo en `<DecimalsScope id="<sistema>">` y cada `AccordionItem` en su propio scope con el control; en `results/*.tsx`, cambiar `useAtom(atomDecimals)` por `useDecimals()` y sumar `<ScopeDecimalsStepper />` por tabla. Está descrito en la sección "La cascada de decimales" de [`docs/state-pattern.md`](./state-pattern.md).
@@ -324,6 +341,8 @@ Ninguna bloquea nada. Están acá para que no haya que redescubrirlas, y para po
 | D13 | **Matrices grandes como mapa y no como números.** Pasados unos 12–15 DOF, una tabla de números deja de ser legible aunque scrollee bien. Salida anotada: una grilla de celdas chicas coloreadas por signo y magnitud, con los ceros en blanco y el valor exacto al pasar el mouse. Para un sistema grande **muestra más** que los números: se ve la estructura en banda y qué barra aporta dónde. Se apoya en el mecanismo de N4 (vincular matriz ↔ modelo), así que conviene hacerla después de esa | `custom/matrix-table.tsx` | mediano |
 | D14 | **Los pasos de ensamblaje crecen peor que lineal**: es una matriz global (`DOF × DOF`) **por barra**. Con 20 nudos y 40 barras son 40 matrices de 40×40, o sea unas 64.000 celdas en el DOM — deja de ser un problema de ancho y pasa a ser uno de rendimiento. Salida anotada: pasados N elementos, los pasos vienen colapsados y se abren de a uno | `results/assembly-steps.tsx` de cada sistema | mediano |
 | D15 | **El motor resuelve invirtiendo, no factorizando.** `System.solve()` hace `inv(kff)` y comprueba la estabilidad con el número de condición; `ldl()` existe (`src/lib/engine/factorization.ts`, con tests) pero **solo la usan la página `/estabilidad` y el bloque de control de la sección 3**. Factorizar sería más rápido, más estable, y el pivote que falla nombraría el grado de libertad sin necesidad de autovalores. **No es un olvido**: el 2026-08-13 el usuario eligió explícitamente no tocar el solver para no arriesgar regresiones, y la página lo aclara en vez de disimularlo. El riesgo es bajo y medible: las regresiones toleran 1e-8/1e-10 y el cambio de redondeo es ~1e-14 | `src/lib/engine/system.ts` | mediano |
+| D16 | **El esquema no dibuja los desplazamientos prescritos.** El motor los resuelve desde el Tren 1 (`Ur ≠ 0`) y desde el 2026-08-14 hay un ejemplo precargado que existe justamente para eso —el apoyo del medio que cede 5 mm—, pero el dibujo muestra un rodillo común: el descenso solo se ve en la columna «Desplazamiento» de la tabla. Falta la notación, que es la decisión de fondo: no puede ser una flecha como la de una carga, porque un desplazamiento impuesto no es una fuerza. Alcanza a los cuatro sistemas (es el módulo compartido) | `src/components/custom/diagram-2d/` + el adaptador de cada sistema | chico/mediano |
+| D17 | **Las etiquetas de nudo y las de barra no se conocen entre sí.** El halo de `DiagramLabel` las hace legibles cuando se cruzan, pero no las separa: si el valor de la carga de un nudo y el nombre de una barra que sale de ese nudo caen en el mismo lugar, quedan una sobre otra. Se vio armando la cercha de los ejemplos, y se esquivó moviendo la carga al cordón inferior. La salida cara es un solucionador de colisiones; la barata, más reglas de corrimiento como las de D6 | `src/components/custom/diagram-2d/` | mediano |
 
 ### 5. Estado de verificación (lo que está probado y lo que no)
 
