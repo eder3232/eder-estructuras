@@ -2,12 +2,19 @@
 
 import { useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { RotateCcw } from "lucide-react";
+import { BookOpen, ChevronDown, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { atomPersistableModel, atomResetModel, atomRestoreModel } from "../store/persistence";
-import { saveModel, storedModelDiscarded } from "../store/persisted-model";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { examples } from "../store/examples";
+import { atomPersistableModel, atomReplaceModel, atomResetModel, atomRestoreModel } from "../store/persistence";
+import { saveModel, storedModelDiscarded, type PersistedModel } from "../store/persisted-model";
 
 /**
  * Guarda el modelo en cada cambio.
@@ -46,14 +53,27 @@ export function ModelPersistence() {
 let avisado = false;
 
 /**
- * Volver al ejemplo inicial.
+ * Avisar que se reemplazó el modelo, **con la vuelta atrás adentro del aviso**.
  *
- * **Con "deshacer" y no con un diálogo de confirmación**, que fue la decisión:
- * un diálogo frena al que sabe lo que quiere y no salva más que el undo, que
- * salva también al que se dio cuenta tres segundos después. El estado anterior
- * viaja en el cierre del toast — el mismo mecanismo que va a necesitar N2 para
- * cargar un ejemplo encima de lo que el usuario tenía.
+ * Esa fue la decisión, y vale para las dos acciones que pisan todo —volver al
+ * ejemplo inicial y cargar un ejemplo—: un diálogo de confirmación frena al que
+ * sabe lo que quiere y no salva más que el undo, que salva también al que se
+ * dio cuenta tres segundos después.
  */
+function avisarConDeshacer(mensaje: string, previo: PersistedModel, restore: (model: PersistedModel) => void) {
+  toast(mensaje, {
+    // Sin descripción a propósito: en tipografía monoespaciada el texto llega
+    // hasta el botón de acción y lo empuja encima del renglón. El título ya lo
+    // dice todo, y el botón dice el resto.
+    duration: 10000,
+    action: {
+      label: "Deshacer",
+      onClick: () => restore(previo),
+    },
+  });
+}
+
+/** Volver al ejemplo inicial. */
 export function ResetModelButton() {
   const reset = useSetAtom(atomResetModel);
   const restore = useSetAtom(atomRestoreModel);
@@ -62,22 +82,66 @@ export function ResetModelButton() {
     <Button
       variant="outline"
       size="sm"
-      onClick={() => {
-        const previo = reset();
-        toast("Volviste al ejemplo inicial", {
-          // Sin descripción a propósito: en tipografía monoespaciada el texto
-          // llega hasta el botón de acción y lo empuja encima del renglón. El
-          // título ya lo dice todo, y el botón dice el resto.
-          duration: 10000,
-          action: {
-            label: "Deshacer",
-            onClick: () => restore(previo),
-          },
-        });
-      }}
+      onClick={() => avisarConDeshacer("Volviste al ejemplo inicial", reset(), restore)}
     >
       <RotateCcw />
       Volver al ejemplo inicial
     </Button>
+  );
+}
+
+/**
+ * Los ejemplos precargados (N2).
+ *
+ * **Es un menú y no un desplegable de selección**: un `Select` dice "el valor
+ * actual es este", y acá no hay valor actual — apenas se carga un ejemplo, el
+ * alumno lo edita y deja de serlo. Lo que hay es una acción que se dispara.
+ *
+ * Cada item lleva **qué muestra ese ejemplo y no otro**, que es la única razón
+ * por la que existe la lista: tres armaduras cualesquiera no enseñarían nada
+ * que el ejemplo inicial no enseñe ya.
+ */
+export function ExamplesMenu() {
+  const replace = useSetAtom(atomReplaceModel);
+  const restore = useSetAtom(atomRestoreModel);
+
+  return (
+    <DropdownMenu>
+      {/* `asChild` y no `render`: este componente es de Radix. El combobox de
+          U2, que es de Base UI, usa la otra API — conviene mirar el import
+          antes de copiar un patrón de un archivo a otro. */}
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">
+          <BookOpen />
+          Ejemplos
+          <ChevronDown />
+        </Button>
+      </DropdownMenuTrigger>
+      {/*
+        `w-96` porque `DropdownMenuContent` fija el ancho **al del disparador**
+        (`w-(--radix-dropdown-menu-trigger-width)`): sin esto el menú sale del
+        ancho del botón «Ejemplos» y cada descripción se parte en cinco
+        renglones. Lo encontró la captura.
+      */}
+      <DropdownMenuContent align="end" className="w-96">
+        {examples.map((example) => (
+          <DropdownMenuItem
+            key={example.id}
+            className="flex-col items-start gap-0.5"
+            onClick={() => avisarConDeshacer(`Cargaste «${example.name}»`, replace(example.model), restore)}
+          >
+            <span className="font-medium">{example.name}</span>
+            {/* `normal-case` porque `DropdownMenuItem` aplica `uppercase` —la
+                tipografía de este fork para menús, que está bien para el
+                nombre y no para una oración—. Es la tercera vez que un
+                `uppercase` de `ui/` aparece donde no corresponde: antes fue
+                `EmptyTitle` con los símbolos de KaTeX. */}
+            <span className="text-xs tracking-normal whitespace-normal normal-case text-muted-foreground">
+              {example.description}
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
-import { ModelPersistence, ResetModelButton } from "./components/model-persistence";
+import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./components/model-persistence";
 import { NodeTable } from "./components/node-table";
 import { ResultsPanel } from "./components/results-panel";
 import { SchemaDiagram } from "./components/schema-diagram";
@@ -68,7 +68,10 @@ export default function Armaduras2DPage() {
                 la rigidez axial de cada barra según su ángulo.
               </p>
             </div>
-            <ResetModelButton />
+            <div className="flex flex-wrap items-center gap-2">
+              <ExamplesMenu />
+              <ResetModelButton />
+            </div>
           </div>
           {/* Arriba de todo y no al lado de una tabla: la regla vale para lo que
               se carga **y** para lo que sale, así que no pertenece a ninguna de

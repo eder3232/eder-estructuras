@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { atomNodes } from "../store/nodes";
 import { MODEL_KEY } from "../store/persisted-model";
-import { ModelPersistence, ResetModelButton } from "./model-persistence";
+import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./model-persistence";
 import { NodeTable } from "./node-table";
 
 /**
@@ -40,6 +40,7 @@ function setup() {
     <Provider store={store}>
       <ModelPersistence />
       <ResetModelButton />
+      <ExamplesMenu />
       <NodeTable />
       <NodesProbe />
       <Toaster />
@@ -92,6 +93,39 @@ describe("persistencia del modelo", () => {
     // sabe lo que quiere, y salva igual al que se dio cuenta después.
     await user.click(await screen.findByRole("button", { name: "Deshacer" }));
     expect(nombres()).toBe("v1,v2,v3,v4,v5");
+  });
+
+  it("cargar un ejemplo lo trae entero, y también se puede deshacer", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await user.click(screen.getByRole("button", { name: /Ejemplos/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Triángulo isostático/ }));
+
+    // El triángulo tiene 3 nudos: si quedara mezclado con lo anterior, serían más.
+    expect(nombres()).toBe("v1,v2,v3");
+    expect(guardado().data.elements).toHaveLength(3);
+
+    await user.click(await screen.findByRole("button", { name: "Deshacer" }));
+    expect(nombres()).toBe("v1,v2,v3,v4");
+  });
+
+  it("el ejemplo cargado no se ensucia al editarlo", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await user.click(screen.getByRole("button", { name: /Ejemplos/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Triángulo isostático/ }));
+    await user.click(screen.getByRole("button", { name: "Agregar un nudo al final" }));
+    expect(nombres()).toBe("v1,v2,v3,v4");
+
+    // Cargarlo de nuevo tiene que dar lo mismo que la primera vez: si el store
+    // apuntara a los objetos del módulo de ejemplos, la edición de recién se
+    // habría quedado pegada al ejemplo para toda la sesión.
+    await user.click(screen.getByRole("button", { name: /Ejemplos/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Triángulo isostático/ }));
+
+    expect(nombres()).toBe("v1,v2,v3");
   });
 
   it("deshacer también devuelve lo guardado, no solo lo que se ve", async () => {

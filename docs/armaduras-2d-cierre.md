@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Queda **1 punto**, abajo, y es **N2**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: terminada el 2026-08-14.** No queda ningún punto: `/armaduras-2d` está cerrada y **se destraba el hilo C** —propagar a los otros tres sistemas—, que arranca preguntándole al usuario. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3, N5 y N1. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3, N5, N1 y N2. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -446,44 +446,51 @@ Recargar la página ya no pierde nada. Salió barato por una decisión vieja: lo
 
 Tests: seis del sobre genérico (`lib/persistence.test.ts`), nueve del modelo —la guarda, el reset con su vuelta atrás, y que **los átomos arrancan con lo guardado**, que se prueba recargando el módulo con `vi.resetModules()`— y cuatro de UI, incluido el «Deshacer» pasando por el toast de verdad. **223 tests.**
 
-## Pendiente, en orden
+### ✅ N2 · Ejemplos precargados
 
-> **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
->
-> **Dos decisiones tomadas al replanificar:**
->
-> 1. **El motor gana la capacidad de ordenar los DOF ahora; la UI va solo en `/armaduras-2d`.** El valor por defecto reproduce el comportamiento de hoy, así que los otros tres sistemas no cambian ni ven la feature. Es el criterio con que ya se hizo D1: el diagnóstico vive en `System.solve()` y alcanza a los cuatro, pero la explicación dibujada está solo en 2D. Cuando llegue el hilo C, propagar son dos checkboxes y **ningún** cambio de motor.
-> 2. **El orden de DOF y la numeración del alumno son parte del modelo**, no preferencia de la app: los puso el profesor, son datos del ejercicio, y tienen que viajar con él cuando N1 permita guardar o compartir.
+Tres armaduras elegibles de un menú, y **ninguna está por ser otra armadura**: cada una existe para mostrar algo que las demás no muestran. Una lista de estructuras cualesquiera no enseñaría nada que el ejemplo inicial no enseñe ya.
 
-**Cuatro bloques.** La regla que los ordena: **cada archivo se toca una sola vez**, y **el estado persistido se escribe último**, cuando su forma ya no va a cambiar.
-
-| Bloque | Puntos |
+| Ejemplo | Para qué está |
 |---|---|
-| Lo que se lee | ~~N3~~ — ~~N5~~ |
-| Estado persistente | ~~N1~~ — 1 · **N2** |
+| **Triángulo isostático** (3 barras) | Los esfuerzos salen del equilibrio y **no dependen del área ni del material** — un test lo fija multiplicando los dos por 3 y por 7 y comprobando que los axiales no se mueven. El ejemplo inicial, hiperestático, no puede mostrarlo. |
+| **Cercha con los apoyos en el medio** (7 barras) | Los nudos restringidos caen en el **medio de la tabla**, así que ahí se ve qué hace el interruptor de M1a. Con el ejemplo inicial no se nota nada, porque sus apoyos ya son las dos primeras filas. |
+| **Apoyo del medio que cede 5 mm** | El único que usa el **desplazamiento prescrito** (`Ur ≠ 0`), la rama que el motor resuelve desde el Tren 1 y que ninguna pantalla ejercitaba. Sin una sola carga aplicada, la estructura queda tensionada. |
 
-**Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
+**El mecanismo ya estaba**: cargar un ejemplo pisa lo que había, y eso es exactamente lo que resolvió N1. `atomReplaceModel` devuelve lo anterior y el aviso lleva el «Deshacer» adentro — la misma función para el reset y para los ejemplos, escrita una vez. **Es un menú y no un `Select`** porque un desplegable de selección afirma "el valor actual es este", y acá no hay valor actual: apenas se carga, el alumno lo edita y deja de serlo.
+
+**Dos cosas que aparecieron al armar los ejemplos, y las dos cambian lo que uno creía:**
+
+1. **La primera versión del asentamiento daba cero en las seis barras.** Era el cuadro arriostrado del ejemplo inicial con el apoyo derecho descendido: ese descenso resulta **compatible con un campo de desplazamientos que no alarga ninguna barra**, así que la estructura acompaña sin tensionarse. O sea que *hiperestática + asentamiento* **no** implica esfuerzos — hace falta que el descenso sea incompatible con todo movimiento sin deformación, y eso lo consigue el apoyo del medio de un tramo continuo. La geometría final es la clásica, y ahora es la única que este repo tiene probada.
+2. **Un ejemplo que no resuelve es peor que no tenerlo**, así que los tres pasan por el motor en los tests: resuelven, **cierran en equilibrio** (se reusa N5 como control, en vez de escribir a mano los valores esperados de cada uno) y no arrastran advertencias.
+
+**Lo que encontró la captura** (novena sesión seguida), y esta vez fueron tres:
+
+- **El menú salía todo en MAYÚSCULAS.** `DropdownMenuItem` aplica `uppercase`, que está bien para el nombre y hace ilegible una oración de dos renglones. **Tercera vez** que un `uppercase` de `ui/` aparece donde no corresponde (antes: `EmptyTitle` y los símbolos de KaTeX).
+- **Y salía angosto**: `DropdownMenuContent` fija el ancho **al del disparador** (`w-(--radix-dropdown-menu-trigger-width)`), así que cada descripción se partía en cinco renglones. Un `max-w-*` no alcanza — hay que pisar el `w-`.
+- **En la cercha, el nombre de la diagonal se escribía encima del valor de la carga.** Y ahí apareció que **el esquema seguía colocando los nombres de barra con la regla que D6 descartó** —corrimiento fijo hacia arriba— mientras la forma deformada ya usaba `axialLabelPoint` (al 25% y hacia afuera de la figura). Ahora el esquema usa la misma función: alcanza a los cuatro sistemas, y se verificó el ejemplo inicial y `/frame2d`. Aun así **las etiquetas de nudo y de barra no se conocen entre sí** —el halo las hace legibles, no las separa—, así que en la cercha la carga se colgó del cordón inferior, donde no hay con qué chocar.
+
+Tests: siete de los ejemplos y dos de UI (cargar uno lo trae entero y se puede deshacer; y **cargarlo dos veces da lo mismo**, que es lo que fija que el store no quede apuntando a los objetos del módulo). **232 tests.**
+
+## Pendiente: nada
+
+**La lista está terminada** (2026-08-14). Quedaron afuera, con su porqué, los puntos de «Lo que quedó explícitamente afuera» de más arriba: **D9**, el resto del **grupo M**, **S2** y **N6**.
+
+Las dependencias que ordenaron el trabajo, por si sirven de molde para el próximo sistema:
 
 - `E2 → M1b` — sin canal de advertencias, M1b queda muda justo en el caso que más enseña.
-- `M1a → M1b` — los dos son entradas de la misma función de orden: M1a la construye, M1b le agrega el criterio de desempate.
-- `U1 → M1b` — M1b agrega columnas a la tabla de nudos: entrar a una cabecera ya agrupada es sumar un grupo; entrar a once columnas planas es rehacerla.
-- `{U1, M1b} → U5` — rotular unidades recién cuando ninguna columna se vaya a mover más.
-- `M1b → N1` — **la más importante**: M1b cambia la forma de `NodeRow`, y escribir el formato persistido antes obliga a migrarlo enseguida.
-- `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
-- `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
-
-### 1 · N2 · Ejemplos precargados ⬅️ **acá se retoma, y es el último**
-
-Dos o tres armaduras clásicas elegibles de una lista. Lo que N1 dejó resuelto: **cargar un ejemplo pisa lo que el usuario tenía, y el mecanismo para eso ya está** — `atomRestoreModel` más el toast con «Deshacer», que es exactamente el mismo camino del reset. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
-
-Queda por decidir **cuáles**, que es lo único que no sale del código: conviene que cada una muestre algo distinto del método (una isostática simple, una hiperestática, y una donde el orden de los grados de libertad se note).
+- `M1a → M1b` — los dos son entradas de la misma función de orden.
+- `U1 → M1b` — entrar a una cabecera ya agrupada es sumar un grupo; entrar a once columnas planas es rehacerla.
+- `{U1, M1b} → U5` — rotular recién cuando ninguna columna se vaya a mover más.
+- `M1b → N1` — la más importante: M1b cambió la forma de `NodeRow`, y escribir el formato persistido antes obligaba a migrarlo enseguida.
+- `N4 → N3` — N4 decidió dónde vive el estado de resaltado; N3 lo reusó.
+- `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía, y el «Deshacer» salió de N1.
 
 ## Cómo verificar
 
 Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no). Lo específico de esta tanda:
 
 - `pnpm test` · `npx tsc --noEmit` · `pnpm build`. **`pnpm lint` da 2 errores preexistentes en `ui/`**; un tercero sí es nuevo.
-- **Mirar la app no es opcional.** Van **nueve** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Mirar la app no es opcional.** Van **diez** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
 - **Para verificar algo que solo existe con el mouse encima** —N4, N3— hay que sembrar el estado: darle al `useState` del `HighlightProvider` un valor inicial fijo, capturar y **revertir**. Es la misma técnica de sembrar un modelo distinto, aplicada al estado de vista.
 - **Y los tests tampoco.** En esta última tanda un test encontró lo que la captura no podía —que Base UI no selecciona el texto del input al enfocarlo, y headless no puede tipear— igual que la captura encontró lo que el test no podía. Las dos verificaciones son complementarias.
 - **Para juzgar un texto, la métrica es la razón de contraste WCAG (4.5 para texto normal), no la distancia RGB.** La distancia sirve para "¿esta zona se distingue de aquella?", que es la pregunta de los bloques de la partición. El token `--warning` medía 275 de distancia —parecía bien— y 2.28:1 de contraste, que es la mitad de lo que hace falta.
@@ -507,6 +514,12 @@ c = Counter(px[x, y] for y in range(y0, y1, 2) for x in range(x0, x1, 2))
 color = c.most_common(1)[0][0]   # comparar contra la moda del fondo
 ```
 
-## Al terminar esta lista
+## Terminada: qué se destraba, y con qué cuidado
 
 Se destraba el **hilo C** del roadmap: propagar a `/springs`, `/frame2d` y `/armaduras-3d`. Va a ser grande. Y sigue en pie la condición que el usuario puso desde el principio: **preguntarle antes de propagar**, porque nunca dio el visto bueno al conjunto de la UI, solo a los arreglos puntuales que fue encontrando.
+
+**Qué hay para propagar**, que es lo que esta lista fue acumulando: insertar una fila en el medio, la cascada de decimales, la narrativa pedagógica entera (D7 + D8 + D11), el estado vacío (U3), los encabezados agrupados (U1), el combobox buscable (U2), las advertencias (E2), los dos interruptores de orden de grados de libertad (M1a/M1b), la nota de unidades (U5), el vínculo matriz ↔ modelo y tabla ↔ dibujo (N4/N3), la verificación de equilibrio (N5), la persistencia con reset y «Deshacer» (N1) y los ejemplos precargados (N2).
+
+**La buena noticia es que casi nada de eso pide tocar el motor.** La política fue la misma en todos: la capacidad va al motor con el comportamiento de hoy por defecto, la UI va solo en `/armaduras-2d`. Así que `restrainedFirst`, `useDofNumbers`, `warnings` y `equilibrium` ya están disponibles para los cuatro sistemas y apagados; propagar es cablear UI.
+
+**Y tres cosas ya llegaron solas** a los otros sistemas, porque viven en módulos compartidos: el diagnóstico de mecanismo (`System.solve()`), los arreglos de etiquetas de los diagramas —incluido el de esta última sesión, que puso los nombres de barra donde D6 mandaba— y el token `--warning` corregido.

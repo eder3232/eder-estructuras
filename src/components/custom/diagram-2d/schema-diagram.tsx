@@ -1,3 +1,4 @@
+import { axialLabelPoint } from "./axial-label";
 import { computeUnitSize } from "./unit-scale";
 import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
@@ -63,6 +64,7 @@ export function SchemaDiagram({
   const viewBox = computeViewBox(points);
   const unitSize = computeUnitSize(viewBox);
   const nodeRadius = unitSize * 0.35;
+  const center = { x: viewBox.minX + viewBox.width / 2, y: viewBox.minY + viewBox.height / 2 };
 
   return (
     <DiagramScaleProvider values={forces.map((f) => f.value)}>
@@ -74,18 +76,17 @@ export function SchemaDiagram({
             if (!from || !to) return null;
             const a = projectPoint(from);
             const b = projectPoint(to);
-            const labelX = a.x + 0.25 * (b.x - a.x);
-            const labelY = a.y + 0.25 * (b.y - a.y);
+            // El nombre de la barra sigue **la misma regla que el valor axial**
+            // de la forma deformada: al 25% del recorrido y corrido hacia
+            // afuera de la figura. Antes usaba un corrimiento fijo hacia
+            // arriba, que es justo la regla que D6 descartó — y se vio en el
+            // ejemplo de la cercha, donde el nombre de la diagonal quedaba
+            // escrito encima del valor de la carga del nudo.
+            const { x, y, anchor } = axialLabelPoint(a, b, unitSize, center);
             return (
               <g key={element.id} className={dim(element.id, "element")}>
                 <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
-                <DiagramLabel
-                  x={labelX}
-                  y={labelY - unitSize * 0.4}
-                  unitSize={unitSize}
-                  baseline="auto"
-                  className="fill-foreground"
-                >
+                <DiagramLabel x={x} y={y} unitSize={unitSize} anchor={anchor} className="fill-foreground">
                   {element.name}
                 </DiagramLabel>
               </g>
