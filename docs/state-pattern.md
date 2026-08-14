@@ -64,7 +64,7 @@ export const atomResults = atom<SpringsResults>((get) => {
 
 Si hay errores de validación (capturados por fila, sin romper la página) no se llama `.solve()`. Si no hay errores, `solved` trae `displacements`, `reactions`, `internalForces` y — clave para la sección de resultados — `assembly` (`dofOrder`, `globalStiffness`, `steps`, `partition`), que `System.solve()` expone justamente para esto.
 
-## El diseño pedagógico de resultados (las 5 secciones del acordeón)
+## El diseño pedagógico de resultados (las 6 secciones del acordeón)
 
 Esto es una **mejora deliberada sobre el original**, no una réplica — ver la discusión completa en el historial de commits (`960a38e`, `932f9e2`) si hace falta el porqué completo. El estándar a mantener en todos los sistemas:
 
@@ -73,6 +73,7 @@ Esto es una **mejora deliberada sobre el original**, no una réplica — ver la 
 3. **Partición y solución**: la matriz global **reordenada** (libres primero) con las cuatro zonas coloreadas y el corte dibujado —la partición se entiende viendo el corte, no cuatro tablas sueltas—, después cada bloque por separado, y las ecuaciones `Uf = Kff⁻¹·(Ff − Kfr·Ur)` y `Rr = Krf·Uf + Krr·Ur` con **todos los operandos a la vista** antes del resultado.
 4. **Fuerzas internas**: sustitución numérica por elemento.
 5. **Forma deformada**: el diagrama del Tren B (no aplica a `springs`, que no tiene geometría).
+6. **Verificación de equilibrio** (N5, 2026-08-13): ΣF = 0 nudo por nudo y en toda la estructura. Cierra el recorrido: las cinco secciones anteriores muestran cómo se llega al resultado y ninguna muestra que el resultado **esté bien**. El cálculo es genérico (`engine/equilibrium.ts`, sale en `SolveResult.equilibrium` para los cuatro sistemas) y **el veredicto va en el título de la sección**, no adentro: la pregunta «¿puedo confiar en esto?» se tiene que poder contestar sin desplegar nada, y la cuenta —que es lo que enseña— queda adentro.
 
 Acordeón `type="multiple"`, primera sección abierta por defecto. La precisión ya no es un único número global: es una cascada página → bloque → tabla, descrita más abajo en "La cascada de decimales".
 

@@ -1,8 +1,8 @@
 # Plan: cerrar `/armaduras-2d` antes de propagar
 
-> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **3 puntos**, ordenados abajo, y el siguiente es **N5**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
+> **Estado: en curso desde el 2026-08-12; última sesión el 2026-08-13.** Quedan **2 puntos**, ordenados abajo, y el siguiente es **N1**. La lista se **replanificó** el 2026-08-13: eran 8, y el barrido del proyecto v1 sumó tres (**E2**, **M1a**, **M1b**) que cambian el orden de todo lo demás. El porqué del orden está en «Pendiente, en orden».
 >
-> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4 y N3. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
+> Hechos y commiteados, en orden: S1, S3, el entorno DOM para tests de componentes, D6 + U4, D10, las matrices que crecen, y —ya en la tanda pedagógica del 2026-08-13— el desplazamiento unitario, D1 (el mecanismo diagnosticado y dibujado), la reciprocidad `k_ij = k_ji`, la animación de la deformada, el modo práctica, la sección de estabilidad, U3, U1, U2, E2, M1a, M1b, U5, N4, N3 y N5. Cada uno tiene su entrada abajo con lo que se decidió y lo que apareció al mirarlo.
 
 Este documento existe porque el **2026-08-12** el usuario tomó una decisión de orden que cambia el plan que venía en el [roadmap](./refactor-roadmap.md):
 
@@ -392,6 +392,31 @@ La otra mitad de N4, y la que faltaba para que **la tabla y el dibujo dejen de s
 
 **Cómo se verificó lo que el mouse no puede mostrar en headless**: sembrando el estado inicial del `HighlightProvider` con un resaltado fijo (`e3` con sus dos nudos), capturando en los dos temas y revirtiendo — la misma técnica de sembrar un modelo distinto que ya se venía usando. Los tests cubren lo otro: las dos direcciones y que el mouse encima de una fila de nudo no encienda ninguna barra. **195 tests.**
 
+### ✅ N5 · Verificación de equilibrio
+
+**La decisión abierta la tomó el usuario**: sección propia del acordeón (la **6**) **y** el veredicto en el título, no una cosa o la otra. El sello contesta *¿puedo confiar en esto?* sin desplegar nada; la tabla —que es lo que enseña— queda adentro.
+
+Las cinco secciones anteriores muestran **cómo se llega** al resultado y ninguna muestra que el resultado **esté bien**. Ahora la última hace la comprobación del pizarrón: nudo por nudo, las barras que llegan tiran, la carga empuja, el apoyo sostiene, y los tres suman cero.
+
+**El cálculo es genérico y vive en el motor** (`engine/equilibrium.ts`, en `SolveResult.equilibrium`): pide `stiffness()` y los desplazamientos, que es lo que declara la interfaz `Element`, así que **el día que se propague no hay motor que tocar**. Un test lo corre con un sistema de 1 DOF por nudo para fijarlo. Es el mismo criterio de D1, E2 y M1a: la capacidad va al motor con el comportamiento de hoy, la UI va solo acá.
+
+**Por qué no es una tautología**, que es la objeción obvia —`K·U = F` es la ecuación que se resolvió—: el camino de vuelta es otro. Se rearman las fuerzas desde la rigidez de **cada barra**, sin pasar por la matriz global ni por la partición, así que atrapa un error de ensamblaje, de mapeo de grados de libertad o de signo al partir. Lo que **no** puede ver es un error adentro de `stiffness()`: esa misma rigidez se usa de los dos lados.
+
+**Tres decisiones de presentación:**
+
+1. **La celda del residuo dice `≈ 0`, no `0.0000`.** Con 4 decimales las diez celdas mostrarían un cero que no se distingue de un cero de verdad ni de un error tapado por el redondeo. El número honesto —el mayor residuo, en exponencial, contra la escala de las fuerzas— se dice **una vez**, abajo: `2.7e-15` contra fuerzas del orden de 12.4.
+2. **El residuo se juzga relativo**, no contra un umbral fijo: 10⁻⁶ es ruido en una estructura cargada con toneladas y un error grosero en una cargada con gramos.
+3. **La fila del total no tiene columna de barras**, y esa ausencia es la lección: cada barra tira de sus dos nudos con fuerzas iguales y opuestas, así que en la suma de toda la estructura se cancelan de a pares y queda lo que entra y sale del sistema.
+
+**Y si no cerrara, el texto lo dice: no es un problema del modelo del usuario, es un bug de la app.** Por eso no entra por el canal de errores ni por el de advertencias de E2, que son de dominio.
+
+**Lo que encontró la captura** (octava sesión seguida):
+
+- **El sello medía 2.78:1 en oscuro.** `text-primary` sobre el fondo oscuro es la misma trampa que el token `--warning` en E2: distancia RGB decente, contraste de texto por la mitad de lo que pide WCAG. Pasó a sello **relleno** (`bg-primary` + `text-primary-foreground`), que mide **6.8:1 en oscuro y 4.7:1 en claro**; la variante de error, **6.9 y 4.8**.
+- **La raya que separa el total no se dibujaba.** `TableBody` lleva `[&_tr:last-child]:border-0`, que es un descendiente y le gana por especificidad a cualquier `border-t-2` puesto en el `tr`: la raya va **en las celdas**. Y es una raya y no un fondo porque `bg-muted/30` medía **5/255** contra el blanco — en esta paleta `--muted` está pegado al fondo. Con la raya, 72 de distancia contra el borde normal, igual en los dos temas.
+
+Tests: cinco de motor (que cierra, que las barras se cancelan de a pares, que el nudo cargado recibe la carga cambiada de signo, que un desplazamiento falseado **rompe** el control —si no, no estaría comprobando nada— y que sirve para 1 DOF por nudo) y cuatro de UI. **204 tests.**
+
 ## Pendiente, en orden
 
 > **La lista se replanificó el 2026-08-13**, después de que el barrido del proyecto v1 (ver [`errores.md`](./errores.md) y el grupo M de [`pendientes-comparacion.md`](./pendientes-comparacion.md)) agregara tres puntos: **E2**, **M1a** y **M1b**. Son los que reordenan todo lo demás, así que el orden **no** es el que tenía antes.
@@ -405,8 +430,8 @@ La otra mitad de N4, y la que faltaba para que **la tabla y el dibujo dejen de s
 
 | Bloque | Puntos |
 |---|---|
-| Lo que se lee | ~~N3~~ — 1 · **N5** |
-| Estado persistente | 2 · **N1** — 3 · **N2** |
+| Lo que se lee | ~~N3~~ — ~~N5~~ |
+| Estado persistente | 1 · **N1** — 2 · **N2** |
 
 **Las dependencias duras**, que son las que fijan el orden (lo demás es conveniencia):
 
@@ -418,15 +443,11 @@ La otra mitad de N4, y la que faltaba para que **la tabla y el dibujo dejen de s
 - `N4 → N3` — N4 decide dónde vive el estado de resaltado; N3 lo reusa.
 - `N1 → N2` — cargar un ejemplo pisa lo que el usuario tenía.
 
-### 1 · N5 · Verificación de equilibrio ⬅️ **acá se retoma**
-
-ΣF = 0 por nudo y global, como cierre de los resultados. Los scripts de regresión ya hacen esta verificación **fuera del repo**; traerla a la UI cierra el recorrido pedagógico. Todo lo necesario ya está calculado: `TrussBreakdown` expone `cos`/`sin`, `internalForce()` da el axial, y las reacciones y fuerzas aplicadas están en `SolveResult`. **Decisión abierta**: sección propia del acordeón o cartel de "resultado verificado" arriba.
-
-### 2 · N1 · Persistencia en `localStorage`
+### 1 · N1 · Persistencia en `localStorage`
 
 Hoy recargar la página pierde todo: es la frustración más común y la más barata de evitar. Es barato por una decisión ya tomada: los átomos guardan **datos planos, nunca instancias del motor**, así que el estado ya es serializable por diseño y no hay que inventar formato. Lo persistido incluye ahora los flags de M1a/M1b. **Lo único a definir es el versionado**, para que un archivo guardado hoy no explote cuando una tabla gane una columna. Descargar/subir JSON y la URL compartible quedan para después.
 
-### 3 · N2 · Ejemplos precargados
+### 2 · N2 · Ejemplos precargados
 
 Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar un ejemplo pisa lo que el usuario tenía, así que necesita confirmación o deshacer. Dato útil: la semilla actual **es el caso del test de regresión**, así que los números en pantalla ya se cotejan contra valores validados.
 
@@ -435,7 +456,7 @@ Dos o tres armaduras clásicas elegibles de una lista. **Depende de N1**: cargar
 Las reglas generales están en la [sección 5 del roadmap](./refactor-roadmap.md#5-estado-de-verificación-lo-que-está-probado-y-lo-que-no). Lo específico de esta tanda:
 
 - `pnpm test` · `npx tsc --noEmit` · `pnpm build`. **`pnpm lint` da 2 errores preexistentes en `ui/`**; un tercero sí es nuevo.
-- **Mirar la app no es opcional.** Van **siete** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
+- **Mirar la app no es opcional.** Van **ocho** sesiones seguidas en que la primera captura encontró algo con los tests, `tsc` y el build ya en verde.
 - **Para verificar algo que solo existe con el mouse encima** —N4, N3— hay que sembrar el estado: darle al `useState` del `HighlightProvider` un valor inicial fijo, capturar y **revertir**. Es la misma técnica de sembrar un modelo distinto, aplicada al estado de vista.
 - **Y los tests tampoco.** En esta última tanda un test encontró lo que la captura no podía —que Base UI no selecciona el texto del input al enfocarlo, y headless no puede tipear— igual que la captura encontró lo que el test no podía. Las dos verificaciones son complementarias.
 - **Para juzgar un texto, la métrica es la razón de contraste WCAG (4.5 para texto normal), no la distancia RGB.** La distancia sirve para "¿esta zona se distingue de aquella?", que es la pregunta de los bloques de la partición. El token `--warning` medía 275 de distancia —parecía bien— y 2.28:1 de contraste, que es la mitad de lo que hace falta.

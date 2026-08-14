@@ -3,6 +3,8 @@ import { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, nullMode, z
 import type { MechanismDiagnosis, MechanismDof } from "./mechanism";
 import { dofNumberingWarning, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
 import type { SolveWarning } from "./warnings";
+import { equilibriumCheck } from "./equilibrium";
+import type { EquilibriumCheck } from "./equilibrium";
 import type { Element } from "./element";
 import type { Node } from "./node";
 
@@ -91,6 +93,13 @@ export interface SolveResult {
    * `warnings.ts` y `docs/errores.md`.
    */
   warnings: SolveWarning[];
+  /**
+   * El control de que cada nudo quedó en equilibrio. Se calcula siempre —es
+   * barato y es el cierre del método— y **no** decide nada: si no cerrara, eso
+   * sería un bug de la app y no un problema del modelo del usuario, así que no
+   * puede ser un error ni una advertencia de dominio. Ver `equilibrium.ts`.
+   */
+  equilibrium: EquilibriumCheck;
 }
 
 interface DofEntry {
@@ -424,10 +433,23 @@ export class System {
 
     const partition: PartitionResult = { free, restrained, kff, kfr, krf, krr };
 
+    // El camino de vuelta: se rehacen las fuerzas nudo por nudo desde la
+    // rigidez de cada barra, sin pasar por la matriz global ni por la
+    // partición, y se comprueba que sumen cero con las cargas y las reacciones.
+    const equilibrium = equilibriumCheck({
+      dofPerNode: this.dofPerNode,
+      nodeIds: nodesInOrder.map((node) => node.id),
+      elements: [...this.elements.values()],
+      displacements,
+      appliedForces: new Map(nodesInOrder.map((node) => [node.id, node.dof.map((d) => d.force)])),
+      reactions,
+    });
+
     return {
       displacements,
       reactions,
       internalForces,
+      equilibrium,
       assembly: {
         dofOrder,
         globalStiffness: k,

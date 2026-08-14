@@ -14,6 +14,8 @@ export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompati
 export type { LoadCompatibility, LoadVerdict, MechanismDiagnosis, MechanismDof } from "./mechanism";
 export { CONDITION_WARNING, dofNumberingWarning, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
 export type { SolveWarning } from "./warnings";
+export { EQUILIBRIUM_TOLERANCE, equilibriumCheck } from "./equilibrium";
+export type { EquilibriumCheck, NodeEquilibrium, NodeElementForce } from "./equilibrium";
 export { cellContributions } from "./cell-contributions";
 export type { CellContribution } from "./cell-contributions";
 export { ldl } from "./factorization";

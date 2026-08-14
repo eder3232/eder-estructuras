@@ -13,6 +13,7 @@ import { atomResults, type Armaduras2DResults } from "../store/results";
 import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
 import { DofOrderControl } from "./results/dof-order-control";
+import { EquilibriumBadge, EquilibriumSection } from "./results/equilibrium-check";
 import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
@@ -241,6 +242,26 @@ function SolvedResults({
                 <div className="flex flex-col gap-6">
                   <SectionDecimals label="Decimales de las etiquetas:" hint={false} />
                   <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
+                </div>
+              </DecimalsScope>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="equilibrium">
+            {/* El veredicto va en el título y no adentro: la pregunta "¿puedo
+                confiar en esto?" se tiene que poder contestar sin desplegar
+                nada. La cuenta, que es lo que enseña, está adentro. */}
+            <AccordionTrigger>
+              <span className="flex flex-wrap items-center gap-3">
+                6. Verificación de equilibrio
+                <EquilibriumBadge equilibrium={solved.equilibrium} />
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <DecimalsScope id="equilibrium">
+                <div className="flex max-w-5xl flex-col gap-6">
+                  <SectionDecimals />
+                  <EquilibriumSection equilibrium={solved.equilibrium} nodesById={nodesById} />
                 </div>
               </DecimalsScope>
             </AccordionContent>
