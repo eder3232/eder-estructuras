@@ -51,7 +51,12 @@ export function DiagramLabel({
       dominantBaseline={baseline}
       // Sin `vector-effect`: el halo tiene que escalar con la figura igual que
       // la fuente, si no cambia de grosor relativo según el zoom del viewBox.
-      strokeWidth={unitSize * 0.3}
+      //
+      // El grosor tiene que **cerrar los huecos entre letras**, no solo rodear
+      // cada una. Con 0.3 una barra que cruzaba una etiqueta se seguía viendo
+      // entre los caracteres —la diagonal `e6` partía en dos el `-6.4000` del
+      // nudo v3 en el ejemplo inicial— y el número se leía cortado.
+      strokeWidth={unitSize * 0.5}
       className={cn("stroke-background [paint-order:stroke] [stroke-linejoin:round]", className)}
     >
       {children}

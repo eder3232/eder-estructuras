@@ -105,7 +105,10 @@ export function SchemaDiagram({
                 unitSize={unitSize}
                 anchor="start"
                 baseline="auto"
-                className="fill-primary"
+                // `primary` mide 2.79:1 contra el fondo en oscuro: sirve para
+                // el círculo, no para un texto (WCAG pide 4.5). `green-500` es
+                // el mismo tono, más claro (8.9:1).
+                className="fill-primary dark:fill-green-500"
               >
                 {node.name}
               </DiagramLabel>

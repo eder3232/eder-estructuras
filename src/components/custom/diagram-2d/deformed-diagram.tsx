@@ -56,15 +56,22 @@ function state(force: number | undefined): "zero" | "tension" | "compression" {
   return force > 0 ? "tension" : "compression";
 }
 
+/**
+ * El verde de tracción **cambia de tono por tema**, medido con la razón de
+ * contraste WCAG contra el fondo: `emerald-500` da 8.0:1 en oscuro pero 2.46:1
+ * en claro, o sea que el valor de una barra traccionada no se leía en claro.
+ * El número va un tono más oscuro que la barra (`700`, 5.4:1) porque a texto se
+ * le piden 4.5 y a un trazo 3 (`600`, 3.7:1).
+ */
 const STROKE_CLASS = {
   zero: "stroke-muted-foreground",
-  tension: "stroke-emerald-500",
+  tension: "stroke-emerald-600 dark:stroke-emerald-500",
   compression: "stroke-destructive",
 } as const;
 
 const FILL_CLASS = {
   zero: "fill-muted-foreground",
-  tension: "fill-emerald-500",
+  tension: "fill-emerald-700 dark:fill-emerald-500",
   compression: "fill-destructive",
 } as const;
 

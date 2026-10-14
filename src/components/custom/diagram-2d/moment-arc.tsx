@@ -14,7 +14,7 @@ interface MomentArcProps {
 }
 
 const COLOR_CLASS = {
-  force: "stroke-blue-500 fill-blue-500",
+  force: "stroke-blue-600 fill-blue-600 dark:stroke-blue-500 dark:fill-blue-500",
   reaction: "stroke-warning fill-warning",
 } as const;
 

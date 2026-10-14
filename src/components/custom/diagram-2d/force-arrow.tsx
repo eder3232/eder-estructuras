@@ -15,8 +15,13 @@ interface ForceArrowProps {
   variant: "force" | "reaction";
 }
 
+/**
+ * El azul de las cargas cambia de tono por tema: `blue-500` da 3.76:1 contra el
+ * fondo claro (el número es texto, y WCAG pide 4.5), `blue-600` da 5.26. En
+ * oscuro es al revés: `blue-600` cae a 3.77 y `blue-500` da 5.26.
+ */
 const COLOR_CLASS = {
-  force: "stroke-blue-500 fill-blue-500",
+  force: "stroke-blue-600 fill-blue-600 dark:stroke-blue-500 dark:fill-blue-500",
   reaction: "stroke-warning fill-warning",
 } as const;
 
