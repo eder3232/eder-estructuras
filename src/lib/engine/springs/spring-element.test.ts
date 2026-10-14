@@ -18,3 +18,9 @@ describe("SpringElement + System — caso de 2 nodos", () => {
     expect(internalForces.get("e1")).toEqual({ axialForce: 5 });
   });
 });
+
+describe("SpringElement — la rigidez tiene que ser positiva", () => {
+  it.each([0, -10, Number.NaN])("rechaza k = %s", (k) => {
+    expect(() => new SpringElement("e1", ["a", "b"], k)).toThrow("debe tener rigidez k positiva");
+  });
+});
