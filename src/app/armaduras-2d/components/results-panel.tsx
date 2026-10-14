@@ -2,7 +2,7 @@
 
 import { useAtom } from "jotai";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui-custom/accordion";
 import { CompactNumbersControl } from "@/components/custom/compact-numbers-control";
 import { DecimalsControl } from "@/components/custom/decimals-control";
 import { DecimalsScope } from "@/components/custom/decimals-scope";
