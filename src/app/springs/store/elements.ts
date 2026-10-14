@@ -1,6 +1,9 @@
 import { atom } from "jotai";
 import { produce } from "immer";
+
+import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
+import { storedModel } from "./persisted-model";
 
 export interface ElementRow {
   id: string;
@@ -17,20 +20,37 @@ const initialElements: ElementRow[] = [
   { id: "seed-e4", name: "e4", fromNodeId: seedNodeIds.v2, toNodeId: seedNodeIds.v1, k: 8 },
 ];
 
-const atomElementsBase = atom<ElementRow[]>(initialElements);
+/** El ejemplo inicial, siempre en una copia nueva. */
+export const seedElements = (): ElementRow[] => initialElements.map((e) => ({ ...e }));
+
+export const atomElementsBase = atom<ElementRow[]>(storedModel?.elements ?? seedElements());
 
 export const atomElements = atom((get) => get(atomElementsBase));
 
-export const atomAddElement = atom(null, (get, set) => {
+/**
+ * Sin argumento agrega al final; con `afterId` inserta debajo de esa fila (D7).
+ *
+ * La `k` se **hereda de la fila anterior** en vez de arrancar en cero:
+ * `SpringElement` rechaza `k ≤ 0`, así que una fila nueva en cero sería un
+ * error y el panel de resultados desaparecería hasta completarla. Es lo mismo
+ * que hace `/armaduras-2d` con el área y el módulo.
+ */
+export const atomAddElement = atom(null, (get, set, afterId?: string) => {
   set(
     atomElementsBase,
     produce((draft: ElementRow[]) => {
-      draft.push({
+      const at = insertIndex(draft, afterId);
+      const previous = draft[at - 1] ?? draft[draft.length - 1];
+
+      draft.splice(at, 0, {
         id: crypto.randomUUID(),
-        name: `e${draft.length + 1}`,
+        name: nextRowName(
+          "e",
+          draft.map((e) => e.name),
+        ),
         fromNodeId: "",
         toNodeId: "",
-        k: 0,
+        k: previous?.k ?? 1,
       });
     }),
   );
