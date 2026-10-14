@@ -40,7 +40,7 @@ export function AssemblySteps({ steps, dofOrder, elements, nodesById }: Assembly
         return (
           <div key={step.elementId} className="flex flex-col gap-2">
             <p className="text-sm">
-              <span className="font-medium">Paso {i + 1}:</span> barra {element?.name ?? step.elementId}
+              <span className="font-medium">Paso {i + 1}:</span> resorte {element?.name ?? step.elementId}
               {element ? ` (k=${element.k})` : ""} conecta {from}↔{to} → aporta en las posiciones de {from} y {to}.
             </p>
             <MatrixTable
