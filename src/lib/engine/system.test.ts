@@ -79,4 +79,31 @@ describe("System — regresión red de 5 nodos / 4 resortes", () => {
     expect(assembly.partition.free).toEqual([2, 3, 4]);
     expect(assembly.partition.restrained).toEqual([0, 1]);
   });
+
+  it("dice a qué celda de K va cada grado de libertad de cada barra, también con otro orden", () => {
+    const build = () => {
+      const system = new System(1);
+      system.addNode({ id: "v1", restrained: [false], force: [5] });
+      system.addNode({ id: "v2", restrained: [true] });
+      system.addNode({ id: "v3", restrained: [false] });
+      system.addElement(new SpringElement("e1", ["v1", "v2"], 10));
+      system.addElement(new SpringElement("e2", ["v3", "v1"], 4));
+      return system;
+    };
+
+    // Es el contrato que usa la exportación a Excel: con `dofs` y la rigidez de
+    // cada barra se tiene que poder rehacer `K` entera sin mirar el motor.
+    for (const restrainedFirst of [false, true]) {
+      const { assembly } = build().solve({ restrainedFirst });
+      const local = { e1: [[10, -10], [-10, 10]], e2: [[4, -4], [-4, 4]] } as const;
+      const rebuilt = assembly.globalStiffness.map((row) => row.map(() => 0));
+      for (const step of assembly.steps) {
+        const k = local[step.elementId as keyof typeof local];
+        step.dofs.forEach((row, i) => step.dofs.forEach((col, j) => (rebuilt[row][col] += k[i][j])));
+      }
+      expect(rebuilt).toEqual(assembly.globalStiffness);
+    }
+
+    expect(build().solve({ restrainedFirst: true }).assembly.steps[0].dofs).toEqual([1, 0]);
+  });
 });

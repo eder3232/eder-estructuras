@@ -35,6 +35,16 @@ export interface PartitionResult {
 
 export interface AssemblyStep {
   elementId: string;
+  /**
+   * A qué fila/columna de la matriz global va cada grado de libertad local de
+   * la barra: `dofs[i]` es el destino de la fila `i` de su `stiffness()`.
+   *
+   * Es el mapa con el que se ensambla, y existe afuera para **la exportación a
+   * Excel**: el libro no suma números sino que escribe la fórmula que los
+   * suma, así que necesita saber qué celda de cada barra cae en qué celda de
+   * `K` — exactamente lo que este recorrido ya decide.
+   */
+  dofs: number[];
   globalStiffnessAfter: number[][];
 }
 
@@ -267,7 +277,7 @@ export class System {
         f0[map[i]] += localF0[i];
       }
 
-      steps.push({ elementId: element.id, globalStiffnessAfter: k.map((row) => [...row]) });
+      steps.push({ elementId: element.id, dofs: map, globalStiffnessAfter: k.map((row) => [...row]) });
     }
 
     return { k, f0, steps };
