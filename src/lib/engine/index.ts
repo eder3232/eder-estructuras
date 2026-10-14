@@ -16,6 +16,8 @@ export { CONDITION_WARNING, dofNumberingWarning, illConditionedWarning, unconnec
 export type { SolveWarning } from "./warnings";
 export { EQUILIBRIUM_TOLERANCE, equilibriumCheck } from "./equilibrium";
 export type { EquilibriumCheck, NodeEquilibrium, NodeElementForce } from "./equilibrium";
+export { determinacy } from "./classification";
+export type { Determinacy, StructureCount } from "./classification";
 export { cellContributions } from "./cell-contributions";
 export type { CellContribution } from "./cell-contributions";
 export { ldl } from "./factorization";

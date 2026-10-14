@@ -4,6 +4,7 @@ import { HighlightProvider } from "@/components/custom/highlight";
 import { UnitsNote } from "@/components/custom/units-note";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { Classification } from "./components/classification";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
 import { ExcelExportButton } from "./components/excel-export-button";
@@ -96,6 +97,13 @@ export default function Armaduras2DPage() {
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Esquema</h2>
           {hydrated ? <SchemaDiagram /> : <Reserved className="h-80 w-80 md:h-[500px] md:w-[500px]" />}
+        </div>
+
+        {/* Entre el dibujo y el cálculo, porque es eso en el pizarrón: se mira
+            la estructura, se cuenta, y recién después se arma K. */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Clasificación</h2>
+          {hydrated ? <Classification /> : <Reserved className="h-40 w-full max-w-3xl" />}
         </div>
 
         {hydrated && <ErrorsPanel />}
