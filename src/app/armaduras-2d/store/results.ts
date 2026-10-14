@@ -5,6 +5,7 @@ import { atomElements, type ElementRow } from "./elements";
 import { atomRestrainedFirst, atomUseDofNumbers } from "./dof-order";
 
 import type { DomainError, DomainIssue } from "@/components/custom/errors-panel";
+import { displayNames, withDisplayNames } from "@/lib/display-names";
 
 export type Armaduras2DResults =
   /**
@@ -71,6 +72,8 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
 
   const system = new System(2);
   const errors: DomainError[] = [];
+  // Los mensajes del motor nombran ids; acá se cambian por lo que ve el alumno.
+  const names = displayNames(nodes, elements);
 
   for (const node of nodes) {
     try {
@@ -87,7 +90,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
         refId: node.id,
         refName: node.name,
         severity: "error",
-        message: e instanceof Error ? e.message : String(e),
+        message: withDisplayNames(e instanceof Error ? e.message : String(e), names),
       });
     }
   }
@@ -114,7 +117,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
         refId: element.id,
         refName: element.name,
         severity: "error",
-        message: e instanceof Error ? e.message : String(e),
+        message: withDisplayNames(e instanceof Error ? e.message : String(e), names),
       });
     }
   }
@@ -134,7 +137,7 @@ export const atomResults = atom<Armaduras2DResults>((get) => {
           severity: "error",
           source: "element",
           refId: "-",
-          message: e instanceof Error ? e.message : String(e),
+          message: withDisplayNames(e instanceof Error ? e.message : String(e), names),
           // El motor no solo dice que no pudo: dice **por qué** y cómo se mueve
           // la estructura. Eso se lleva a la UI para poder dibujarlo.
           mechanism: e instanceof SingularStiffnessError ? e.diagnosis : undefined,
