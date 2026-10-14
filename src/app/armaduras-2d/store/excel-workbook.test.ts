@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createStore } from "jotai";
 
 import { buildTruss2DWorkbook, SHEETS } from "@/lib/excel/truss-2d-workbook";
-import { recalculate, type Recalculated } from "@/lib/excel/testing/recalculate";
-import { cellAt, eachCell, type WorkbookModel } from "@/lib/excel/workbook-model";
+import { recalculate } from "@/lib/excel/testing/recalculate";
+import { expectSameNumbers, rowNamed } from "@/lib/excel/testing/expectations";
+import { cellAt, type WorkbookModel } from "@/lib/excel/workbook-model";
 import { atomElements } from "./elements";
 import { examples } from "./examples";
 import { atomNodes, seedNodes } from "./nodes";
@@ -44,48 +45,8 @@ const cases = models.flatMap(([name, model]) => [
   [`${name}, restringidos arriba`, { ...model, restrainedFirst: !model.restrainedFirst }] as const,
 ]);
 
-/** Cada número que el libro calcula, con dónde está y cuánto tiene que dar. */
-function* expectations(model: WorkbookModel) {
-  for (const sheet of model.sheets) {
-    for (const [row, col, cell] of eachCell(sheet)) {
-      if (cell.formula !== undefined) yield { sheet: sheet.name, row, col, expected: cell.result! };
-    }
-    for (const array of sheet.arrays) {
-      for (let r = 0; r < array.rows; r++) {
-        for (let c = 0; c < array.cols; c++) {
-          yield { sheet: sheet.name, row: array.row + r, col: array.col + c, expected: array.results[r][c] };
-        }
-      }
-    }
-  }
-}
-
-/**
- * Tolerancia relativa a la escala de la hoja: en `K` conviven 10⁷ con ceros que
- * el coseno de 90° deja en 10⁻⁹, y una relativa pura fallaría en esos ceros.
- */
-function expectSameNumbers(book: Recalculated, expected: WorkbookModel) {
-  const scale = new Map<string, number>();
-  for (const e of expectations(expected)) scale.set(e.sheet, Math.max(scale.get(e.sheet) ?? 0, Math.abs(e.expected)));
-
-  let checked = 0;
-  for (const { sheet, row, col, expected: want } of expectations(expected)) {
-    const got = book.value(sheet, row, col);
-    const where = `${sheet}!R${row}C${col}`;
-    expect(typeof got, `${where} dio ${JSON.stringify(got)}`).toBe("number");
-    const tolerance = 1e-9 * Math.abs(want) + 1e-12 * scale.get(sheet)!;
-    expect(Math.abs((got as number) - want), `${where}: ${got} contra ${want}`).toBeLessThanOrEqual(tolerance);
-    checked++;
-  }
-  return checked;
-}
-
-/** La fila de la hoja Datos donde está un nudo o una barra, buscándola por nombre. */
-function dataRow(model: WorkbookModel, name: string) {
-  const data = model.sheets.find((sheet) => sheet.name === SHEETS.data)!;
-  for (const [row, col, cell] of eachCell(data)) if (col === 1 && cell.value === name) return row;
-  throw new Error(`no está ${name} en Datos`);
-}
+/** La fila de la hoja Datos donde está un nudo o una barra. */
+const dataRow = (model: WorkbookModel, name: string) => rowNamed(model, SHEETS.data, name);
 
 describe("exportación de /armaduras-2d a Excel", () => {
   it.each(cases)("%s: cada fórmula recalcula a lo mismo que el motor", (_, model) => {

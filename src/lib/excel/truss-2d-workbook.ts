@@ -1,4 +1,5 @@
 import { TrussElement2D, type SolveResult, type TrussInternalForce } from "@/lib/engine";
+import { buildMatrixMethodSheets, MATRIX_METHOD_SHEETS } from "./matrix-method-sheets";
 import { SheetBuilder, address, rangeAddress, type SheetImage, type WorkbookModel } from "./workbook-model";
 
 /**
@@ -57,8 +58,8 @@ export interface Truss2DWorkbookInput {
 export const SHEETS = {
   data: "Datos",
   bars: "Barras",
-  assembly: "Ensamblaje",
-  solution: "Solución",
+  assembly: MATRIX_METHOD_SHEETS.assembly,
+  solution: MATRIX_METHOD_SHEETS.solution,
   results: "Resultados",
 } as const;
 
@@ -84,7 +85,7 @@ interface BarRefs {
 
 export function buildTruss2DWorkbook({ nodes, elements, solved, schema }: Truss2DWorkbookInput): WorkbookModel {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
-  const { dofOrder, partition, globalStiffness, steps } = solved.assembly;
+  const { dofOrder, steps } = solved.assembly;
   const dofLabel = (globalIndex: number) => {
     const entry = dofOrder[globalIndex];
     return `${nodesById.get(entry.nodeId)!.name} ${AXES[entry.localDof]}`;
@@ -261,141 +262,27 @@ export function buildTruss2DWorkbook({ nodes, elements, solved, schema }: Truss2
   for (let col = 1; col <= 8; col++) bars.width(col, 12);
   for (let col = 9; col <= 12; col++) bars.width(col, 14);
 
-  // ---------------------------------------------------------------- Ensamblaje
-  const assembly = new SheetBuilder(SHEETS.assembly);
-  const t = globalStiffness.length;
-  assembly.text(1, 1, "Matriz de rigidez global K", "title");
-  assembly.text(
-    2,
-    1,
-    "Cada celda suma lo que aporta cada barra que toca los dos nudos de su fila y su columna. Un 0 es un par de nudos que ninguna barra conecta.",
-    "note",
-  );
-  assembly.merge(2, 1, 1, Math.max(t + 1, 10));
-
-  // Qué celdas de qué barras caen en cada (fila, columna) de K: el recorrido
-  // del motor, escrito como referencias en vez de sumado.
-  const contributions: string[][][] = Array.from({ length: t }, () => Array.from({ length: t }, () => []));
-  for (const element of elements) {
-    const { dofs } = stepByElement.get(element.id)!;
-    const refs = barRefs.get(element.id)!;
-    dofs.forEach((row, i) => dofs.forEach((col, j) => contributions[row][col].push(refs.stiffness(i, j))));
-  }
-
-  const kTop = 5;
-  for (let g = 0; g < t; g++) {
-    assembly.text(kTop - 1, 2 + g, `${dofLabel(g)} (${g})`, "header");
-    assembly.text(kTop + g, 1, `${dofLabel(g)} (${g})`, "label");
-  }
-  for (let r = 0; r < t; r++) {
-    for (let col = 0; col < t; col++) {
-      const refs = contributions[r][col];
-      if (refs.length > 0) assembly.formula(kTop + r, 2 + col, refs.join("+"), globalStiffness[r][col]);
-      else assembly.set(kTop + r, 2 + col, { role: "computed", value: 0 });
-    }
-  }
-  assembly.width(1, 12);
-  for (let col = 2; col <= t + 1; col++) assembly.width(col, 13);
-
-  // ---------------------------------------------------------------- Solución
-  const solution = new SheetBuilder(SHEETS.solution);
-  const { free, restrained } = partition;
-  const nf = free.length;
-  const nr = restrained.length;
-  solution.text(1, 1, "Partición y solución", "title");
-  solution.text(
-    2,
-    1,
-    "K se parte en grados libres (f) y restringidos (r). Los desplazamientos libres salen de Uf = Kff⁻¹ · (Ff − Kfr · Ur) y las reacciones de Rr = Krf · Uf + Krr · Ur.",
-    "note",
-  );
-  solution.merge(2, 1, 1, Math.max(nf + nr + 3, 10));
-
-  const kRef = (r: number, col: number) => assembly.ref(kTop + r, 2 + col);
-
-  /** Un bloque de K, cada celda una referencia a la hoja Ensamblaje. Devuelve su rango. */
-  const block = (title: string, top: number, left: number, rows: number[], cols: number[], values: number[][]) => {
-    solution.text(top, left, title, "label");
-    cols.forEach((g, j) => solution.text(top + 1, left + 1 + j, dofLabel(g), "header"));
-    rows.forEach((g, i) => {
-      solution.text(top + 2 + i, left, dofLabel(g), "label");
-      cols.forEach((h, j) => solution.formula(top + 2 + i, left + 1 + j, kRef(g, h), values[i][j]));
-    });
-    return rangeAddress(top + 2, left + 1, rows.length, cols.length);
-  };
-
-  const partTop = 4;
-  const lowerTop = partTop + nf + 3;
-  const rightLeft = 1 + nf + 2;
-  const kff = nf > 0 ? block("Kff", partTop, 1, free, free, partition.kff) : null;
-  const kfr = nf > 0 ? block("Kfr", partTop, rightLeft, free, restrained, partition.kfr) : null;
-  const krf = nf > 0 ? block("Krf", lowerTop, 1, restrained, free, partition.krf) : null;
-  const krr = block("Krr", lowerTop, rightLeft, restrained, restrained, partition.krr);
-
-  const valueAt = (map: Map<string, number[]>, g: number) => {
-    const entry = dofOrder[g];
-    return map.get(entry.nodeId)![entry.localDof];
-  };
-
-  /** Un vector columna con sus etiquetas. `cell` escribe cada fila y devuelve nada. */
-  const vectorTop = lowerTop + nr + 3;
-  const vector = (title: string, left: number, dofs: number[], cell: (row: number, col: number, g: number) => void) => {
-    solution.text(vectorTop, left, title, "label");
-    dofs.forEach((g, i) => {
-      solution.text(vectorTop + 1 + i, left, dofLabel(g), "label");
-      cell(vectorTop + 1 + i, left + 1, g);
-    });
-    return rangeAddress(vectorTop + 1, left + 1, dofs.length, 1);
-  };
-
-  const ffLeft = 1;
-  const urLeft = 4;
-  const ufLeft = 7;
-  const rrLeft = 10;
-  const ff = vector("Ff (cargas)", ffLeft, free, (row, col, g) => {
-    const entry = dofOrder[g];
-    const ref = nodeRefs.get(entry.nodeId)!.force[entry.localDof]!;
-    solution.formula(row, col, ref, nodesById.get(entry.nodeId)![entry.localDof === 0 ? "forceX" : "forceZ"]);
+  // -------------------------------------------- Ensamblaje y Solución (comunes)
+  const { assembly, solution, ufRef, rrRef } = buildMatrixMethodSheets({
+    solved,
+    dofLabel,
+    elementIds: elements.map((element) => element.id),
+    stiffnessRef: (id, i, j) => barRefs.get(id)!.stiffness(i, j),
+    force: (g) => {
+      const entry = dofOrder[g];
+      const node = nodesById.get(entry.nodeId)!;
+      return {
+        ref: nodeRefs.get(entry.nodeId)!.force[entry.localDof]!,
+        value: entry.localDof === 0 ? node.forceX : node.forceZ,
+      };
+    },
+    prescribedRef: (g) => {
+      const entry = dofOrder[g];
+      return nodeRefs.get(entry.nodeId)!.displacement[entry.localDof]!;
+    },
+    assemblyNote:
+      "Cada celda suma lo que aporta cada barra que toca los dos nudos de su fila y su columna. Un 0 es un par de nudos que ninguna barra conecta.",
   });
-  const ur = vector("Ur (desplaz. prescritos)", urLeft, restrained, (row, col, g) => {
-    const entry = dofOrder[g];
-    const ref = nodeRefs.get(entry.nodeId)!.displacement[entry.localDof]!;
-    solution.formula(row, col, ref, valueAt(solved.displacements, g));
-  });
-
-  /** Dónde quedó cada desplazamiento libre y cada reacción, para la hoja de resultados. */
-  const ufRef = new Map<number, string>();
-  const rrRef = new Map<number, string>();
-
-  let uf: string | null = null;
-  if (nf > 0) {
-    solution.text(vectorTop, ufLeft, "Uf (desplazamientos)", "label");
-    free.forEach((g, i) => {
-      solution.text(vectorTop + 1 + i, ufLeft, dofLabel(g), "label");
-      ufRef.set(g, solution.ref(vectorTop + 1 + i, ufLeft + 1));
-    });
-    uf = rangeAddress(vectorTop + 1, ufLeft + 1, nf, 1);
-    const rhs = nr > 0 ? `${ff}-MMULT(${kfr},${ur})` : ff;
-    solution.array(
-      vectorTop + 1,
-      ufLeft + 1,
-      `MMULT(MINVERSE(${kff}),${rhs})`,
-      free.map((g) => [valueAt(solved.displacements, g)]),
-    );
-  }
-
-  solution.text(vectorTop, rrLeft, "Rr (reacciones)", "label");
-  restrained.forEach((g, i) => {
-    solution.text(vectorTop + 1 + i, rrLeft, dofLabel(g), "label");
-    rrRef.set(g, solution.ref(vectorTop + 1 + i, rrLeft + 1));
-  });
-  solution.array(
-    vectorTop + 1,
-    rrLeft + 1,
-    uf ? `MMULT(${krf},${uf})+MMULT(${krr},${ur})` : `MMULT(${krr},${ur})`,
-    restrained.map((g) => [valueAt(solved.reactions, g)]),
-  );
-  for (let col = 1; col <= Math.max(rightLeft + nr, rrLeft + 1); col++) solution.width(col, 13);
 
   // ---------------------------------------------------------------- Resultados
   const results = new SheetBuilder(SHEETS.results);
@@ -463,5 +350,5 @@ export function buildTruss2DWorkbook({ nodes, elements, solved, schema }: Truss2
   results.width(1, 10);
   for (let col = 2; col <= 5; col++) results.width(col, 18);
 
-  return { sheets: [data.sheet, bars.sheet, assembly.sheet, solution.sheet, results.sheet] };
+  return { sheets: [data.sheet, bars.sheet, assembly, solution, results.sheet] };
 }
