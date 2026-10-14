@@ -5,7 +5,8 @@ import { useAtom } from "jotai";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CompactNumbersControl } from "@/components/custom/compact-numbers-control";
 import { DecimalsControl } from "@/components/custom/decimals-control";
-import { DecimalsScope, ScopeDecimalsControl } from "@/components/custom/decimals-scope";
+import { DecimalsScope } from "@/components/custom/decimals-scope";
+import { SectionDecimals } from "@/components/custom/section-decimals";
 import { DofOrderTable } from "@/components/custom/dof-order-table";
 import { NoResults } from "@/components/custom/no-results";
 import { atomElements, type ElementRow } from "../store/elements";
@@ -23,30 +24,6 @@ import { PracticeMode } from "./results/practice-mode";
 import { UnitDisplacement } from "./results/unit-displacement";
 
 const DOF_LABELS = ["x", "z"];
-
-/**
- * Encabezado de precisión de una sección. La leyenda va una sola vez por
- * bloque, y no repetida en cada tabla: explicar la cascada veintipico de veces
- * era justamente lo que hacía ilegible la pantalla.
- */
-function SectionDecimals({
-  label = "Decimales de esta sección:",
-  hint = true,
-}: {
-  label?: string;
-  hint?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <ScopeDecimalsControl label={label} inheritsFrom="la página" />
-      {hint && (
-        <p className="text-xs text-muted-foreground">
-          Cada tabla sigue a la sección salvo que le fijes un número con − / +. El ↺ la vuelve a soltar.
-        </p>
-      )}
-    </div>
-  );
-}
 
 /**
  * La sección entera de resultados: el título, los controles y el cuerpo.

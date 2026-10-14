@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,10 +43,13 @@ export function PositionsQuiz({
   labels,
   expected,
   title,
+  instruction = "hacé click en cada posición de la matriz global donde esa barra suma algo.",
 }: {
   labels: string[];
   expected: CellKey[];
   title: string;
+  /** Qué hay que hacer, en el idioma del sistema (en resortes no hay «barras»). */
+  instruction?: ReactNode;
 }) {
   const [selected, setSelected] = useState<Set<CellKey>>(new Set());
   const [checked, setChecked] = useState(false);
@@ -73,8 +76,7 @@ export function PositionsQuiz({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
-        <span className="font-medium">{title}</span> — hacé click en cada posición de la matriz global donde esa barra
-        suma algo.
+        <span className="font-medium">{title}</span> — {instruction}
       </p>
 
       <div className="max-w-full overflow-x-auto">
@@ -165,16 +167,26 @@ export function PositionsQuiz({
  * Acepta expresiones, así que se puede escribir `2e7*0.001/3` en vez del número
  * ya resuelto: es como el alumno tiene el valor mientras lo está calculando.
  */
+const ARMADURAS_VALUES_INSTRUCTION = (
+  <>
+    completá la matriz de rigidez de esa barra en ejes globales. Podés escribir la cuenta (
+    <code className="text-xs">2e7*0.001/3</code>) en vez del resultado.
+  </>
+);
+
 export function ValuesQuiz({
   rowLabels,
   colLabels,
   expected,
   title,
+  instruction = ARMADURAS_VALUES_INSTRUCTION,
 }: {
   rowLabels: string[];
   colLabels: string[];
   expected: number[][];
   title: string;
+  /** Qué hay que hacer, en el idioma del sistema. */
+  instruction?: ReactNode;
 }) {
   const decimals = useDecimals();
   const [entries, setEntries] = useState<Record<CellKey, string>>({});
@@ -189,8 +201,7 @@ export function ValuesQuiz({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
-        <span className="font-medium">{title}</span> — completá la matriz de rigidez de esa barra en ejes globales.
-        Podés escribir la cuenta (<code className="text-xs">2e7*0.001/3</code>) en vez del resultado.
+        <span className="font-medium">{title}</span> — {instruction}
       </p>
 
       <div className="max-w-full overflow-x-auto">

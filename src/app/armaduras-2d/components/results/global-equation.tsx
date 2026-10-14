@@ -2,10 +2,8 @@ import { useState } from "react";
 
 import { cellContributions, type AssemblyResult, type SolveResult } from "@/lib/engine";
 import { useHighlight, useSetHighlight } from "@/components/custom/highlight";
-import { DecimalsScope, ScopeDecimalsStepper, useDecimals } from "@/components/custom/decimals-scope";
-import { Math, MathBlock } from "@/components/custom/math";
-import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
-import { MatrixTable } from "@/components/custom/matrix-table";
+import { useDecimals } from "@/components/custom/decimals-scope";
+import { GlobalEquation as GenericGlobalEquation } from "@/components/custom/global-equation";
 import { SchemaDiagram } from "@/components/custom/diagram-2d/schema-diagram";
 import type { DiagramSupport } from "@/components/custom/diagram-2d/types";
 import type { ElementRow } from "../../store/elements";
@@ -23,116 +21,38 @@ const globalMath = globalThis.Math;
 
 const AXIS_LABEL = ["x", "z"];
 
-/** Clase de una celda incógnita. Se resuelve en el paso siguiente, no se conoce todavía. */
-const UNKNOWN = "bg-primary/15 font-semibold";
-
 /**
- * El cierre del ensamblaje: la ecuación de rigidez del sistema completo, con la
- * matriz recién armada entre los vectores de fuerza y desplazamiento.
- *
- * Lo que agrega sobre el original —que mostraba las tres matrices y ya— es
- * **marcar cuáles de esos números son incógnitas**. Es la pregunta que se
- * responde al particionar, y sin señalarla la ecuación parece ya resuelta:
- * están todos los números a la vista, calculados, sin distinguir el dato de lo
- * que se dedujo. La tabla de grados de libertad ya lo dice en palabras; acá se
- * ve de un vistazo, y se ve **por qué hay que partir la matriz**: los conocidos
- * y los incógnitos están intercalados.
+ * La ecuación global genérica (`custom/global-equation.tsx`) con lo que es de
+ * armaduras: los dos ejes, y el vínculo matriz ↔ modelo (N4) — pasar el mouse
+ * por una celda de `K` enciende las barras que aportan ahí, en el dibujo.
  */
 export function GlobalEquation({ assembly, solved, nodesById, elements }: GlobalEquationProps) {
-  const { dofOrder, globalStiffness } = assembly;
+  const { dofOrder } = assembly;
   const setHighlight = useSetHighlight();
   const [cell, setCell] = useState<[number, number] | null>(null);
   const elementNodeIds = elements.map((e) => ({ id: e.id, nodeIds: [e.fromNodeId, e.toNodeId] }));
 
-  const labels = dofOrder.map(
-    (entry) => `${nodesById.get(entry.nodeId)?.name ?? entry.nodeId}${AXIS_LABEL[entry.localDof]}`,
-  );
-
-  // En un DOF restringido la fuerza es la reacción (incógnita) y el
-  // desplazamiento es el dato prescrito; en uno libre, al revés.
-  const forces = dofOrder.map((entry) => {
-    const node = nodesById.get(entry.nodeId)!;
-    if (entry.restrained) return [solved.reactions.get(entry.nodeId)![entry.localDof]];
-    return [entry.localDof === 0 ? node.forceX : node.forceZ];
-  });
-
-  const displacements = dofOrder.map((entry) => [
-    solved.displacements.get(entry.nodeId)![entry.localDof],
-  ]);
-
   return (
-    <DecimalsScope id="global-equation">
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Con la matriz ya ensamblada, la ecuación de rigidez del sistema es:
-          </span>
-          <ScopeDecimalsStepper />
-        </div>
-
-        <MathBlock tex="\begin{bmatrix} F \end{bmatrix} = \begin{bmatrix} K \end{bmatrix} \cdot \begin{bmatrix} U \end{bmatrix}" />
-
-        <MatrixEquation>
-          <EquationTerm tex="F">
-            <MatrixTable
-              matrix={forces}
-              rowLabels={labels}
-              cellClass={(row) => (dofOrder[row].restrained ? UNKNOWN : undefined)}
-            />
-          </EquationTerm>
-          <MathOp tex="=" />
-          <EquationTerm tex="K">
-            <MatrixTable
-              matrix={globalStiffness}
-              labels={labels}
-              symmetricHighlight
-              onCellHover={(hovered) => {
-                setCell(hovered);
-                if (!hovered) return setHighlight(null);
-                const [row, col] = hovered;
-                setHighlight({
-                  nodeIds: [dofOrder[row].nodeId, dofOrder[col].nodeId],
-                  elementIds: cellContributions(assembly.steps, elementNodeIds, dofOrder, row, col).map(
-                    (c) => c.elementId,
-                  ),
-                });
-              }}
-            />
-          </EquationTerm>
-          <MathOp tex="\cdot" />
-          <EquationTerm tex="U">
-            <MatrixTable
-              matrix={displacements}
-              rowLabels={labels}
-              cellClass={(row) => (dofOrder[row].restrained ? undefined : UNKNOWN)}
-            />
-          </EquationTerm>
-        </MatrixEquation>
-
-        <WhoContributes
-          assembly={assembly}
-          cell={cell}
-          elements={elements}
-          nodesById={nodesById}
-        />
-
-        {/* La instrucción de pasar el mouse se dice **una sola vez**, en el
-            bloque de arriba. Este párrafo era el que la traía, y con el bloque
-            nuevo quedaban dos textos seguidos empezando igual. */}
-        <p className="text-xs text-muted-foreground">
-          Al pasar el mouse se resalta además la celda <span className="font-medium text-foreground">simétrica</span>:{" "}
-          <Math tex="k_{ij} = k_{ji}" />. La fuerza que aparece en <Math tex="i" /> cuando <Math tex="j" /> se
-          desplaza una unidad es la misma que aparece en <Math tex="j" /> cuando se desplaza <Math tex="i" /> — por
-          eso la matriz es simétrica, y no por casualidad.
-        </p>
-
-        <p className="text-xs text-muted-foreground">
-          Las celdas resaltadas son las <span className="font-medium text-foreground">incógnitas</span>: en un nudo
-          restringido se conoce el desplazamiento y falta la reacción; en uno libre, al revés. Como están
-          intercaladas, no se puede despejar de una sola vez — de ahí la partición del paso siguiente.
-        </p>
-      </div>
-    </DecimalsScope>
+    <GenericGlobalEquation
+      assembly={assembly}
+      solved={solved}
+      labelOf={(entry) => `${nodesById.get(entry.nodeId)?.name ?? entry.nodeId}${AXIS_LABEL[entry.localDof]}`}
+      forceOf={(entry) => {
+        const node = nodesById.get(entry.nodeId)!;
+        return entry.localDof === 0 ? node.forceX : node.forceZ;
+      }}
+      onCellHover={(hovered) => {
+        setCell(hovered);
+        if (!hovered) return setHighlight(null);
+        const [row, col] = hovered;
+        setHighlight({
+          nodeIds: [dofOrder[row].nodeId, dofOrder[col].nodeId],
+          elementIds: cellContributions(assembly.steps, elementNodeIds, dofOrder, row, col).map((c) => c.elementId),
+        });
+      }}
+    >
+      <WhoContributes assembly={assembly} cell={cell} elements={elements} nodesById={nodesById} />
+    </GenericGlobalEquation>
   );
 }
 

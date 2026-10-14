@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /**
  * Por qué el programa no muestra unidades en ningún lado.
  *
@@ -12,11 +14,22 @@
  * paso enseña lo que el alumno realmente hace mal: el error común no es
  * elegir mal el sistema, es **mezclar**.
  *
- * Es genérico porque la regla vale para los cuatro sistemas. `/frame2d` va a
- * querer sumarle una línea cuando se propague: sus momentos van en fuerza ×
- * longitud y sus giros en radianes, que no siguen la misma correspondencia.
+ * Es genérico porque la regla vale para los cuatro sistemas; lo que cambia es
+ * el ejemplo, porque cada uno tiene datos distintos (un resorte no tiene área
+ * ni coordenadas, y su `k` va en fuerza/longitud). Por eso el ejemplo y el
+ * error típico entran por props, con los de armaduras como valor por defecto.
+ * `/frame2d` va a querer sumarle una línea cuando se propague: sus momentos van
+ * en fuerza × longitud y sus giros en radianes.
  */
-export function UnitsNote() {
+export function UnitsNote({
+  example = ARMADURAS_EXAMPLE,
+  mixing = ARMADURAS_MIXING,
+}: {
+  /** Un sistema coherente aplicado a los datos de este módulo. */
+  example?: ReactNode;
+  /** El error típico de mezclar, con los datos de este módulo. */
+  mixing?: ReactNode;
+}) {
   return (
     <div className="max-w-3xl rounded-md border border-dashed p-3 text-sm text-muted-foreground">
       <p className="mb-2">
@@ -26,19 +39,26 @@ export function UnitsNote() {
         una unidad de fuerza y una de longitud, usalas en todos los datos, y los resultados salen en esas mismas
         unidades.
       </p>
-      <p className="mb-2">
-        Si trabajás en <span className="font-medium text-foreground">tonf</span> y{" "}
-        <span className="font-medium text-foreground">cm</span>: el módulo <span className="italic">E</span> va en
-        tonf/cm², las coordenadas en cm, el área en cm² y las cargas en tonf — y obtenés{" "}
-        <span className="font-medium text-foreground">desplazamientos en cm</span> y{" "}
-        <span className="font-medium text-foreground">reacciones y fuerzas internas en tonf</span>.
-      </p>
-      <p>
-        El error más común no es equivocarse de sistema: es <span className="font-medium">mezclar</span> —{" "}
-        <span className="italic">E</span> en kgf/cm² con las coordenadas en metros, por ejemplo. Eso da resultados
-        errados por un factor de 10⁴ y <span className="font-medium text-foreground">el programa no puede
-        detectarlo</span>, porque para él son números válidos.
-      </p>
+      <p className="mb-2">{example}</p>
+      <p>{mixing}</p>
     </div>
   );
 }
+
+const strong = (text: string) => <span className="font-medium text-foreground">{text}</span>;
+
+const ARMADURAS_EXAMPLE = (
+  <>
+    Si trabajás en {strong("tonf")} y {strong("cm")}: el módulo <span className="italic">E</span> va en tonf/cm², las
+    coordenadas en cm, el área en cm² y las cargas en tonf — y obtenés {strong("desplazamientos en cm")} y{" "}
+    {strong("reacciones y fuerzas internas en tonf")}.
+  </>
+);
+
+const ARMADURAS_MIXING = (
+  <>
+    El error más común no es equivocarse de sistema: es <span className="font-medium">mezclar</span> —{" "}
+    <span className="italic">E</span> en kgf/cm² con las coordenadas en metros, por ejemplo. Eso da resultados errados
+    por un factor de 10⁴ y {strong("el programa no puede detectarlo")}, porque para él son números válidos.
+  </>
+);
