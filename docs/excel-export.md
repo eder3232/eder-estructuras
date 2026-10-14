@@ -1,6 +1,6 @@
 # Exportación a Excel con el método vivo (Fase 7)
 
-> **Estado (2026-10-14): terminada en `/armaduras-2d`** — botón «Descargar Excel» en el encabezado, libro con el método vivo e imagen del esquema, verificado de punta a punta (app → descarga → Excel). Falta propagarla a los otros tres sistemas con el hilo C; el diseño ya es genérico para eso.
+> **Estado (2026-10-14): terminada en `/armaduras-2d` y en `/springs`** (resortes sin imagen: no tienen geometría). Las hojas Ensamblaje y Solución y el botón son comunes a los dos (`matrix-method-sheets.ts`, `custom/excel-export-button.tsx`); cada sistema pone su hoja Datos, la de sus elementos y Resultados. La primera versión, en armaduras, — botón «Descargar Excel» en el encabezado, libro con el método vivo e imagen del esquema, verificado de punta a punta (app → descarga → Excel). Falta propagarla a los otros tres sistemas con el hilo C; el diseño ya es genérico para eso.
 
 ## Qué hace
 
@@ -18,6 +18,9 @@ Genera un `.xlsx` **sin macros** donde el método matricial sigue vivo: coordena
 | Archivo | Qué es |
 |---|---|
 | `src/lib/excel/workbook-model.ts` | El libro **como datos**: celdas con rol (`input`, `computed`…), fórmulas con su resultado, bloques matriciales. Sin librerías. |
+| `src/lib/excel/matrix-method-sheets.ts` | Las hojas Ensamblaje y Solución, comunes a todos los sistemas: solo necesitan dónde está cada término de rigidez, cada carga y cada desplazamiento prescrito. |
+| `src/lib/excel/springs-workbook.ts` | El libro de `/springs`: Datos, Resortes, las dos comunes y Resultados. |
+| `src/lib/excel/testing/expectations.ts` | Solo tests: recorrer todo lo que calcula un libro y compararlo recalculado. |
 | `src/lib/excel/truss-2d-workbook.ts` | Arma el modelo de una armadura 2D a partir de los nudos, las barras y el `SolveResult`. Hojas: Datos, Barras, Ensamblaje, Solución, Resultados. |
 | `src/lib/excel/write-xlsx.ts` | El único que conoce a `exceljs`. Lo carga con `import()` (pesa ~250 KB gzip). |
 | `src/lib/excel/testing/recalculate.ts` | Solo tests: recalcula el modelo con HyperFormula (GPL-3, dependencia de desarrollo), con `MINVERSE` registrado a mano porque no la trae. |
