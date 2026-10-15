@@ -7,7 +7,7 @@ import type { PerspectiveCamera } from "three";
 
 import { Button } from "@/components/ui/button";
 import { computeBounds, computeUnitSize, type Bounds3D } from "./bounds";
-import { readDiagramColors } from "./theme-colors";
+import { useDiagramColors } from "./theme-colors";
 import type { Point3 } from "./types";
 
 type OrbitControlsRef = React.ComponentRef<typeof OrbitControls>;
@@ -44,7 +44,7 @@ interface SceneCanvasProps {
 export function SceneCanvas({ points, children, className }: SceneCanvasProps) {
   const bounds = useMemo(() => computeBounds(points), [points]);
   const unitSize = computeUnitSize(bounds);
-  const colors = useMemo(() => readDiagramColors(), []);
+  const colors = useDiagramColors();
 
   const controlsRef = useRef<OrbitControlsRef>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);

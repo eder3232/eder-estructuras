@@ -50,6 +50,15 @@ Lo que **sí está bien** y conviene saberlo: el store ya revisa las referencias
 4. **Headless y WebGL**: la receta de captura que usa el repo no se probó nunca con un lienzo WebGL. Chrome headless suele necesitar un renderizador por software (SwiftShader). Si no anda, la verificación visual de la escena queda a mano.
 5. **Hover y rotación compiten por el mouse.** Si entra N3, pasar el mouse sobre una barra no puede disparar la rotación de `OrbitControls` ni al revés. Es la decisión de UX más delicada de este módulo.
 
+## Paso 0: lo que encontró mirar la escena (2026-10-15)
+
+**Cómo capturar WebGL en headless**: la receta de siempre, pero **sin `--disable-gpu`** y con `--enable-unsafe-swiftshader`. Con `--use-angle=swiftshader` la escena sale vacía aunque el DOM tenga el lienzo y las etiquetas. Para saber si una escena corre sin mirarla: `--dump-dom` y buscar el `<canvas data-engine="three.js ...">` y las etiquetas `<Html>` con su `translate3d`.
+
+1. **La escena nunca siguió al tema.** ✅ Arreglado. Tailwind v4 compila los tokens a `lab(...)`, el conversor `oklch → sRGB` escrito a mano no lo reconocía, y **todos** los colores caían a la reserva, que es la paleta clara: en oscuro, barras casi negras sobre fondo negro. Los tests del conversor pasaban porque probaban el formato de `globals.css`, no el que devuelve el navegador. Además se descartaba la transparencia: `--border` de oscuro es blanco al 10% y la grilla salía **blanca pura**. Ahora el navegador resuelve el color (lienzo 2D de 1×1), la transparencia se compone sobre `--background`, y la lectura es una **suscripción** a la clase de `<html>` (`useDiagramColors`), así que la escena se repinta al cambiar de tema. Verificado en oscuro y con un cambio de tema en caliente.
+2. **Las columnas X, Y, Z de la tabla de nudos están aplastadas**: las coordenadas no se leen, en los dos temas. Va con los bugs (paso 1).
+3. **Las tres reacciones de cada apoyo se escriben en el mismo lugar** en la deformada (`14.2857` encima de `-2.8571` encima de `0.0000`), y se dibuja `-0.0000`. Va con los bugs.
+4. **Los nombres de nudo** son de 10 px y van en el verde de `--primary`: en oscuro casi no se leen. Va con los bugs, midiendo el contraste.
+
 ## 5. Alcance de la v1 (decidido por el usuario, 2026-10-15)
 
 **Paso 0: mirar la escena** antes de cualquier otra cosa, en los dos temas. Es lo único del módulo que no se vio nunca, y lo que encuentre puede cambiar el resto.

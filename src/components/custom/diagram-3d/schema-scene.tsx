@@ -7,7 +7,7 @@ import { computeBounds, computeUnitSize } from "./bounds";
 import { ForceArrow3D } from "./force-arrow-3d";
 import { SceneCanvas } from "./scene-canvas";
 import { SupportGlyph3D } from "./support-glyph-3d";
-import { readDiagramColors } from "./theme-colors";
+import { useDiagramColors } from "./theme-colors";
 import type { Diagram3DElement, Diagram3DForce, Diagram3DNode, Diagram3DSupport, Point3 } from "./types";
 
 interface SchemaSceneProps {
@@ -26,7 +26,7 @@ const FORCE_BLUE = 0x3b82f6;
  * un nudo existente simplemente no se dibujan, sin romper el resto.
  */
 export function SchemaScene({ nodes, elements, supports, forces }: SchemaSceneProps) {
-  const colors = useMemo(() => readDiagramColors(), []);
+  const colors = useDiagramColors();
   const points: Point3[] = useMemo(() => nodes.map((n) => [n.x, n.y, n.z]), [nodes]);
 
   if (nodes.length === 0) return null;

@@ -1,42 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { oklchToHex } from "./theme-colors";
+import { compositeOver } from "./theme-colors";
 
-describe("oklchToHex", () => {
-  it("convierte los extremos acromáticos", () => {
-    expect(oklchToHex("oklch(1 0 0)")).toBe(0xffffff);
-    expect(oklchToHex("oklch(0 0 0)")).toBe(0x000000);
+/**
+ * La conversión de formato la hace el navegador (ver el comentario de
+ * `theme-colors.ts`), así que no hay nada propio que probar ahí: el único
+ * cálculo de este módulo es componer la transparencia sobre el fondo. Que los
+ * colores sigan al tema se verifica mirando la escena en los dos temas.
+ */
+describe("compositeOver", () => {
+  it("deja igual un color opaco", () => {
+    expect(compositeOver([0x12, 0x34, 0x56, 255], 0xffffff)).toBe(0x123456);
   });
 
-  it("mantiene los grises con las tres componentes iguales", () => {
-    const hex = oklchToHex("oklch(0.556 0 0)")!;
-    const r = (hex >> 16) & 0xff;
-    const g = (hex >> 8) & 0xff;
-    const b = hex & 0xff;
-    expect(g).toBe(r);
-    expect(b).toBe(r);
-    // Un gris medio, no un extremo.
-    expect(r).toBeGreaterThan(100);
-    expect(r).toBeLessThan(160);
+  it("un color transparente es el fondo", () => {
+    expect(compositeOver([255, 255, 255, 0], 0x0a0a0a)).toBe(0x0a0a0a);
   });
 
-  it("ubica los tokens con color en el tono correcto", () => {
-    // --destructive del tema: rojo (R dominante).
-    const destructive = oklchToHex("oklch(0.577 0.245 27.325)")!;
-    expect((destructive >> 16) & 0xff).toBeGreaterThan((destructive >> 8) & 0xff);
-    expect((destructive >> 16) & 0xff).toBeGreaterThan(destructive & 0xff);
-
-    // --primary del tema: verde (G dominante).
-    const primary = oklchToHex("oklch(0.527 0.154 150.069)")!;
-    expect((primary >> 8) & 0xff).toBeGreaterThan((primary >> 16) & 0xff);
-    expect((primary >> 8) & 0xff).toBeGreaterThan(primary & 0xff);
-  });
-
-  it("acepta la luminosidad en porcentaje", () => {
-    expect(oklchToHex("oklch(100% 0 0)")).toBe(0xffffff);
-  });
-
-  it("devuelve null si no es un oklch()", () => {
-    expect(oklchToHex("#ff0000")).toBeNull();
-    expect(oklchToHex("")).toBeNull();
+  it("el borde de oscuro (blanco al 10%) queda cerca del fondo, no blanco", () => {
+    // Es el caso que dejaba la grilla del piso blanca pura.
+    const border = compositeOver([255, 255, 255, 26], 0x0a0a0a);
+    const channel = (border >> 16) & 0xff;
+    expect(channel).toBeGreaterThan(0x0a);
+    expect(channel).toBeLessThan(0x30);
   });
 });

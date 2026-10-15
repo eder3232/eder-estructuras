@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { computeBounds, computeUnitSize } from "./bounds";
 import { ForceArrow3D } from "./force-arrow-3d";
 import { SceneCanvas } from "./scene-canvas";
-import { readDiagramColors } from "./theme-colors";
+import { useDiagramColors } from "./theme-colors";
 import type { Diagram3DElement, Diagram3DForce, Diagram3DNode, Point3 } from "./types";
 
 interface DeformedSceneProps {
@@ -31,7 +31,7 @@ export function DeformedScene({
   elementForceValue,
 }: DeformedSceneProps) {
   const [scaleFactor, setScaleFactor] = useState(50);
-  const colors = useMemo(() => readDiagramColors(), []);
+  const colors = useDiagramColors();
 
   const displacedById = useMemo(() => {
     return new Map<string, Point3>(
