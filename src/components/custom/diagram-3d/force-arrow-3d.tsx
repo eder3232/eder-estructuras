@@ -14,7 +14,24 @@ interface ForceArrow3DProps {
   /** "force" = carga aplicada; "reaction" = reacción calculada — mismo criterio de color que el módulo 2D. */
   variant: "force" | "reaction";
   color: number;
+  /**
+   * `false` para dibujar la flecha sin su número. Las reacciones de un apoyo se
+   * rotulan juntas con `NodeForceLabel`: con una etiqueta por eje, las tres de
+   * un mismo nudo caían una encima de la otra en la vista isométrica.
+   */
+  label?: boolean;
 }
+
+/**
+ * Lo que a los decimales actuales se lee como cero no se dibuja. Comparar con
+ * `=== 0` dejaba pasar el ruido numérico del solver, y la escena mostraba una
+ * flecha con `-0.0000`.
+ */
+export function readsAsZero(value: number, decimals: number): boolean {
+  return Math.abs(value) < 0.5 * 10 ** -decimals;
+}
+
+const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 
 /**
  * Flecha recta sobre un eje coordenado: vástago cilíndrico desde el nudo hacia
@@ -22,16 +39,18 @@ interface ForceArrow3DProps {
  * flecha de valor exactamente cero no se dibuja — evita el ruido de las
  * reacciones nulas.
  */
-export function ForceArrow3D({ origin, axis, value, unitSize, variant, color }: ForceArrow3DProps) {
+export function ForceArrow3D({ origin, axis, value, unitSize, variant, color, label = true }: ForceArrow3DProps) {
   const decimals = useDecimals();
-  if (value === 0) return null;
+  if (readsAsZero(value, decimals)) return null;
 
   const sign: 1 | -1 = value >= 0 ? 1 : -1;
   const direction = unitVector(axis, sign);
   const rotation = rotationForAxis(axis, sign);
 
-  const length = unitSize * 2.2;
-  const headHeight = unitSize * 0.7;
+  // Más larga que en 2D: con la cámara en perspectiva y lejos, a `2.2` la
+  // flecha medía un 5% de la figura y no se veía.
+  const length = unitSize * 5;
+  const headHeight = unitSize * 1.2;
   const shaftLength = Math.max(length - headHeight, unitSize * 0.2);
 
   const shaftCenter = translate(origin, direction, shaftLength / 2);
@@ -41,22 +60,65 @@ export function ForceArrow3D({ origin, axis, value, unitSize, variant, color }: 
   return (
     <group>
       <mesh position={shaftCenter} rotation={rotation}>
-        <cylinderGeometry args={[unitSize * 0.09, unitSize * 0.09, shaftLength, 10]} />
+        <cylinderGeometry args={[unitSize * 0.14, unitSize * 0.14, shaftLength, 10]} />
         <meshStandardMaterial color={color} />
       </mesh>
       <mesh position={headCenter} rotation={rotation}>
-        <coneGeometry args={[unitSize * 0.26, headHeight, 12]} />
+        <coneGeometry args={[unitSize * 0.4, headHeight, 12]} />
         <meshStandardMaterial color={color} />
       </mesh>
-      <Html position={labelAt} center style={{ pointerEvents: "none" }}>
-        <span
-          className="whitespace-nowrap rounded bg-background/80 px-1 text-[10px] tabular-nums"
-          style={{ color: `#${color.toString(16).padStart(6, "0")}` }}
-          data-variant={variant}
-        >
-          {value.toFixed(decimals)}
-        </span>
-      </Html>
+      {label && (
+        <Html position={labelAt} center style={{ pointerEvents: "none" }}>
+          <span
+            className="whitespace-nowrap rounded bg-background/80 px-1 text-xs tabular-nums"
+            style={{ color: hex(color) }}
+            data-variant={variant}
+          >
+            {value.toFixed(decimals)}
+          </span>
+        </Html>
+      )}
     </group>
+  );
+}
+
+/**
+ * Las componentes de fuerza de un nudo en una sola etiqueta, una por renglón
+ * (`Rx = −2.8571`). Va debajo del nudo, que es donde están los apoyos: arriba
+ * suelen llegar las barras. Las componentes que se leen como cero no se
+ * listan; si no queda ninguna, no hay etiqueta.
+ */
+export function NodeForceLabel({
+  origin,
+  components,
+  symbol,
+  unitSize,
+  color,
+}: {
+  origin: Point3;
+  components: { axis: Diagram3DAxis; value: number }[];
+  /** La letra de la magnitud: `R` para reacciones. */
+  symbol: string;
+  unitSize: number;
+  color: number;
+}) {
+  const decimals = useDecimals();
+  const visible = components.filter((c) => !readsAsZero(c.value, decimals));
+  if (visible.length === 0) return null;
+
+  return (
+    <Html position={[origin[0], origin[1], origin[2] - unitSize * 3]} center style={{ pointerEvents: "none" }}>
+      <span
+        className="flex flex-col whitespace-nowrap rounded bg-background/80 px-1 text-xs tabular-nums"
+        style={{ color: hex(color) }}
+      >
+        {visible.map((c) => (
+          <span key={c.axis}>
+            {symbol}
+            <sub>{c.axis}</sub> = {c.value.toFixed(decimals)}
+          </span>
+        ))}
+      </span>
+    </Html>
   );
 }

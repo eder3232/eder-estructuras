@@ -5,6 +5,7 @@ import { useAtom } from "jotai";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SolveResult, Truss3DInternalForce } from "@/lib/engine";
 import { atomDecimals } from "@/components/custom/decimals";
+import { operand } from "@/lib/operand";
 import type { ElementRow } from "../../store/elements";
 import { dofLabels, type NodeRow } from "../../store/nodes";
 
@@ -68,13 +69,13 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
                     {cosines.map((c, axis) => (
                       <span key={dofLabels[axis]}>
                         {axis > 0 ? " + " : ""}
-                        {c.toFixed(decimals)}×({uTo[axis].toFixed(decimals)} − {uFrom[axis].toFixed(decimals)})
+                        {operand(c, decimals)}×({operand(uTo[axis], decimals)} − {operand(uFrom[axis], decimals)})
                       </span>
                     ))}
                   </TableCell>
                   <TableCell className="tabular-nums">{elongation.toFixed(decimals)}</TableCell>
                   <TableCell className="tabular-nums">
-                    N = {eaOverL.toFixed(decimals)} × {elongation.toFixed(decimals)}
+                    N = {operand(eaOverL, decimals)} × {operand(elongation, decimals)}
                   </TableCell>
                   <TableCell className="tabular-nums font-medium">
                     {result ? result.axialForce.toFixed(decimals) : "—"}

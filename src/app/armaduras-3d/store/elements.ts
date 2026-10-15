@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { produce } from "immer";
+import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
 
 export interface ElementRow {
@@ -28,17 +29,31 @@ const atomElementsBase = atom<ElementRow[]>(initialElements);
 
 export const atomElements = atom((get) => get(atomElementsBase));
 
-export const atomAddElement = atom(null, (get, set) => {
+/**
+ * Sin argumento agrega al final; con `afterId`, debajo de esa fila.
+ *
+ * El área y el módulo se **heredan de la fila anterior**: `TrussElement3D`
+ * rechaza valores no positivos, así que una barra nueva en cero nacía en error
+ * (B1 de docs/armaduras-3d-v1.md). Es la misma regla de `/armaduras-2d`, y una
+ * armadura suele tener un solo material.
+ */
+export const atomAddElement = atom(null, (get, set, afterId?: string) => {
   set(
     atomElementsBase,
     produce((draft: ElementRow[]) => {
-      draft.push({
+      const at = insertIndex(draft, afterId);
+      const previous = draft[at - 1] ?? draft[draft.length - 1];
+
+      draft.splice(at, 0, {
         id: crypto.randomUUID(),
-        name: `e${draft.length + 1}`,
+        name: nextRowName(
+          "e",
+          draft.map((e) => e.name),
+        ),
         fromNodeId: "",
         toNodeId: "",
-        area: 0,
-        elasticity: 0,
+        area: previous?.area ?? AREA,
+        elasticity: previous?.elasticity ?? ELASTICITY,
       });
     }),
   );

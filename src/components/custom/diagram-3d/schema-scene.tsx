@@ -53,7 +53,7 @@ export function SchemaScene({ nodes, elements, supports, forces }: SchemaScenePr
           <group key={element.id}>
             <Line points={[a, b]} color={colors.foreground} lineWidth={2.5} />
             <Html position={label} center style={{ pointerEvents: "none" }}>
-              <span className="rounded bg-background/80 px-1 text-[10px] text-foreground">{element.name}</span>
+              <span className="rounded bg-background/80 px-1 text-xs text-foreground">{element.name}</span>
             </Html>
           </group>
         );
@@ -70,7 +70,11 @@ export function SchemaScene({ nodes, elements, supports, forces }: SchemaScenePr
             center
             style={{ pointerEvents: "none" }}
           >
-            <span className="rounded bg-background/80 px-1 text-[10px] font-medium text-primary">{node.name}</span>
+            {/* El verde de `--primary` en oscuro no se lee como texto chico: mismo
+                arreglo que los nombres de nudo del esquema 2D. */}
+            <span className="rounded bg-background/80 px-1 text-xs font-semibold text-primary dark:text-green-500">
+              {node.name}
+            </span>
           </Html>
         </group>
       ))}

@@ -6,25 +6,13 @@ import { useDecimals } from "@/components/custom/decimals-scope";
 import { Math, MathBlock } from "@/components/custom/math";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
+import { operand } from "@/lib/operand";
 
 interface InternalForcesTableProps {
   elements: ElementRow[];
   internalForces: SolveResult["internalForces"];
   displacements: SolveResult["displacements"];
   nodesById: Map<string, NodeRow>;
-}
-
-/**
- * Un operando de la sustitución, entre paréntesis si es negativo.
- *
- * Sin esto la fila se lee `−-0.6000×0.0000` en cuanto un coseno director da
- * negativo — el signo fijo de la fórmula pegado al signo del número. Pasaba en
- * la barra `e6` del ejemplo semilla, que va de derecha a izquierda. Es un bug
- * heredado: la versión anterior de esta tabla concatenaba igual.
- */
-function operand(value: number, decimals: number): string {
-  const text = value.toFixed(decimals);
-  return text.startsWith("-") ? `(${text})` : text;
 }
 
 export function InternalForcesTable({ elements, internalForces, displacements, nodesById }: InternalForcesTableProps) {

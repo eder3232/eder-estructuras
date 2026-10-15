@@ -65,7 +65,7 @@ Lo que **sí está bien** y conviene saberlo: el store ya revisa las referencias
 
 **v1**, extrayendo a genérico en vez de copiar (el criterio de `/springs`), y en este orden:
 
-1. Bugs B1–B6 y tests del módulo.
+1. [x] **Bugs** B1–B6 y los hallazgos 3 y 4 del paso 0, con tests (2026-10-15). B6 se resolvió con el `NodeCombobox` compartido. La función que pone entre paréntesis los negativos de una sustitución (B5) estaba copiada en 2D y en `/springs`: pasó a `src/lib/operand.ts`. Las reacciones van ahora **en una sola etiqueta por apoyo**, una componente por renglón, y no se dibuja lo que a los decimales actuales se lee como cero; las flechas eran un 5% de la figura y no se veían, ahora son más del doble. Los nombres de nudo usan el mismo arreglo que el esquema 2D (`dark:text-green-500`). **El hallazgo 2 (columnas X, Y, Z aplastadas) pasó al paso 2**, porque la tabla de nudos se reescribe ahí entera (encabezados agrupados, insertar filas, numeración de grados de libertad), y los encabezados agrupados son justamente lo que les da ancho en 2D.
 2. Lo barato: U3, E2, N5, U5, clasificación `g = b + r − 3n`, D7, D8, U2, U1, M1a/M1b, y el mecanismo explicado en texto. La página pasa a `max-w-[84rem]`, como 2D.
 3. **Matrices grandes**, en componentes compartidos y **aplicadas también a `/armaduras-2d` y `/springs`** (decisión del usuario: tocan dos módulos cerrados, así que se revisan con tests y capturas):
    - la **vista ampliada** de una ecuación: apilada para las cadenas (`A·k·Aᵀ`), en pantalla completa y en fila para `F = K·U`; el botón **siempre visible** en las ecuaciones que son o pueden ser grandes;

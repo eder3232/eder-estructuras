@@ -5,10 +5,10 @@ import { Line } from "@react-three/drei";
 
 import { Slider } from "@/components/ui/slider";
 import { computeBounds, computeUnitSize } from "./bounds";
-import { ForceArrow3D } from "./force-arrow-3d";
+import { ForceArrow3D, NodeForceLabel } from "./force-arrow-3d";
 import { SceneCanvas } from "./scene-canvas";
 import { useDiagramColors } from "./theme-colors";
-import type { Diagram3DElement, Diagram3DForce, Diagram3DNode, Point3 } from "./types";
+import type { Diagram3DAxis, Diagram3DElement, Diagram3DForce, Diagram3DNode, Point3 } from "./types";
 
 interface DeformedSceneProps {
   nodes: Diagram3DNode[];
@@ -50,6 +50,18 @@ export function DeformedScene({
   if (nodes.length === 0) return null;
 
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
+
+  const reactionsByNode = new Map<string, { nodeId: string; origin: Point3; components: { axis: Diagram3DAxis; value: number }[] }>();
+  for (const reaction of reactions) {
+    const group = reactionsByNode.get(reaction.nodeId) ?? {
+      nodeId: reaction.nodeId,
+      origin: [reaction.x, reaction.y, reaction.z] as Point3,
+      components: [],
+    };
+    group.components.push({ axis: reaction.axis, value: reaction.value });
+    reactionsByNode.set(reaction.nodeId, group);
+  }
+
   const unitSize = computeUnitSize(computeBounds(points));
 
   /** Mismo criterio que en 2D: el color dice tracción/compresión, no magnitud. */
@@ -122,6 +134,18 @@ export function DeformedScene({
             value={reaction.value}
             unitSize={unitSize}
             variant="reaction"
+            color={colors.warning}
+            label={false}
+          />
+        ))}
+
+        {[...reactionsByNode.values()].map((group) => (
+          <NodeForceLabel
+            key={group.nodeId}
+            origin={group.origin}
+            components={group.components}
+            symbol="R"
+            unitSize={unitSize}
             color={colors.warning}
           />
         ))}

@@ -1,23 +1,21 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { NodeCombobox, type NodeOption } from "@/components/custom/node-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { atomNodes } from "../store/nodes";
 import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "../store/elements";
 
 /**
  * Una barra de armadura espacial pide exactamente los mismos datos que una
- * plana (extremos, área, E) — la diferencia entre 2D y 3D vive toda en los
- * nudos. Por eso esta tabla es hoy idéntica a la de `/armaduras-2d`: es la
- * primera pareja byte-idéntica del repo, y el próximo sistema que la necesite
- * dispara la extracción a `src/components/custom/` (mismo criterio que se usó
- * con `errors-panel`, ver docs/state-pattern.md).
+ * plana (extremos, área, E): la diferencia entre 2D y 3D vive toda en los
+ * nudos. Por eso esta tabla y la de `/armaduras-2d` convergen (deuda D2).
  */
 export function ElementTable() {
   const [elements] = useAtom(atomElements);
@@ -25,6 +23,7 @@ export function ElementTable() {
   const addElement = useSetAtom(atomAddElement);
   const removeElement = useSetAtom(atomRemoveElement);
   const updateField = useSetAtom(atomUpdateElementField);
+  const options = useMemo<NodeOption[]>(() => nodes.map((n) => ({ value: n.id, label: n.name })), [nodes]);
 
   return (
     <div className="max-w-full overflow-x-auto">
@@ -59,38 +58,22 @@ export function ElementTable() {
                 />
               </TableCell>
               <TableCell>
-                <Select
+                <NodeCombobox
+                  options={options}
                   value={element.fromNodeId}
-                  onValueChange={(value) => updateField({ id: element.id, field: "fromNodeId", value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nudo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nodes.map((node) => (
-                      <SelectItem key={node.id} value={node.id}>
-                        {node.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  excluded={element.toNodeId}
+                  label={`Nudo de origen de ${element.name}`}
+                  onChange={(value) => updateField({ id: element.id, field: "fromNodeId", value })}
+                />
               </TableCell>
               <TableCell>
-                <Select
+                <NodeCombobox
+                  options={options}
                   value={element.toNodeId}
-                  onValueChange={(value) => updateField({ id: element.id, field: "toNodeId", value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nudo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nodes.map((node) => (
-                      <SelectItem key={node.id} value={node.id}>
-                        {node.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  excluded={element.fromNodeId}
+                  label={`Nudo de destino de ${element.name}`}
+                  onChange={(value) => updateField({ id: element.id, field: "toNodeId", value })}
+                />
               </TableCell>
               <TableCell>
                 <FormulaInput

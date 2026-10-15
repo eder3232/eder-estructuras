@@ -4,22 +4,13 @@ import { Math, MathBlock } from "@/components/custom/math";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
+import { operand } from "@/lib/operand";
 
 interface InternalForcesTableProps {
   elements: ElementRow[];
   internalForces: SolveResult["internalForces"];
   displacements: SolveResult["displacements"];
   nodesById: Map<string, NodeRow>;
-}
-
-/**
- * Un operando de la sustitución, entre paréntesis si es negativo. Sin esto se
- * leía «F = 4 × -0.3293»: el signo de la fórmula pegado al del número (B5). Es
- * el bug que `/armaduras-2d` corrigió en `a4aabf3`.
- */
-function operand(value: number, decimals: number): string {
-  const text = value.toFixed(decimals);
-  return text.startsWith("-") ? `(${text})` : text;
 }
 
 /**

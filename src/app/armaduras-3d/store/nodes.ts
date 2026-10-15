@@ -1,6 +1,8 @@
 import { atom } from "jotai";
 import { produce } from "immer";
 
+import { insertIndex, nextRowName } from "@/lib/row-names";
+
 /** Los 3 DOF de un nudo de armadura espacial: las tres traslaciones. */
 export type NodeAxis = "x" | "y" | "z";
 
@@ -79,13 +81,17 @@ const atomNodesBase = atom<NodeRow[]>(initialNodes);
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
-export const atomAddNode = atom(null, (get, set) => {
+/** Sin argumento agrega al final; con `afterId`, debajo de esa fila. */
+export const atomAddNode = atom(null, (get, set, afterId?: string) => {
   set(
     atomNodesBase,
     produce((draft: NodeRow[]) => {
-      draft.push({
+      draft.splice(insertIndex(draft, afterId), 0, {
         id: crypto.randomUUID(),
-        name: `v${draft.length + 1}`,
+        name: nextRowName(
+          "v",
+          draft.map((n) => n.name),
+        ),
         x: 0,
         y: 0,
         z: 0,
