@@ -1,5 +1,6 @@
 import { TrussElement3D } from "@/lib/engine";
 import { MatrixTable } from "@/components/custom/matrix-table";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 
@@ -16,6 +17,7 @@ interface LocalStiffnessListProps {
  * es que hay tres cosenos directores en vez de cos/sen.
  */
 export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListProps) {
+  const decimals = useDecimals();
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
@@ -50,8 +52,8 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
           return (
             <div key={element.id} className="flex flex-col gap-2">
               <p className="text-sm font-medium">
-                {element.name} ({from.name}↔{to.name}): L={length.toFixed(4)}, cx={cx.toFixed(4)}, cy=
-                {cy.toFixed(4)}, cz={cz.toFixed(4)}, EA/L={eaOverL.toFixed(4)}
+                {element.name} ({from.name}↔{to.name}): L={length.toFixed(decimals)}, cx={cx.toFixed(decimals)}, cy=
+                {cy.toFixed(decimals)}, cz={cz.toFixed(decimals)}, EA/L={eaOverL.toFixed(decimals)}
               </p>
               <div className="flex flex-wrap items-end gap-6">
                 <div className="flex flex-col gap-1">

@@ -32,6 +32,13 @@ export interface NodeRow {
   restrainedX: boolean;
   restrainedY: boolean;
   restrainedZ: boolean;
+  /**
+   * El número que el alumno le pone a cada grado de libertad, si la numeración
+   * manual está encendida (`atomUseDofNumbers`). `0` es "sin numerar".
+   */
+  dofNumberX: number;
+  dofNumberY: number;
+  dofNumberZ: number;
 }
 
 export const seedNodeIds = {
@@ -48,6 +55,9 @@ const emptyLoads = {
   displacementX: 0,
   displacementY: 0,
   displacementZ: 0,
+  dofNumberX: 0,
+  dofNumberY: 0,
+  dofNumberZ: 0,
 };
 
 const pinned = { restrainedX: true, restrainedY: true, restrainedZ: true };
@@ -77,7 +87,8 @@ const initialNodes: NodeRow[] = [
   { id: seedNodeIds.d, name: "d", x: 1.5, y: 1.2, z: 3, ...emptyLoads, forceZ: -25, ...freeNode },
 ];
 
-const atomNodesBase = atom<NodeRow[]>(initialNodes);
+// Exportado para `dof-order.ts`, que siembra la numeración al encenderla.
+export const atomNodesBase = atom<NodeRow[]>(initialNodes);
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
@@ -121,7 +132,10 @@ type NumericField =
   | "forceZ"
   | "displacementX"
   | "displacementY"
-  | "displacementZ";
+  | "displacementZ"
+  | "dofNumberX"
+  | "dofNumberY"
+  | "dofNumberZ";
 
 export const atomUpdateNodeField = atom(
   null,
@@ -158,6 +172,8 @@ export const displacementFieldByAxis = {
   y: "displacementY",
   z: "displacementZ",
 } as const;
+
+export const dofNumberFieldByAxis = { x: "dofNumberX", y: "dofNumberY", z: "dofNumberZ" } as const;
 
 export const atomToggleNodeRestrained = atom(
   null,

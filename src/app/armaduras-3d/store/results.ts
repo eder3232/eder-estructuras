@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { SingularStiffnessError, System, TrussElement3D, type SolveResult, type SolveWarning } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
 import { atomElements, type ElementRow } from "./elements";
+import { atomRestrainedFirst, atomUseDofNumbers } from "./dof-order";
 
 import type { DomainError, DomainIssue } from "@/components/custom/errors-panel";
 import { displayNames, withDisplayNames } from "@/lib/display-names";
@@ -38,6 +39,8 @@ function toIssues(
 export const atomResults = atom<Armaduras3DResults>((get) => {
   const nodes = get(atomNodes);
   const elements = get(atomElements);
+  const restrainedFirst = get(atomRestrainedFirst);
+  const useDofNumbers = get(atomUseDofNumbers);
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
 
   // Sin barras no hay nada que resolver, y no un mecanismo: la `Kff` saldría
@@ -64,6 +67,7 @@ export const atomResults = atom<Armaduras3DResults>((get) => {
         restrained: [node.restrainedX, node.restrainedY, node.restrainedZ],
         force: [node.forceX, node.forceY, node.forceZ],
         displacement: [node.displacementX, node.displacementY, node.displacementZ],
+        dofNumbers: [node.dofNumberX, node.dofNumberY, node.dofNumberZ],
       });
     } catch (e) {
       errors.push({
@@ -108,7 +112,7 @@ export const atomResults = atom<Armaduras3DResults>((get) => {
   }
 
   try {
-    const solved = system.solve();
+    const solved = system.solve({ restrainedFirst, useDofNumbers });
     return { status: "ok", solved, warnings: toIssues(solved.warnings, nodesById, elements), nodesById };
   } catch (e) {
     return {

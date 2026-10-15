@@ -69,6 +69,22 @@ export const atomRemoveElement = atom(null, (get, set, id: string) => {
   );
 });
 
+/** Fija área y/o módulo en todas las barras de una (ver `/armaduras-2d`). */
+export const atomSetAllElementsNumber = atom(
+  null,
+  (get, set, input: { area?: number; elasticity?: number }) => {
+    set(
+      atomElementsBase,
+      produce((draft: ElementRow[]) => {
+        for (const element of draft) {
+          if (input.area !== undefined) element.area = input.area;
+          if (input.elasticity !== undefined) element.elasticity = input.elasticity;
+        }
+      }),
+    );
+  },
+);
+
 export const atomUpdateElementField = atom(
   null,
   (
