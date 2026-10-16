@@ -57,7 +57,38 @@ interface MatrixTableProps {
    * solo dice dónde está el mouse.
    */
   onCellHover?: (cell: [number, number] | null) => void;
+  /**
+   * Dibuja la matriz como **mapa de celdas** (D13): sin números, cada celda
+   * coloreada por su signo y su magnitud. El número se lee al pasar el mouse,
+   * con `onCellHover`.
+   *
+   * Es para la matriz que ya no entra ni en pantalla completa (desde ~19 grados
+   * de libertad a 1920 px): ahí una tabla de números es un muro que nadie lee, y
+   * lo que sí se puede leer es la **forma** — qué celdas no son cero (los pares
+   * de nudos que una barra conecta), la banda alrededor de la diagonal, y que
+   * la diagonal manda. Las filas conservan el alto de la tabla de números, para
+   * que `F`, `K` y `U` sigan alineadas renglón a renglón.
+   */
+  heatmap?: boolean;
   className?: string;
+}
+
+/**
+ * Los dos colores del mapa: azul el positivo, rojo el negativo. Divergentes y
+ * no del verde de la marca, que en las tablas ya significa "resaltado".
+ */
+const HEAT_POSITIVE = "oklch(0.62 0.17 250)";
+const HEAT_NEGATIVE = "oklch(0.63 0.21 30)";
+
+/**
+ * Color de una celda del mapa. El piso de 15% es para que el valor más chico
+ * que no sea cero **se distinga del cero**: la diferencia entre "poco" y "nada"
+ * es la que enseña el mapa (un cero es un par de nudos sin barra).
+ */
+export function heatColor(value: number, maxAbs: number): string | undefined {
+  if (maxAbs === 0 || globalThis.Math.abs(value) <= maxAbs * 1e-9) return undefined;
+  const share = 15 + 85 * (globalThis.Math.abs(value) / maxAbs);
+  return `color-mix(in oklch, ${value > 0 ? HEAT_POSITIVE : HEAT_NEGATIVE} ${share.toFixed(1)}%, transparent)`;
 }
 
 export function MatrixTable({
@@ -70,6 +101,7 @@ export function MatrixTable({
   stickyLabels,
   symmetricHighlight,
   onCellHover,
+  heatmap,
   className,
 }: MatrixTableProps) {
   const decimals = useDecimals();
@@ -82,7 +114,8 @@ export function MatrixTable({
   // El factor sale de la matriz entera y no de cada celda: si cada una eligiera
   // el suyo, la columna dejaría de ser comparable de un vistazo, que es para lo
   // que sirve una matriz.
-  const exponent = compact ? scaleExponent(matrix.flat()) : 0;
+  const exponent = compact && !heatmap ? scaleExponent(matrix.flat()) : 0;
+  const maxAbs = heatmap ? globalThis.Math.max(0, ...matrix.flat().map((v) => globalThis.Math.abs(v))) : 0;
   const factor = scaleLabel(exponent);
 
   const isReciprocal = (row: number, col: number) =>
@@ -113,6 +146,7 @@ export function MatrixTable({
                 key={i}
                 className={cn(
                   "border px-2 py-1 text-center font-medium text-muted-foreground",
+                  heatmap && "px-1 text-xs",
                   stickyHead,
                 )}
               >
@@ -163,10 +197,21 @@ export function MatrixTable({
                   // pero con alpha no alcanzaba: medido sobre una captura, un
                   // `bg-primary/40` encima de la zona esmeralda quedaba a 8/255
                   // de la zona sin resaltar. A simple vista eran el mismo verde.
-                  isReciprocal(i, j) && "bg-primary font-semibold text-primary-foreground",
+                  isReciprocal(i, j) && !heatmap && "bg-primary font-semibold text-primary-foreground",
+                  // En el mapa el relleno es el dato, así que el resaltado no
+                  // lo tapa: lo enmarca.
+                  heatmap && "min-w-7 px-0",
+                  heatmap && isReciprocal(i, j) && "outline-2 -outline-offset-2 outline-foreground",
                 )}
+                style={heatmap ? { backgroundColor: heatColor(value, maxAbs) } : undefined}
               >
-                {formatScaled(value, decimals, exponent)}
+                {heatmap ? (
+                  // Invisible pero presente: le da a la fila el mismo alto que
+                  // la de una tabla de números.
+                  <span className="invisible">0</span>
+                ) : (
+                  formatScaled(value, decimals, exponent)
+                )}
               </td>
             ))}
           </tr>

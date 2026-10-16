@@ -1,8 +1,7 @@
 import { TrussElement2D } from "@/lib/engine";
 import { DecimalsScope, ScopeDecimalsStepper, useDecimals } from "@/components/custom/decimals-scope";
 import { Math, MathBlock, texText } from "@/components/custom/math";
-import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
-import { MatrixTable } from "@/components/custom/matrix-table";
+import { ChainEquation } from "@/components/custom/chain-equation";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 
@@ -133,23 +132,15 @@ export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListPr
                   <ScopeDecimalsStepper />
                 </div>
 
-                <MatrixEquation>
-                  <EquationTerm tex={`K_{${barTex}}`}>
-                    <MatrixTable matrix={globalStiffness} labels={globalLabels} />
-                  </EquationTerm>
-                  <MathOp tex="=" />
-                  <EquationTerm tex={`A_{${barTex}}`}>
-                    <MatrixTable matrix={transform} rowLabels={globalLabels} colLabels={axialLabels} />
-                  </EquationTerm>
-                  <MathOp tex="\cdot" />
-                  <EquationTerm tex={`k_{${barTex}}`}>
-                    <MatrixTable matrix={localStiffness} labels={axialLabels} />
-                  </EquationTerm>
-                  <MathOp tex="\cdot" />
-                  <EquationTerm tex={`A^{T}_{${barTex}}`}>
-                    <MatrixTable matrix={transformTransposed} rowLabels={axialLabels} colLabels={globalLabels} />
-                  </EquationTerm>
-                </MatrixEquation>
+                <ChainEquation
+                  title={`Rigidez de la barra ${element.name} en ejes globales`}
+                  result={{ tex: `K_{${barTex}}`, matrix: globalStiffness, rowLabels: globalLabels, colLabels: globalLabels }}
+                  factors={[
+                    { tex: `A_{${barTex}}`, matrix: transform, rowLabels: globalLabels, colLabels: axialLabels },
+                    { tex: `k_{${barTex}}`, matrix: localStiffness, rowLabels: axialLabels, colLabels: axialLabels },
+                    { tex: `A^{T}_{${barTex}}`, matrix: transformTransposed, rowLabels: axialLabels, colLabels: globalLabels },
+                  ]}
+                />
               </div>
             </DecimalsScope>
           );

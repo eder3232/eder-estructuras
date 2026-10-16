@@ -178,7 +178,7 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
 
           <MathBlock tex="\begin{bmatrix} U_f \end{bmatrix} = \begin{bmatrix} K_{ff} \end{bmatrix}^{-1} \cdot \left( \begin{bmatrix} F_f \end{bmatrix} - \begin{bmatrix} K_{fr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix} \right)" />
 
-          <MatrixEquation>
+          <MatrixEquation expand={{ title: "Los desplazamientos libres" }}>
             <EquationTerm tex="U_f">
               <MatrixTable matrix={uf} rowLabels={freeLabels} />
             </EquationTerm>
@@ -224,7 +224,7 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
 
           <MathBlock tex="\begin{bmatrix} R_r \end{bmatrix} = \begin{bmatrix} K_{rf} \end{bmatrix} \cdot \begin{bmatrix} U_f \end{bmatrix} + \begin{bmatrix} K_{rr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix}" />
 
-          <MatrixEquation>
+          <MatrixEquation expand={{ title: "Las reacciones" }}>
             <EquationTerm tex="R_r">
               <MatrixTable matrix={rr} rowLabels={restrainedLabels} />
             </EquationTerm>

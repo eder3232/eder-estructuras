@@ -1,10 +1,22 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
 
 import type { AssemblyResult, DofOrderEntry, SolveResult } from "@/lib/engine";
-import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
+import { DecimalsScope, ScopeDecimalsStepper, useDecimals } from "@/components/custom/decimals-scope";
 import { Math, MathBlock } from "@/components/custom/math";
 import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
-import { MatrixTable } from "@/components/custom/matrix-table";
+import { heatColor, MatrixTable } from "@/components/custom/matrix-table";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+
+/**
+ * Desde cuántos grados de libertad `K` arranca como mapa. Medido en `/dev`:
+ * cada columna de números ocupa ~76 px, así que la ecuación entera pide
+ * ~`76·DOF + 270` px, y en pantalla completa a 1920 px entra hasta ~19. Pasado
+ * eso ni la pantalla completa la muestra entera, y el mapa sí.
+ */
+export const HEATMAP_ABOVE_DOFS = 19;
 
 /** Clase de una celda incógnita. Se resuelve en el paso siguiente, no se conoce todavía. */
 const UNKNOWN = "bg-primary/15 font-semibold";
@@ -44,6 +56,12 @@ export function GlobalEquation({
   const { dofOrder, globalStiffness } = assembly;
   const labels = dofOrder.map(labelOf);
 
+  // `null` es "lo que convenga al tamaño": el alumno puede elegir, pero si no
+  // lo hizo, una armadura que crece hasta no entrar pasa sola al mapa.
+  const [chosenHeatmap, setChosenHeatmap] = useState<boolean | null>(null);
+  const heatmap = chosenHeatmap ?? dofOrder.length > HEATMAP_ABOVE_DOFS;
+  const [hovered, setHovered] = useState<[number, number] | null>(null);
+
   // En un DOF restringido la fuerza es la reacción (incógnita) y el
   // desplazamiento es el dato prescrito; en uno libre, al revés.
   const forces = dofOrder.map((entry) =>
@@ -59,11 +77,20 @@ export function GlobalEquation({
             Con la matriz ya ensamblada, la ecuación de rigidez del sistema es:
           </span>
           <ScopeDecimalsStepper />
+          <div className="flex items-center gap-2 text-sm">
+            <Switch id="global-heatmap" checked={heatmap} onCheckedChange={setChosenHeatmap} />
+            <Label htmlFor="global-heatmap" className="font-normal">
+              <Math tex="K" /> como mapa
+            </Label>
+          </div>
         </div>
 
         <MathBlock tex="\begin{bmatrix} F \end{bmatrix} = \begin{bmatrix} K \end{bmatrix} \cdot \begin{bmatrix} U \end{bmatrix}" />
 
-        <MatrixEquation>
+        <MatrixEquation
+          expand={{ title: "La ecuación de rigidez del sistema" }}
+          header={heatmap ? <HeatmapReadout matrix={globalStiffness} labels={labels} cell={hovered} /> : undefined}
+        >
           <EquationTerm tex="F">
             <MatrixTable
               matrix={forces}
@@ -73,7 +100,16 @@ export function GlobalEquation({
           </EquationTerm>
           <MathOp tex="=" />
           <EquationTerm tex="K">
-            <MatrixTable matrix={globalStiffness} labels={labels} symmetricHighlight onCellHover={onCellHover} />
+            <MatrixTable
+              matrix={globalStiffness}
+              labels={labels}
+              symmetricHighlight
+              heatmap={heatmap}
+              onCellHover={(cell) => {
+                setHovered(cell);
+                onCellHover?.(cell);
+              }}
+            />
           </EquationTerm>
           <MathOp tex="\cdot" />
           <EquationTerm tex="U">
@@ -101,5 +137,46 @@ export function GlobalEquation({
         </p>
       </div>
     </DecimalsScope>
+  );
+}
+
+/**
+ * Lo que el mapa no muestra: el número. Una línea fija encima de la ecuación y
+ * no un tooltip, porque un tooltip tapa las celdas vecinas, que son justamente
+ * con las que se lo quiere comparar.
+ *
+ * **Dos renglones fijos**, el valor y la leyenda, y no uno que envuelva: con
+ * `flex-wrap` la leyenda cambiaba de renglón según lo largo del valor, y la
+ * ecuación entera saltaba al mover el mouse por `K`.
+ */
+function HeatmapReadout({
+  matrix,
+  labels,
+  cell,
+}: {
+  matrix: number[][];
+  labels: string[];
+  cell: [number, number] | null;
+}) {
+  const decimals = useDecimals();
+  return (
+    // `div` y no `p`: el panel le pone ancho máximo a los párrafos.
+    <div className="flex flex-col gap-1 text-sm">
+      <span className="min-h-5">
+        {cell ? (
+          <span className="whitespace-nowrap tabular-nums">
+            <Math tex="K" />[{labels[cell[0]]}, {labels[cell[1]]}] ={" "}
+            <span className="font-semibold">{matrix[cell[0]][cell[1]].toFixed(decimals)}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Pasá el mouse por una celda de K para ver su valor.</span>
+        )}
+      </span>
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span className="size-3 border" style={{ backgroundColor: heatColor(1, 1) }} /> positivo
+        <span className="ml-2 size-3 border" style={{ backgroundColor: heatColor(-1, 1) }} /> negativo
+        <span className="ml-2 size-3 border" /> cero · más intenso, más grande
+      </span>
+    </div>
   );
 }
