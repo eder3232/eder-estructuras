@@ -6,8 +6,8 @@ const MOVES = 1e-9;
 const AXES = ["x", "y", "z"];
 
 /**
- * El diagnóstico de mecanismo de una armadura espacial, en palabras. El dibujo
- * del movimiento sobre la escena llega con el paso 5 de docs/armaduras-3d-v1.md.
+ * El diagnóstico de mecanismo de una armadura espacial, en palabras. El
+ * movimiento se dibuja además sobre la escena del esquema (`mechanismMotion`).
  *
  * El caso que más enseña en 3D es el **grado de libertad suelto**: un nudo
  * cuyas barras están todas en un mismo plano no tiene rigidez fuera de él,

@@ -20,6 +20,8 @@ interface ForceArrow3DProps {
    * un mismo nudo caían una encima de la otra en la vista isométrica.
    */
   label?: boolean;
+  /** Menos de 1 para atenuarla cuando se señala otra parte del modelo (N3). */
+  opacity?: number;
 }
 
 /**
@@ -39,7 +41,16 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
  * flecha de valor exactamente cero no se dibuja — evita el ruido de las
  * reacciones nulas.
  */
-export function ForceArrow3D({ origin, axis, value, unitSize, variant, color, label = true }: ForceArrow3DProps) {
+export function ForceArrow3D({
+  origin,
+  axis,
+  value,
+  unitSize,
+  variant,
+  color,
+  label = true,
+  opacity = 1,
+}: ForceArrow3DProps) {
   const decimals = useDecimals();
   if (readsAsZero(value, decimals)) return null;
 
@@ -61,14 +72,14 @@ export function ForceArrow3D({ origin, axis, value, unitSize, variant, color, la
     <group>
       <mesh position={shaftCenter} rotation={rotation}>
         <cylinderGeometry args={[unitSize * 0.14, unitSize * 0.14, shaftLength, 10]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial color={color} transparent opacity={opacity} />
       </mesh>
       <mesh position={headCenter} rotation={rotation}>
         <coneGeometry args={[unitSize * 0.4, headHeight, 12]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial color={color} transparent opacity={opacity} />
       </mesh>
       {label && (
-        <Html position={labelAt} center style={{ pointerEvents: "none" }}>
+        <Html position={labelAt} center style={{ pointerEvents: "none", opacity }}>
           <span
             className="whitespace-nowrap rounded bg-background/80 px-1 text-xs tabular-nums"
             style={{ color: hex(color) }}

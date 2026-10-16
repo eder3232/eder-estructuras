@@ -15,7 +15,7 @@ export default function Armaduras3DPage() {
     // matrices de una barra espacial son de 6×6 y no entran en `max-w-5xl`. La
     // prosa tiene techo propio. El proveedor de resaltado envuelve la página
     // porque el vínculo tabla ↔ escena (N3, paso 5) cruza las tablas de arriba
-    // con la escena de abajo; hasta entonces no resalta nada.
+    // con la escena de abajo.
     <HighlightProvider>
       <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
         <div className="flex flex-col gap-3">

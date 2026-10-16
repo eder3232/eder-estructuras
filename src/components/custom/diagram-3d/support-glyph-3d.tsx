@@ -9,6 +9,8 @@ interface SupportGlyph3DProps {
   support: Diagram3DSupport;
   unitSize: number;
   color: number;
+  /** Menos de 1 para atenuarlo cuando se señala otra parte del modelo (N3). */
+  opacity?: number;
 }
 
 const AXES: Diagram3DAxis[] = ["x", "y", "z"];
@@ -23,7 +25,7 @@ const AXES: Diagram3DAxis[] = ["x", "y", "z"];
  *   un manguito corto sobre cada eje impedido. Dibujar el cono ahí sería
  *   mentir: diría que los tres desplazamientos están tomados.
  */
-export function SupportGlyph3D({ support, unitSize, color }: SupportGlyph3DProps) {
+export function SupportGlyph3D({ support, unitSize, color, opacity = 1 }: SupportGlyph3DProps) {
   const origin: Point3 = [support.x, support.y, support.z];
   const restrained: Record<Diagram3DAxis, boolean> = {
     x: support.restrainedX,
@@ -38,7 +40,7 @@ export function SupportGlyph3D({ support, unitSize, color }: SupportGlyph3DProps
     return (
       <mesh position={[origin[0], origin[1], origin[2] - height / 2]} rotation={rotationForAxis("z", 1)}>
         <coneGeometry args={[height * 0.5, height, 4]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial color={color} transparent opacity={opacity} />
       </mesh>
     );
   }
@@ -50,7 +52,7 @@ export function SupportGlyph3D({ support, unitSize, color }: SupportGlyph3DProps
       {AXES.filter((axis) => restrained[axis]).map((axis) => (
         <mesh key={axis} position={origin} rotation={rotationForAxis(axis, 1)}>
           <cylinderGeometry args={[unitSize * 0.45, unitSize * 0.45, sleeveLength, 12, 1, true]} />
-          <meshStandardMaterial color={color} transparent opacity={0.55} side={DoubleSide} />
+          <meshStandardMaterial color={color} transparent opacity={0.55 * opacity} side={DoubleSide} />
         </mesh>
       ))}
       {/* Discos en los extremos de cada manguito, para que se lea el eje impedido de perfil. */}
@@ -60,7 +62,7 @@ export function SupportGlyph3D({ support, unitSize, color }: SupportGlyph3DProps
         return (
           <mesh key={`${axis}-cap`} position={cap} rotation={rotationForAxis(axis, 1)}>
             <cylinderGeometry args={[unitSize * 0.55, unitSize * 0.55, unitSize * 0.12, 12]} />
-            <meshStandardMaterial color={color} />
+            <meshStandardMaterial color={color} transparent opacity={opacity} />
           </mesh>
         );
       })}

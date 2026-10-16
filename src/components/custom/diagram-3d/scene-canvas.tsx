@@ -30,6 +30,14 @@ interface SceneCanvasProps {
   points: Point3[];
   children: ReactNode;
   className?: string;
+  /**
+   * Cuándo empieza y termina un arrastre de la cámara. Lo usa el resaltado
+   * (N3): al rotar, el mouse pasa por encima de barras y nudos sin querer
+   * señalarlos, y sin esto las filas de las tablas parpadearían durante todo
+   * el giro.
+   */
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
 }
 
 /**
@@ -41,7 +49,7 @@ interface SceneCanvasProps {
  * de datos movería la vista mientras el usuario edita una tabla. El botón
  * "Recentrar" recupera el encuadre cuando hizo falta.
  */
-export function SceneCanvas({ points, children, className }: SceneCanvasProps) {
+export function SceneCanvas({ points, children, className, onInteractionStart, onInteractionEnd }: SceneCanvasProps) {
   const bounds = useMemo(() => computeBounds(points), [points]);
   const unitSize = computeUnitSize(bounds);
   const colors = useDiagramColors();
@@ -99,7 +107,14 @@ export function SceneCanvas({ points, children, className }: SceneCanvasProps) {
 
         {children}
 
-        <OrbitControls ref={controlsRef} target={initialFraming.target} makeDefault enableDamping />
+        <OrbitControls
+          ref={controlsRef}
+          target={initialFraming.target}
+          makeDefault
+          enableDamping
+          onStart={onInteractionStart}
+          onEnd={onInteractionEnd}
+        />
       </Canvas>
 
       <Button size="sm" variant="outline" className="absolute right-2 top-2" onClick={recenter}>
