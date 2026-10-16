@@ -16,10 +16,12 @@ import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
 import { DofOrderControl } from "./results/dof-order-control";
 import { EquilibriumBadge, EquilibriumSection } from "./results/equilibrium-check";
+import { GlobalEquation } from "./results/global-equation";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { MechanismExplanation } from "./results/mechanism-explanation";
 import { PartitionAndSolution } from "./results/partition-and-solution";
+import { PracticeMode } from "./results/practice-mode";
 
 /**
  * La sección entera de resultados, con la forma de `/armaduras-2d`: el título
@@ -131,6 +133,7 @@ function SolvedResults({
                     <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
                   </div>
                   <LocalStiffnessList elements={elements} nodesById={nodesById} />
+                  <PracticeMode elements={elements} nodesById={nodesById} assembly={assembly} />
                 </div>
               </DecimalsScope>
             </AccordionContent>
@@ -148,6 +151,7 @@ function SolvedResults({
                     elements={elements}
                     nodesById={nodesById}
                   />
+                  <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} />
                 </div>
               </DecimalsScope>
             </AccordionContent>

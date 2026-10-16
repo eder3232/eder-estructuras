@@ -13,12 +13,33 @@ export interface Truss3DInternalForce {
 }
 
 /**
+ * Los pasos intermedios de la rigidez de una barra espacial, para mostrarlos
+ * con los mismos números que se usan para calcular. Es el `TrussBreakdown` de
+ * `TrussElement2D` con un coseno más (ver ahí por qué existe).
+ */
+export interface Truss3DBreakdown {
+  length: number;
+  /** `[Cx, Cy, Cz]`, en el orden de los DOF. */
+  cosines: [number, number, number];
+  eaOverL: number;
+  /** `A`, 6×2: lleva los 2 DOF axiales de la barra a los 6 DOF globales de sus nudos. */
+  transform: number[][];
+  /** `Aᵀ`, 2×6. Es un operando visible de la cadena. */
+  transformTransposed: number[][];
+  /** `k` en ejes locales, 2×2: `EA/L · [[1,−1],[−1,1]]`. */
+  localStiffness: number[][];
+  /** `A · k · Aᵀ`, 6×6. Es lo que devuelve `stiffness()`. */
+  globalStiffness: number[][];
+}
+
+/**
  * Barra de armadura espacial: solo rigidez axial, 3 DOF de traslación por nudo.
  * Es el mismo elemento que `TrussElement2D` con un coseno director más — la
  * única diferencia real entre armaduras planas y espaciales.
  */
 export class TrussElement3D implements Element {
   readonly nodeIds: readonly [string, string];
+  private readonly length: number;
   private readonly cos: readonly [number, number, number];
   private readonly eaOverL: number;
 
@@ -46,6 +67,7 @@ export class TrussElement3D implements Element {
       throw new Error(`El elemento ${id} tiene longitud cero: los nodos ${from.id} y ${to.id} coinciden.`);
     }
 
+    this.length = length;
     this.cos = [dx / length, dy / length, dz / length];
     this.eaOverL = (elasticity * area) / length;
   }
@@ -59,7 +81,8 @@ export class TrussElement3D implements Element {
     return this.eaOverL;
   }
 
-  stiffness(): number[][] {
+  /** Los pasos intermedios de `stiffness()`, para poder mostrarlos. Ver `Truss3DBreakdown`. */
+  breakdown(): Truss3DBreakdown {
     const [cx, cy, cz] = this.cos;
     const transform = [
       [cx, 0],
@@ -74,7 +97,21 @@ export class TrussElement3D implements Element {
       [-this.eaOverL, this.eaOverL],
     ];
 
-    return multiply(multiply(transform, localStiffness), transpose(transform)) as number[][];
+    const transformTransposed = transpose(transform) as number[][];
+
+    return {
+      length: this.length,
+      cosines: [cx, cy, cz],
+      eaOverL: this.eaOverL,
+      transform,
+      transformTransposed,
+      localStiffness,
+      globalStiffness: multiply(multiply(transform, localStiffness), transformTransposed) as number[][],
+    };
+  }
+
+  stiffness(): number[][] {
+    return this.breakdown().globalStiffness;
   }
 
   internalForce([from, to]: [number[], number[]]): Truss3DInternalForce {

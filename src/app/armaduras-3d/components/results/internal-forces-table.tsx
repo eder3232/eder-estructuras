@@ -1,8 +1,9 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { SolveResult, Truss3DInternalForce } from "@/lib/engine";
+import { TrussElement3D, type SolveResult, type Truss3DInternalForce } from "@/lib/engine";
 import { useDecimals } from "@/components/custom/decimals-scope";
+import { Math, MathBlock } from "@/components/custom/math";
 import { operand } from "@/lib/operand";
 import type { ElementRow } from "../../store/elements";
 import { dofLabels, type NodeRow } from "../../store/nodes";
@@ -20,19 +21,32 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Para cada barra: la elongación δ es la proyección del desplazamiento relativo entre sus extremos sobre el eje
-        de la barra, δ = Σ c<sub>i</sub> · (u<sub>hacia,i</sub> − u<sub>desde,i</sub>) sobre los ejes x, y, z; y la
-        fuerza axial es N = EA/L · δ. Positivo = tracción.
+        Con los desplazamientos de sus dos nudos, cada barra da su elongación proyectando el desplazamiento relativo
+        de sus extremos sobre su propio eje, ahora con tres cosenos. La fuerza axial sale de multiplicarla por la
+        rigidez de la barra:
+      </p>
+      <MathBlock tex="\delta = C_x\,(u_{j,x} - u_{i,x}) + C_y\,(u_{j,y} - u_{i,y}) + C_z\,(u_{j,z} - u_{i,z}) \qquad N = \frac{EA}{L}\,\delta" />
+      <p className="text-sm text-muted-foreground">
+        <Math tex="N > 0" /> es tracción y <Math tex="N < 0" /> compresión: es el signo que colorea las barras en
+        la forma deformada.
       </p>
       <div className="max-w-full overflow-x-auto">
         <Table className="border">
           <TableHeader>
             <TableRow>
-              <TableHead>Elemento</TableHead>
-              <TableHead>Sustitución de δ</TableHead>
-              <TableHead>δ</TableHead>
-              <TableHead>Sustitución de N</TableHead>
-              <TableHead>N (fuerza axial)</TableHead>
+              <TableHead>Barra</TableHead>
+              <TableHead>
+                Sustitución de <Math tex="\delta" />
+              </TableHead>
+              <TableHead>
+                <Math tex="\delta" />
+              </TableHead>
+              <TableHead>
+                Sustitución de <Math tex="N" />
+              </TableHead>
+              <TableHead>
+                <Math tex="N" /> (fuerza axial)
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -41,7 +55,25 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
               const to = nodesById.get(element.toNodeId);
               const result = internalForces.get(element.id) as Truss3DInternalForce | undefined;
 
-              if (!from || !to) {
+              // La geometría se le pide al elemento del motor, como en las
+              // matrices locales: antes este archivo tenía su propia copia de
+              // los cosenos y de EA/L.
+              let geometry;
+              if (from && to) {
+                try {
+                  geometry = new TrussElement3D(
+                    element.id,
+                    { id: from.id, x: from.x, y: from.y, z: from.z },
+                    { id: to.id, x: to.x, y: to.y, z: to.z },
+                    element.area,
+                    element.elasticity,
+                  ).breakdown();
+                } catch {
+                  geometry = undefined;
+                }
+              }
+
+              if (!from || !to || !geometry) {
                 return (
                   <TableRow key={element.id}>
                     <TableCell>{element.name}</TableCell>
@@ -50,10 +82,7 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
                 );
               }
 
-              const delta = [to.x - from.x, to.y - from.y, to.z - from.z];
-              const length = Math.hypot(delta[0], delta[1], delta[2]);
-              const cosines = delta.map((d) => (length === 0 ? 0 : d / length));
-              const eaOverL = length === 0 ? 0 : (element.elasticity * element.area) / length;
+              const { cosines, eaOverL } = geometry;
 
               const uFrom = displacements.get(element.fromNodeId) ?? [0, 0, 0];
               const uTo = displacements.get(element.toNodeId) ?? [0, 0, 0];
@@ -62,8 +91,7 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
               return (
                 <TableRow key={element.id}>
                   <TableCell>{element.name}</TableCell>
-                  <TableCell className="tabular-nums">
-                    δ ={" "}
+                  <TableCell className="whitespace-nowrap tabular-nums">
                     {cosines.map((c, axis) => (
                       <span key={dofLabels[axis]}>
                         {axis > 0 ? " + " : ""}
@@ -72,8 +100,8 @@ export function InternalForcesTable({ elements, internalForces, displacements, n
                     ))}
                   </TableCell>
                   <TableCell className="tabular-nums">{elongation.toFixed(decimals)}</TableCell>
-                  <TableCell className="tabular-nums">
-                    N = {operand(eaOverL, decimals)} × {operand(elongation, decimals)}
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {operand(eaOverL, decimals)} × {operand(elongation, decimals)}
                   </TableCell>
                   <TableCell className="tabular-nums font-medium">
                     {result ? result.axialForce.toFixed(decimals) : "—"}

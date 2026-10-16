@@ -107,3 +107,51 @@ describe("TrussElement3D + System — sanity de 1 barra oblicua", () => {
     expect(() => new TrussElement3D("e1", p, { ...p, id: "b" }, 1, 10)).toThrow(/longitud cero/);
   });
 });
+
+/** Lo mismo que `TrussElement2D.breakdown`: lo que se muestra tiene que ser lo que se calcula. */
+describe("TrussElement3D.breakdown", () => {
+  // (0,0,0)→(2,3,6): L = 7, cosenos (2/7, 3/7, 6/7). Tres distintos, así que un eje cruzado se nota.
+  const element = new TrussElement3D("e1", { id: "a", x: 0, y: 0, z: 0 }, { id: "b", x: 2, y: 3, z: 6 }, 2, 70);
+
+  it("expone la geometría que usa para calcular", () => {
+    const { length, cosines, eaOverL } = element.breakdown();
+    expect(length).toBeCloseTo(7, 12);
+    expect(cosines[0]).toBeCloseTo(2 / 7, 12);
+    expect(cosines[1]).toBeCloseTo(3 / 7, 12);
+    expect(cosines[2]).toBeCloseTo(6 / 7, 12);
+    expect(eaOverL).toBeCloseTo(20, 12);
+  });
+
+  it("es la fuente de `stiffness()`, no una copia", () => {
+    expect(element.breakdown().globalStiffness).toEqual(element.stiffness());
+  });
+
+  it("A tiene los cosenos por extremo y Aᵀ es su transpuesta", () => {
+    const { transform, transformTransposed, cosines } = element.breakdown();
+    const [cx, cy, cz] = cosines;
+    expect(transform).toEqual([
+      [cx, 0],
+      [cy, 0],
+      [cz, 0],
+      [0, cx],
+      [0, cy],
+      [0, cz],
+    ]);
+    expect(transformTransposed).toEqual([
+      [cx, cy, cz, 0, 0, 0],
+      [0, 0, 0, cx, cy, cz],
+    ]);
+  });
+
+  it("los cuatro bloques de 3×3 son el mismo con el signo cambiado", () => {
+    const k = element.stiffness();
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++) {
+        expect(k[i + 3][j + 3]).toBeCloseTo(k[i][j], 10);
+        expect(k[i][j + 3]).toBeCloseTo(-k[i][j], 10);
+        expect(k[i + 3][j]).toBeCloseTo(-k[i][j], 10);
+        // Y el bloque es EA/L · cᵢ·cⱼ.
+        expect(k[i][j]).toBeCloseTo(20 * element.directionCosines[i] * element.directionCosines[j], 10);
+      }
+  });
+});
