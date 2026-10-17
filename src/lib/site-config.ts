@@ -9,7 +9,7 @@
 export const siteConfig = {
   name: "Eder Estructuras",
   description:
-    "Análisis estructural por el método matricial de rigideces: resortes, armaduras planas y espaciales, y pórticos planos, mostrando el paso a paso del cálculo.",
+    "Análisis estructural por el método matricial de rigideces: resortes, armaduras planas y espaciales, y pórticos planos con análisis sísmico, mostrando el paso a paso del cálculo.",
 } as const;
 
 /** Los sistemas estructurales que hoy tienen página propia. */
@@ -18,6 +18,7 @@ export const systemLinks = [
   { href: "/armaduras-2d", label: "Armaduras 2D" },
   { href: "/armaduras-3d", label: "Armaduras 3D" },
   { href: "/frame2d", label: "Pórticos 2D" },
+  { href: "/frame2d-seismic", label: "Pórticos con sismo" },
 ] as const;
 
 /**

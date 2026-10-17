@@ -53,7 +53,14 @@ const axisLabel = (axis: NodeAxis, third: string) => (axis === "r" ? third : axi
  * `/armaduras-2d`): con un rótulo largo por columna («Desplaz. X») era el
  * rótulo y no el dato lo que le fijaba el ancho a la tabla.
  */
-export function NodeTable() {
+export function NodeTable({ withLoads = true }: {
+  /**
+   * `false` en `frame2d-seismic`: ahí las cargas van **por caso**, en su propia
+   * tabla, así que la de nudos queda en geometría y apoyos.
+   */
+  withLoads?: boolean;
+} = {}) {
+  const numberGroups = withLoads ? NUMBER_GROUPS : NUMBER_GROUPS.filter((g) => g.title === "Coordenadas");
   const [nodes] = useAtom(atomNodes);
   const [useDofNumbers] = useAtom(atomUseDofNumbers);
   const addNode = useSetAtom(atomAddNode);
@@ -64,7 +71,7 @@ export function NodeTable() {
   const rowHighlight = useHighlightRows();
 
   const groups = [
-    ...NUMBER_GROUPS,
+    ...numberGroups,
     { title: "Restringido", axes: nodeAxes, third: "θ" },
     ...(useDofNumbers ? [{ title: "Grado de libertad", axes: nodeAxes, third: "θ" }] : []),
   ];
@@ -144,7 +151,7 @@ export function NodeTable() {
                   />
                 </TableCell>
 
-                {NUMBER_GROUPS.map((group) =>
+                {numberGroups.map((group) =>
                   group.axes.map((axis, i) => {
                     const field = group.fieldByAxis[axis]!;
                     const restrained = node[restrainedFieldByAxis[axis]];

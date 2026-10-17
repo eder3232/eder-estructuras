@@ -124,7 +124,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 2 | **Motor: `seismic/`**: `condense()` y la rigidez lateral; `e030.ts` (C(T) con la regla 18.3, k, αᵢ, V con C/R ≥ 0.11, el V para derivas sin el mínimo, T por C_T y por Rayleigh); `combinations.ts` (combinación lineal de resultados y envolvente sobre estaciones comunes); derivas. Tests contra valores conocidos: portal biempotrado con viga rígida, `K_L = 24EI/h³`; edificio de corte de 2 y 3 pisos; un ejemplo de la E.030 hecho a mano | **hecho** (ver abajo) |
 | 3 | **`/frame2d` reutilizable**: hoy sus átomos son globales de módulo y leen su clave de `localStorage` al importarse. Hay que elegir entre una fábrica de stores con la clave como parámetro o un `Provider` de Jotai por página con la persistencia inyectada; se decide leyendo `state-pattern.md` y probando el más chico. `/frame2d` no cambia de comportamiento: sus tests siguen pasando sin tocarlos | **hecho** (ver abajo) |
 | 4 | **Store sísmico**: el caso en cada carga (`LoadRow.loadCase`) y en las fuerzas de nudo, los niveles derivados, los parámetros E.030, las combinaciones editables, una solución por caso, las combinaciones, la envolvente y las derivas. Tests del store | **hecho** (ver abajo) |
-| 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | pendiente |
+| 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | **hecho** (ver abajo) |
 | 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | pendiente |
 | 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | pendiente |
 | 8 | **Excel**, alcance tentativo, a confirmar al llegar: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores) | pendiente |
@@ -207,3 +207,36 @@ En `src/app/frame2d-seismic/store/`:
   - La envolvente de M en las columnas es antisimétrica entre e1 y e2, como corresponde a un pórtico simétrico con sismo en los dos sentidos.
   - K_L = [[5626, −2969], [−2969, 2451]] t/m.
 - **Pendiente para el paso 6**: la clasificación por caso usa `3b + r − 3n` sin contar el diafragma. Se dice en la página.
+
+### Paso 5: la página y las tablas (2026-10-17) — hecho
+
+- **`/frame2d-seismic`** (`page.tsx`): monta el `Provider` de Jotai con `createSeismicStore()` (en un `useState`, así que en el cliente arranca con lo guardado). Las tablas se reservan hasta hidratar, como en `/frame2d`. Ya está en la barra de navegación («Pórticos con sismo», `lib/site-config.ts`).
+- **Se reusan tal cual** las tablas de nudos, barras y cargas de `/frame2d`, con dos props nuevas y opcionales, así que `/frame2d` no cambia:
+  - `NodeTable withLoads={false}`: solo geometría y apoyos.
+  - `LoadTable cases`: agrega la columna «Caso» y cambia una frase de la introducción.
+- **Componentes propios** (`components/`):
+  - `NodalLoadTable`: las cargas en nudos por caso.
+  - `SeismicParamsForm`: los datos de la E.030. En modo «escritas por nivel» quedan solo R₀, Iₐ, Iₚ, que hacen falta para las derivas.
+  - `LevelsTable`: niveles, nudos, hᵢ, Pᵢ, Pᵢhᵢᵏ, αᵢ, Fᵢ y las sumas.
+  - `SeismicSteps`: el cortante paso a paso, con los artículos y los números del modelo. Dice cuándo la Tabla N° 6 daría el tramo nuevo y no se usa, y cuándo manda el mínimo de C/R junto con el V para derivas.
+  - `CombinationsTable`: editable, con «Volver a las de la E.060».
+  - `ModelPersistence`/`ResetModelButton` con la clave sísmica.
+  - `CaseSelector`: botones con `aria-pressed`. No usa `ui/tabs`, que nadie estrenó.
+  - `CaseSchema`.
+- **Lo que encontró mirar la app:**
+  - **El esquema con todas las cargas dibujaba la muerta y la viva de una viga una encima de la otra**: de la viga e5 se leía −1.2 (CV) y no −3 (CM). Ahora **el esquema es de un caso** (`CaseSchema`, con la `Frame2DView` de ese caso). En CS se ven las Fᵢ de cada nivel aplicadas en el primer nudo.
+  - Los selectores cortaban el texto («análisis es…») y uno mostraba «C_T» con el guion bajo literal: textos más cortos y más anchos.
+  - El casillero de «regular» estaba mezclado con los campos.
+- **Verificado en el navegador:**
+  - Las Fᵢ (3.4558 y 4.2786) y V = 7.7344 coinciden con los tests.
+  - Cambiar Z a 0.35 da V = 6.0156 (= 0.35·2.5·1.1/8·50) y se guarda.
+  - El modo a mano pone campos para Fᵢ.
+  - Agregar una carga en nudo la guarda.
+  - **`/frame2d` sigue con sus 4 nudos, con «Fuerza» y sin «Caso»**, y cada página guarda con su clave.
+  - Cero `.katex-error` y la consola limpia.
+- **Receta para la próxima**: `fill` del MCP **no** sirve con `FormulaInput`, porque el borrador vive en el estado del componente y el valor vuelve. Hay que hacer click, `Control+A`, `type_text` con `submitKey: "Enter"`.
+- Tests (3, `components/page-pieces.test.tsx`): el esquema por caso con sus números; las tablas sin fuerzas y con la columna del caso; los niveles y el cortante sin `.katex-error`. 585 en total.
+- **Detalles abiertos:**
+  - Los campos de la E.030 no tienen nombre accesible: el `Label` lleva KaTeX y `FormulaInput` no acepta `aria-label`.
+  - La fila de un nivel enciende solo su primer nudo: `useHighlightRows` con `kind: "node"` no recibe varios.
+  - La tabla de cargas con la columna «Caso» pide scroll horizontal a 1080 px.

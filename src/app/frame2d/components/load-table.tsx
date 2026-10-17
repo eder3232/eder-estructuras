@@ -37,7 +37,14 @@ const DIRECTION_LABEL: Record<LoadDirection, string> = {
   axial: "Axial (x′)",
 };
 
-export function LoadTable() {
+export function LoadTable({ cases }: {
+  /**
+   * Los casos de carga de `frame2d-seismic`: con ellos aparece la columna
+   * «Caso». `/frame2d` no tiene casos (decisión del 2026-10-17).
+   */
+  cases?: { id: "CM" | "CV"; label: string }[];
+} = {}) {
+  const columns = cases ? 14 : 13;
   const loads = useAtomValue(atomLoads);
   const elements = useAtomValue(atomElements);
   const nodes = useAtomValue(atomNodes);
@@ -71,8 +78,9 @@ export function LoadTable() {
       <div className="flex max-w-3xl flex-col gap-2 text-sm text-muted-foreground">
         <p>
           Las cargas que van <strong>a lo largo de una barra</strong>, no en un nudo. El programa calcula con ellas
-          los momentos de empotramiento perfecto (FEM) de cada barra —la tabla de abajo los muestra— y, después,
-          los diagramas.
+          los momentos de empotramiento perfecto (FEM) de cada barra —
+          {cases ? "cada caso los muestra en su procedimiento" : "la tabla de abajo los muestra"}— y, después, los
+          diagramas.
         </p>
         <p>
           Cada valor lleva el signo de su eje: <code>+Z</code> hacia arriba, <code>+X</code> hacia la derecha,{" "}
@@ -104,6 +112,7 @@ export function LoadTable() {
               </TableHead>
               <TableHead className="w-10" />
               <TableHead>Nombre</TableHead>
+              {cases && <TableHead>Caso</TableHead>}
               <TableHead>Barra</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Dirección</TableHead>
@@ -119,7 +128,7 @@ export function LoadTable() {
           <TableBody>
             {loads.length === 0 && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-sm text-muted-foreground">
+                <TableCell colSpan={columns} className="text-center text-sm text-muted-foreground">
                   Sin cargas en barras. Con el + se agrega la primera.
                 </TableCell>
               </TableRow>
@@ -165,6 +174,27 @@ export function LoadTable() {
                       onBlur={(e) => update({ id: load.id, field: "name", value: e.target.value })}
                     />
                   </TableCell>
+                  {cases && (
+                    <TableCell>
+                      <Select
+                        value={load.loadCase ?? "CM"}
+                        onValueChange={(value) =>
+                          update({ id: load.id, field: "loadCase", value: value as "CM" | "CV" })
+                        }
+                      >
+                        <SelectTrigger className="w-20" aria-label={`Caso de la carga ${load.name}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cases.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <NodeCombobox
                       options={options}
