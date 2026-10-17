@@ -127,7 +127,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | **hecho** (ver abajo) |
 | 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | **hecho** (ver abajo) |
 | 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | **hecho** (ver abajo) |
-| 8 | **Excel**, alcance tentativo, a confirmar al llegar: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores) | pendiente |
+| 8 | **Excel**: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores). Alcance confirmado por el usuario el 2026-10-17 | **hecho** (ver abajo) |
 | 9 | Mirar la app de punta a punta, `pnpm build` y el cierre | pendiente |
 
 **Sin verificar todavía**: que la E.060 2009 no tenga modificaciones posteriores, y cuál de las dos formas del paso 3 es la más chica.
@@ -301,4 +301,30 @@ Tres ejemplos en el menú (`store/examples.ts`), cada uno para algo que los otro
 **Receta para la próxima**: el menú «Ejemplos» (Base UI) no se abre con `.click()` desde un script; sí despachando `pointerdown`, `mousedown`, `pointerup`, `mouseup` y `click` sobre el botón y después sobre el `[role="menuitem"]`.
 
 Tests: 5 en `store/examples.test.ts`. 592 en total.
+
+### Paso 8: el Excel (2026-10-17) — hecho
+
+El alcance lo confirmó el usuario: tres hojas, sin repetir el procedimiento matricial de cada caso (ese es el del libro de Pórticos 2D).
+
+- **`src/lib/excel/frame-2d-seismic-workbook.ts`** (`buildSeismicWorkbook`), con sus propios tipos de entrada, como los otros libros. Lo que tiene que dar cada fórmula lo calcula con las mismas funciones del motor (`staticSeismicForces`, `storyDrifts`…).
+  - **Sismo**: editables Z, U, S, T_P, T_L, R₀, Iₐ, Iₚ, C_T (o T, si es escrito), y la altura y el peso de cada nivel. Fórmulas: R, h_n = `MAX` de las alturas, T, **C con la regla 18.3** (`IF(T<=TP,2.5,…)`), C/R, C/R usado (`MAX(C/R,0.11)`), P, V, el V de derivas, k, Pᵢhᵢᵏ, αᵢ, Fᵢ y Fᵢ para derivas. Con fuerzas escritas, las Fᵢ son las editables y no hay parámetros del suelo.
+  - **Rigidez lateral**: K_aa, K_ab y K_bb **fijas**, porque las decide la geometría y el libro lo dice. `K_L = Kaa − MMULT(MMULT(Kab, MINVERSE(Kbb)), TRANSPOSE(Kab))` y `δ = MMULT(MINVERSE(K_L), F)` son fórmulas matriciales, **con las F vivas de la hoja Sismo**. Siguen las derivas: × V_derivas/V, × 0.75R o 0.85R (R de la hoja Sismo), Δᵢ, Δᵢ/hₑᵢ y Δ/h ÷ límite (≤ 1 cumple). El límite es editable. «¿Cumple?» va como cociente y no como texto, para que el test lo pueda verificar.
+  - **Combinaciones**: los factores son editables. Los esfuerzos de cada caso (en la convención de viga) y las reacciones son **fijos**, porque los resolvió la app. Cada combinación es una fórmula, y la envolvente es `MAX`/`MIN` de las combinaciones.
+- **`store/excel.ts`** (`atomSeismicWorkbookInput`) arma la entrada con lo que ya calcula la página, o devuelve `null` sin los tres casos y la rigidez lateral. Los rótulos de los grados de `K_ff` salieron a `freeDofLabels` (`store/analysis.ts`), que comparten la página y el libro.
+- **Botón** «Descargar Excel» en el encabezado (`components/excel-export-button.tsx`, el genérico), `portico-sismo.xlsx`.
+
+Verificado:
+
+- **Test** (`store/excel-workbook.test.ts`, 16):
+  - El inicial, los tres ejemplos, el período escrito y los restringidos arriba: recalculado con HyperFormula, cada fórmula da lo del motor, y K_L y δ del libro son los de la app.
+  - **Editar en el libro** Z, un peso y R₀ da lo mismo que la app con el modelo editado en las hojas Sismo y Rigidez lateral. Lo mismo con R₀ = 30, donde el mínimo de C/R pasa a mandar y las derivas usan el V sin él.
+  - Editar un factor da lo mismo en Combinaciones.
+  - Con fuerzas escritas, las Fᵢ son editables.
+  - **Prueba de mutación**: cambiar la meseta de C de 2.5 a 2.4 rompe 6 de 16.
+- **Excel de verdad, por COM**: los 5 libros, **2075 celdas, 0 diferencias al abrir y 0 después de editar** Z, el peso del nivel 1 y un factor (`verificar.ps1` en el scratchpad de la sesión, la receta de `frame2d-v1.md`, paso 10). Excel reconoce las celdas matriciales.
+- **De punta a punta**: el libro del ejemplo de tres pisos bajado con el **botón real** de la app da 753 celdas, 0 diferencias antes y después de editar.
+- **Mirado** (PDF desde Excel, a PNG con `pdftoppm`): las tres hojas se leen. Lo único que encontró fue que **las columnas de K_bb pasadas la 12 quedaban angostas** (es de 18×18 en el ejemplo de tres pisos): ahora el ancho cubre todas. El ruido numérico (`3.39E-16` donde va 0) sale tal cual, como en los otros libros.
+- **Trampa**: en un template de JS escrito desde un heredoc, `\${nombre}` no interpoló y la ruta del JSON salió con `${name}` literal. Mejor armar las rutas con `path.join`.
+
+Tests: 608 en total.
 

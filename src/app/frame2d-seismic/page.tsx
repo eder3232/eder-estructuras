@@ -16,6 +16,7 @@ import { GRAVITY_CASES } from "./components/cases";
 import { CombinationsTable } from "./components/combinations-table";
 import { Drifts } from "./components/drifts";
 import { Envelope } from "./components/envelope";
+import { ExcelExportButton } from "./components/excel-export-button";
 import { LateralStiffness } from "./components/lateral-stiffness";
 import { LevelsTable } from "./components/levels-table";
 import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./components/model-persistence";
@@ -68,6 +69,7 @@ function SeismicPage() {
             <div className="flex flex-wrap items-center gap-2">
               <ExamplesMenu />
               <ResetModelButton />
+              {hydrated && <ExcelExportButton />}
             </div>
           </div>
           <UnitsNote example={SEISMIC_EXAMPLE} mixing={SEISMIC_MIXING} />

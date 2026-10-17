@@ -8,8 +8,7 @@ import { Math, MathBlock } from "@/components/custom/math";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import { NoResults } from "@/components/custom/no-results";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { dofLabels } from "@/app/frame2d/store/nodes";
-import { atomLateralAnalysis, type LateralResult } from "../store/analysis";
+import { atomLateralAnalysis, freeDofLabels, type LateralResult } from "../store/analysis";
 import { caseViews } from "../store/cases";
 import { num } from "./format";
 
@@ -22,19 +21,10 @@ const REASON: Record<Extract<LateralResult, { status: "unavailable" }>["reason"]
 /** Espacio que no parte el renglón: «N1 x» y «Nivel 1» se partían en dos en el rótulo de una fila. */
 const NBSP = String.fromCharCode(0xa0);
 
-/** El rótulo de cada grado de libertad de `K_ff`: el del piso si es de un diafragma. */
+/** El rótulo de cada grado de libertad de `K_ff` (ver `freeDofLabels`). */
 function useFreeLabels(freeGlobalIndices: number[]): string[] {
   const results = useAtomValue(caseViews.CS.atomResults);
-  return useMemo(() => {
-    if (results.status !== "ok") return freeGlobalIndices.map(String);
-    const byIndex = new Map(results.solved.assembly.dofOrder.map((e) => [e.globalIndex, e]));
-    return freeGlobalIndices.map((index) => {
-      const entry = byIndex.get(index);
-      if (!entry) return String(index);
-      if (entry.diaphragmId) return `${entry.diaphragmId.replace("Nivel ", "N")}${NBSP}x`;
-      return `${results.nodesById.get(entry.nodeId)?.name ?? entry.nodeId}${dofLabels[entry.localDof]}`;
-    });
-  }, [results, freeGlobalIndices]);
+  return useMemo(() => freeDofLabels(results, freeGlobalIndices, NBSP), [results, freeGlobalIndices]);
 }
 
 /**

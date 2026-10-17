@@ -21,6 +21,7 @@ import {
   type StoryDrift,
 } from "@/lib/engine";
 import { atomElements } from "@/app/frame2d/store/elements";
+import { dofLabels } from "@/app/frame2d/store/nodes";
 import type { Frame2DMemberLoads, Frame2DResults } from "@/app/frame2d/store/results";
 import { caseViews } from "./cases";
 import { CASES, atomCombinations, atomLevelInputs, atomSeismicParams, type CaseId } from "./model";
@@ -232,3 +233,20 @@ export const atomCombinationResults = atom((get): CombinationsResult => {
 
   return { status: "ok", combinations: results, envelope, reactions };
 });
+
+/**
+ * El rótulo de cada grado de libertad de `K_ff`: el del piso si es de un
+ * diafragma («N1 x»), el del nudo si no («v3θ»). Lo usan la página y el Excel;
+ * `space` es el espacio entre el piso y el eje (la página pone uno que no parte
+ * el renglón).
+ */
+export function freeDofLabels(results: Frame2DResults, freeGlobalIndices: number[], space = " "): string[] {
+  if (results.status !== "ok") return freeGlobalIndices.map(String);
+  const byIndex = new Map(results.solved.assembly.dofOrder.map((e) => [e.globalIndex, e]));
+  return freeGlobalIndices.map((index) => {
+    const entry = byIndex.get(index);
+    if (!entry) return String(index);
+    if (entry.diaphragmId) return `${entry.diaphragmId.replace("Nivel ", "N")}${space}x`;
+    return `${results.nodesById.get(entry.nodeId)?.name ?? entry.nodeId}${dofLabels[entry.localDof]}`;
+  });
+}

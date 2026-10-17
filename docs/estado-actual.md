@@ -106,7 +106,7 @@ Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el r
 **Lo que pasa hoy** (2026-10-17, cierre de `/frame2d`):
 
 ```
-pnpm test          # 592 tests, 83 archivos (2026-10-17, paso 7 de frame2d-seismic)
+pnpm test          # 608 tests, 84 archivos (2026-10-17, paso 8 de frame2d-seismic)
 npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
@@ -159,7 +159,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | `frame2d-seismic`: tres ejemplos con lecciones medidas; los rótulos del esquema y de la envolvente que se pisaban (paso 7) |
+| (este) | `frame2d-seismic`: el Excel con el sismo, la rigidez lateral y las combinaciones vivos (paso 8) |
+| `9bc246b` | `frame2d-seismic`: tres ejemplos con lecciones medidas; los rótulos del esquema y de la envolvente que se pisaban (paso 7) |
 | `da6d48d` | `frame2d-seismic`: los resultados — procedimiento por caso, rigidez lateral, derivas y envolvente (paso 6) |
 | `e98b6ba` | `frame2d-seismic`: la página y las tablas, con el esquema por caso (paso 5) |
 | `e16b654` | `frame2d-seismic`: el store — casos, niveles, E.030, rigidez lateral, derivas, combinaciones y envolvente (paso 4) |
