@@ -206,6 +206,28 @@ Lo que encontró mirarlo:
 
 Quedó **sin cambiar a propósito**: el ejemplo inicial sigue sin cargas en barras (es el de la regresión del motor); los ejemplos con cargas van en el paso 9.
 
+### Paso 4: diagramas N, V, M (2026-10-17) — hecho
+
+- **Motor** (`src/lib/engine/frame2d/member-diagrams.ts`): `memberDiagram(fuerzasDeExtremo, cargas, eje)` por estática del tramo libre `[0, x]`, en forma cerrada (las integrales de la distribuida lineal se hacen a mano, no numéricamente). Devuelve los puntos para la curva (24 por tramo entre bordes de carga; en un salto, dos puntos con el mismo `x`), los **puntos clave** (extremos, los dos lados de cada salto, y los máximos de M donde V = 0, con la raíz cuadrática exacta), el **cierre** contra el extremo «hacia» y `at(x)` para el cursor. `beamConventionEnds` pasa las fuerzas de extremo a la convención de viga.
+- **Convención** (la de la sección 4): N tracción +; V horario +; M + si tracciona `−y'`. Conversión desde el elemento: `V(0⁺) = F_i,y'`, `M(0⁺) = −M_i`, `N(0⁺) = −F_i,x'`.
+- **Tests** (8 del motor + 4 del store): simplemente apoyada con uniforme (`qL/8`… `qL²/8` en el centro), biempotrada con puntual (`∓PL/8` y el salto de V), ménsula con momento (salto de M, V nulo), triangular (máximo `qL²/9√3` en `L/√3`), columna con peso propio (N lineal), `dM/dx = V`, los extremos en convención de viga, y el **cierre en un pórtico a dos aguas** con todas las clases de carga y dirección. **Prueba de mutación**: invertir el signo del momento de la distribuida rompe 4 tests; contar una carga concentrada justo en `x` de los dos lados rompe 2.
+- **Vista sobre el pórtico** (`diagram-2d/internal-force-diagram.tsx`, genérico): selector N / V / M, una escala para todas las barras, N y V positivos del lado `+y'`, **M del lado traccionado**. Violeta, porque azul, verde, rojo y ámbar ya significan otra cosa; texto a 7.3:1 en claro y 10.6:1 en oscuro (medido).
+- **Barra aislada «estilo libro»**: la barra horizontal con sus nudos nombrados y sus cargas en ejes locales arriba, y N, V, M alineados debajo, cada uno con su escala, M positivo hacia abajo (lado traccionado, igual que en el pórtico). Un cursor da los tres valores exactos en el punto (`at(x)`).
+- **B8 resuelto**: la tabla de fuerzas internas muestra las dos convenciones rotuladas — `f_local` (la de la matriz, la que tiene signos opuestos en los extremos) y los esfuerzos N, V, M de viga — con un párrafo que explica por qué no conviene mezclarlas.
+- Las barras con **FEM a mano** no tienen diagrama, y la sección lo dice con la razón (lo contrario de V13).
+
+Lo que encontró mirarlo (con el pórtico semilla y q = −10 sobre la viga):
+
+- **Los números se verificaron contra la física**, no solo contra los tests: la viga da `31.25 − (3.79 + 12.10)/2 ≈ 23.30` contra el máximo de 23.44 (corrido del centro por la asimetría); V baja 50 = qL y cruza cero en x = 2.33; las reacciones horizontales suman −5 y el +0.905 de la base izquierda es el empuje de la gravedad (+3.40) menos el de la carga lateral (−2.49); el cursor en x = 2.5 da lo que da la cuenta a mano.
+- **El momento de cada esquina salía dos veces** (viga y columna, que en un nudo de dos barras valen lo mismo por equilibrio). `mergeJointLabels`, solo para M: en V y N dos valores iguales en un nudo serían casualidad.
+- **Los números centrados cruzaban las columnas**: se anclan por el lado que da a la barra, como en `axialLabelPoint`; y en una barra horizontal, el número del extremo crece hacia adentro.
+- **Un esfuerzo constante con dos números caía en las esquinas**: medido, cuatro números de N se pisaban. Ahora se escribe una vez, a mitad de la barra, como en los textos. Medición final con un script que busca texto que cruce una barra o pise otro texto: **cero en los tres diagramas**.
+- La barra aislada tenía una franja de cargas alta y vacía cuando la barra no tiene cargas, y no decía qué nudo es cada extremo: ahora la franja se achica y los nudos van rotulados.
+
+Lo que **no** se miró: un pórtico inclinado en pantalla (sí en el test de cierre), ni una pantalla angosta.
+
+Queda para el paso 5: B7 (el color de la deformada supone N constante, y con carga axial ya no lo es).
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.

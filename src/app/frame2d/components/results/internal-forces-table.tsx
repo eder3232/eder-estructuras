@@ -4,7 +4,7 @@ import { useAtom } from "jotai";
 import { multiply } from "mathjs";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FrameElement2D, type FrameInternalForce, type SolveResult } from "@/lib/engine";
+import { FrameElement2D, beamConventionEnds, type FrameInternalForce, type SolveResult } from "@/lib/engine";
 import { atomDecimals } from "@/components/custom/decimals";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
@@ -35,10 +35,17 @@ export function InternalForcesTable({
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
         Para cada barra: se llevan los desplazamientos globales de sus dos nudos a ejes locales (u_local = T·u_global)
-        y se multiplican por la rigidez local, f_local = k_local · u_local + FEM. El resultado son la fuerza axial
-        (N), el corte (V) y el momento (M) en cada extremo. El sistema se resolvió con cargas solo nodales, así que
-        acá se le devuelve a cada barra su carga repartida real sumando el FEM — por eso una viga simplemente apoyada
-        con carga distribuida da momento cero en los extremos aunque su FEM no sea cero.
+        y se multiplican por la rigidez local, f_local = k_local · u_local + FEM. El sistema se resolvió con cargas
+        solo nodales, así que acá se le devuelve a cada barra su carga repartida real sumando el FEM — por eso una
+        viga simplemente apoyada con carga distribuida da momento cero en los extremos aunque su FEM no sea cero.
+      </p>
+      <p className="text-sm text-muted-foreground">
+        <strong>Dos convenciones, y conviene no mezclarlas.</strong> <code>f_local</code> es la fuerza que los nudos
+        le hacen a la barra, positiva según los ejes locales (<code>x′</code> hacia «hacia», <code>y′</code> a la
+        izquierda, momento antihorario): es lo que da la matriz, y por eso la axial de una barra traccionada sale con
+        signo opuesto en sus dos extremos. Los <strong>esfuerzos</strong> son la convención de viga de los textos (N
+        positiva en tracción, V positivo horario, M positivo traccionando la fibra de abajo): un solo signo para toda
+        la barra, el mismo de los diagramas.
       </p>
       <div className="max-w-full overflow-x-auto">
         <Table className="border">
@@ -49,9 +56,12 @@ export function InternalForcesTable({
               <TableHead>u local</TableHead>
               <TableHead>w local</TableHead>
               <TableHead>θ local</TableHead>
-              <TableHead>N (axial)</TableHead>
-              <TableHead>V (corte)</TableHead>
-              <TableHead>M (momento)</TableHead>
+              <TableHead>f x′</TableHead>
+              <TableHead>f y′</TableHead>
+              <TableHead>m</TableHead>
+              <TableHead className="border-l">N</TableHead>
+              <TableHead>V</TableHead>
+              <TableHead>M</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -64,7 +74,7 @@ export function InternalForcesTable({
                 return [
                   <TableRow key={element.id}>
                     <TableCell>{element.name}</TableCell>
-                    <TableCell colSpan={7}>—</TableCell>
+                    <TableCell colSpan={10}>—</TableCell>
                   </TableRow>,
                 ];
               }
@@ -86,19 +96,23 @@ export function InternalForcesTable({
                 multiply(frameElement.transform(), globalDisplacement) as number[][]
               ).map((row) => row[0]);
 
+              const beam = beamConventionEnds(result);
               return [
-                { end: from.name, offset: 0, forces: result.from },
-                { end: to.name, offset: 3, forces: result.to },
-              ].map(({ end, offset, forces }) => (
+                { end: from.name, offset: 0, forces: result.from, stress: beam.from },
+                { end: to.name, offset: 3, forces: result.to, stress: beam.to },
+              ].map(({ end, offset, forces, stress }) => (
                 <TableRow key={`${element.id}-${offset}`}>
                   <TableCell>{offset === 0 ? element.name : ""}</TableCell>
                   <TableCell>{end}</TableCell>
                   <TableCell className="tabular-nums">{show(localDisplacement[offset])}</TableCell>
                   <TableCell className="tabular-nums">{show(localDisplacement[offset + 1])}</TableCell>
                   <TableCell className="tabular-nums">{show(localDisplacement[offset + 2])}</TableCell>
-                  <TableCell className="tabular-nums font-medium">{show(forces.axial)}</TableCell>
-                  <TableCell className="tabular-nums font-medium">{show(forces.shear)}</TableCell>
-                  <TableCell className="tabular-nums font-medium">{show(forces.moment)}</TableCell>
+                  <TableCell className="tabular-nums">{show(forces.axial)}</TableCell>
+                  <TableCell className="tabular-nums">{show(forces.shear)}</TableCell>
+                  <TableCell className="tabular-nums">{show(forces.moment)}</TableCell>
+                  <TableCell className="border-l tabular-nums font-medium">{show(stress.N)}</TableCell>
+                  <TableCell className="tabular-nums font-medium">{show(stress.V)}</TableCell>
+                  <TableCell className="tabular-nums font-medium">{show(stress.M)}</TableCell>
                 </TableRow>
               ));
             })}

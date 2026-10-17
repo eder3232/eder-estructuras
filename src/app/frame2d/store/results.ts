@@ -5,8 +5,13 @@ import {
   System,
   loadFixedEndForces,
   memberAxis,
+  memberDiagram,
   sumFixedEndForces,
   type FrameFixedEndForces,
+  type FrameInternalForce,
+  type MemberAxis,
+  type MemberDiagram,
+  type MemberLoad,
   type SolveResult,
   type SolveWarning,
 } from "@/lib/engine";
@@ -69,6 +74,9 @@ function fixedEndForcesByElement(
   fem: Map<string, FrameFixedEndForces>;
   /** Barras con alguna carga que no se pudo usar: su FEM no significa nada. */
   brokenElementIds: Set<string>;
+  /** Las cargas de cada barra ya traducidas al motor, y su eje: con eso se dibujan los diagramas. */
+  loadsByElement: Map<string, MemberLoad[]>;
+  axisByElement: Map<string, MemberAxis>;
   errors: DomainError[];
   warnings: DomainIssue[];
 } {
@@ -76,6 +84,13 @@ function fixedEndForcesByElement(
   const brokenElementIds = new Set<string>();
   const warnings: DomainIssue[] = [];
   const perElement = new Map<string, FrameFixedEndForces[]>();
+  const loadsByElement = new Map<string, MemberLoad[]>();
+  const axisByElement = new Map<string, MemberAxis>();
+  for (const element of elements) {
+    const from = nodesById.get(element.fromNodeId);
+    const to = nodesById.get(element.toNodeId);
+    if (from && to) axisByElement.set(element.id, memberAxis(from, to));
+  }
   const elementsById = new Map(elements.map((e) => [e.id, e]));
 
   for (const load of loads) {
@@ -105,8 +120,10 @@ function fixedEndForcesByElement(
 
     const axis = memberAxis(from, to);
     try {
-      const fem = loadFixedEndForces(toMemberLoad(load, axis.length), axis);
+      const member = toMemberLoad(load, axis.length);
+      const fem = loadFixedEndForces(member, axis);
       perElement.set(element.id, [...(perElement.get(element.id) ?? []), fem]);
+      loadsByElement.set(element.id, [...(loadsByElement.get(element.id) ?? []), member]);
     } catch (e) {
       errors.push({ ...issue(e instanceof Error ? e.message : String(e)), severity: "error" });
       brokenElementIds.add(element.id);
@@ -119,7 +136,7 @@ function fixedEndForcesByElement(
       element.manualFem ? manualFixedEndForces(element) : sumFixedEndForces(perElement.get(element.id) ?? []),
     ]),
   );
-  return { fem, brokenElementIds, errors, warnings };
+  return { fem, brokenElementIds, loadsByElement, axisByElement, errors, warnings };
 }
 
 /** El FEM de cada barra, calculado o a mano: lo leen el cálculo y la tabla «FEM por barra». */
@@ -225,4 +242,36 @@ export const atomResults = atom<Frame2DResults>((get) => {
       nodesById,
     };
   }
+});
+
+/**
+ * Los diagramas N, V, M de cada barra, o la razón por la que no los hay.
+ *
+ * Una barra con **FEM a mano** no tiene diagramas interiores: el FEM escrito no
+ * dice cómo está repartida la carga, y sin eso no hay con qué dibujar entre los
+ * extremos. El original los dibujaba igual, como si la barra no tuviera carga
+ * (V13 de `docs/frame2d-v1.md`); acá se dice.
+ */
+export type MemberDiagramResult = { status: "ok"; diagram: MemberDiagram } | { status: "manual-fem" };
+
+export const atomMemberDiagrams = atom((get) => {
+  const results = get(atomResults);
+  const diagrams = new Map<string, MemberDiagramResult>();
+  if (results.status !== "ok") return diagrams;
+
+  const { loadsByElement, axisByElement } = get(atomMemberLoads);
+  for (const element of get(atomElements)) {
+    if (element.manualFem) {
+      diagrams.set(element.id, { status: "manual-fem" });
+      continue;
+    }
+    const forces = results.solved.internalForces.get(element.id) as FrameInternalForce | undefined;
+    const axis = axisByElement.get(element.id);
+    if (!forces || !axis) continue;
+    diagrams.set(element.id, {
+      status: "ok",
+      diagram: memberDiagram(forces, loadsByElement.get(element.id) ?? [], axis),
+    });
+  }
+  return diagrams;
 });

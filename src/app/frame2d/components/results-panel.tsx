@@ -15,6 +15,7 @@ import { DeformedShape } from "./results/deformed-shape";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { MechanismExplanation } from "./results/mechanism-explanation";
+import { MemberDiagrams } from "./results/member-diagrams";
 import { PartitionAndSolution } from "./results/partition-and-solution";
 
 /**
@@ -150,8 +151,15 @@ function SolvedResults({
           </AccordionContent>
         </AccordionItem>
 
+        <AccordionItem value="diagrams">
+          <AccordionTrigger>5. Diagramas de fuerza axial, cortante y momento</AccordionTrigger>
+          <AccordionContent>
+            <MemberDiagrams elements={elements} nodesById={nodesById} />
+          </AccordionContent>
+        </AccordionItem>
+
         <AccordionItem value="deformed">
-          <AccordionTrigger>5. Forma deformada</AccordionTrigger>
+          <AccordionTrigger>6. Forma deformada</AccordionTrigger>
           <AccordionContent>
             <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
           </AccordionContent>

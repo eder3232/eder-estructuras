@@ -4,7 +4,7 @@ import { createStore } from "jotai";
 import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "./elements";
 import { atomAddNode, atomNodes, atomRemoveNode, atomToggleNodeRestrained, atomUpdateNodeField, seedNodeIds } from "./nodes";
 import { atomAddLoad, atomLoads, atomUpdateLoadField } from "./loads";
-import { atomMemberLoads, atomResults } from "./results";
+import { atomMemberDiagrams, atomMemberLoads, atomResults } from "./results";
 
 /**
  * Cada bloque fija uno de los bugs de la revisión para la v1 (ver
@@ -255,5 +255,51 @@ describe("/frame2d — cargas en barras (paso 3)", () => {
     const fem = store.get(atomMemberLoads).fem.get("seed-e2")!;
     expect(fem.from.shear + fem.to.shear).toBeCloseTo(50, 9);
     expect(fem.from.shear).toBeGreaterThan(fem.to.shear);
+  });
+});
+
+describe("/frame2d — diagramas (paso 4)", () => {
+  function loadedFrame() {
+    const store = createStore();
+    store.set(atomAddLoad, { elementId: "seed-e2" });
+    const load = store.get(atomLoads)[0];
+    store.set(atomUpdateLoadField, { id: load.id, field: "q1", value: -10 });
+    store.set(atomUpdateLoadField, { id: load.id, field: "q2", value: -10 });
+    return store;
+  }
+
+  it("cada barra cierra: el diagrama llega a lo que el motor dio en «hacia»", () => {
+    const store = loadedFrame();
+    const diagrams = store.get(atomMemberDiagrams);
+    expect(diagrams.size).toBe(3);
+    for (const result of diagrams.values()) {
+      if (result.status !== "ok") throw new Error(result.status);
+      expect(Math.abs(result.diagram.closure.N)).toBeLessThan(1e-8);
+      expect(Math.abs(result.diagram.closure.V)).toBeLessThan(1e-8);
+      expect(Math.abs(result.diagram.closure.M)).toBeLessThan(1e-8);
+    }
+  });
+
+  it("en la viga cargada, V baja qL de punta a punta y M tiene un máximo positivo adentro", () => {
+    const result = loadedFrame().get(atomMemberDiagrams).get("seed-e2");
+    if (result?.status !== "ok") throw new Error(String(result?.status));
+    const { points, keyPoints } = result.diagram;
+    expect(points[0].V - points[points.length - 1].V).toBeCloseTo(50, 9);
+    const extremum = keyPoints.find((k) => k.kind === "extremum")!;
+    expect(extremum.left.M).toBeGreaterThan(0);
+    expect(extremum.left.V).toBeCloseTo(0, 9);
+  });
+
+  it("una barra con FEM a mano no tiene diagrama, y se sabe por qué", () => {
+    const store = loadedFrame();
+    store.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
+    expect(store.get(atomMemberDiagrams).get("seed-e2")).toEqual({ status: "manual-fem" });
+    expect(store.get(atomMemberDiagrams).get("seed-e1")?.status).toBe("ok");
+  });
+
+  it("sin resultados no hay diagramas", () => {
+    const store = loadedFrame();
+    store.set(atomUpdateElementField, { id: "seed-e2", field: "inertia", value: 0 });
+    expect(store.get(atomMemberDiagrams).size).toBe(0);
   });
 });

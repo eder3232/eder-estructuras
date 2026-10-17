@@ -45,5 +45,7 @@ export {
   sumFixedEndForces,
 } from "./frame2d/member-loads";
 export type { LoadDirection, MemberAxis, MemberLoad } from "./frame2d/member-loads";
+export { beamConventionEnds, memberDiagram } from "./frame2d/member-diagrams";
+export type { DiagramKeyPoint, DiagramPoint, DiagramValues, MemberDiagram } from "./frame2d/member-diagrams";
 export { SpringElement } from "./springs/spring-element";
 export type { SpringInternalForce } from "./springs/spring-element";
