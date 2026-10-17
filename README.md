@@ -15,6 +15,8 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 
 > **Al 2026-10-17, los cinco sistemas están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d`, `/frame2d` y `/frame2d-seismic` (este último, como extensión de `/frame2d` y no como copia: casos de carga, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación, las derivas, las combinaciones E.060 y la envolvente).
 >
+> **En producción**: https://eder-estructuras.vercel.app (proyecto de Vercel `eder-estructuras`; cómo desplegar, en la sección 6 de [`docs/estado-actual.md`](./docs/estado-actual.md)). La home se rehízo el 2026-10-17.
+>
 > **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue.**
 >
 > Al cierre todo pasa: 608 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
