@@ -1,11 +1,10 @@
 "use client";
 
-import { useAtom } from "jotai";
 import { multiply } from "mathjs";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FrameElement2D, beamConventionEnds, type FrameInternalForce, type SolveResult } from "@/lib/engine";
-import { atomDecimals } from "@/components/custom/decimals";
+import { useDecimals } from "@/components/custom/decimals-scope";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 
@@ -28,7 +27,7 @@ export function InternalForcesTable({
   displacements,
   nodesById,
 }: InternalForcesTableProps) {
-  const [decimals] = useAtom(atomDecimals);
+  const decimals = useDecimals();
   const show = (value: number) => value.toFixed(decimals);
 
   return (

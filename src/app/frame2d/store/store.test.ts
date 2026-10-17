@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createStore } from "jotai";
 
-import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "./elements";
+import { atomClassification } from "./classification";
+import { atomToggleRestrainedFirst, atomToggleUseDofNumbers } from "./dof-order";
+import {
+  atomAddElement,
+  atomElements,
+  atomRemoveElement,
+  atomSetAllElementsNumber,
+  atomUpdateElementField,
+} from "./elements";
 import { atomAddNode, atomNodes, atomRemoveNode, atomToggleNodeRestrained, atomUpdateNodeField, seedNodeIds } from "./nodes";
 import { atomAddLoad, atomLoads, atomUpdateLoadField } from "./loads";
 import { atomMemberDiagrams, atomMemberLoads, atomMemberShapes, atomResults } from "./results";
@@ -330,5 +338,79 @@ describe("/frame2d — deformada entre nudos (paso 5)", () => {
     store.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
     expect(store.get(atomMemberShapes).get("seed-e2")?.homogeneousOnly).toBe(true);
     expect(store.get(atomMemberShapes).get("seed-e1")?.homogeneousOnly).toBe(false);
+  });
+});
+
+describe("/frame2d — verificación de equilibrio (paso 6)", () => {
+  it("el pórtico inicial cierra: con dos empotramientos, la suma de momentos lleva brazos", () => {
+    // Antes daba «no cierra»: sumaba los dos momentos de reacción (9.19) como
+    // si fueran una componente más, sin brazo de palanca.
+    const { equilibrium } = solvedOf(createStore());
+    expect(equilibrium.ok).toBe(true);
+    for (const value of equilibrium.global) expect(Math.abs(value)).toBeLessThan(1e-9);
+  });
+
+  it("con cargas en las barras también, y la columna «carga» del nudo es solo lo que se cargó ahí", () => {
+    const store = createStore();
+    store.set(atomAddLoad, { elementId: "seed-e2" });
+    const load = store.get(atomLoads)[0];
+    store.set(atomUpdateLoadField, { id: load.id, field: "q1", value: -10 });
+    store.set(atomUpdateLoadField, { id: load.id, field: "q2", value: -10 });
+    const { equilibrium } = solvedOf(store);
+    expect(equilibrium.ok).toBe(true);
+    const v2 = equilibrium.nodes.find((n) => n.nodeId === seedNodeIds.v2)!;
+    expect(v2.applied).toEqual([0, 0, 0]);
+  });
+});
+
+describe("/frame2d — lo genérico de los otros sistemas (paso 6)", () => {
+  it("clasificación del pórtico inicial: 3·3 + 6 − 3·4 = 3, hiperestático, y el motor lo confirma", () => {
+    const classification = createStore().get(atomClassification);
+    if (classification.status !== "counted") throw new Error(classification.status);
+    expect(classification).toMatchObject({ bars: 3, reactions: 6, nodes: 4 });
+    expect(classification.count.degree).toBe(3);
+    expect(classification.verdict).toBe("indeterminate");
+  });
+
+  it("con articulado y móvil en las bases queda isostático (g = 0)", () => {
+    const store = createStore();
+    store.set(atomToggleNodeRestrained, { id: seedNodeIds.v1, axis: "r" });
+    store.set(atomToggleNodeRestrained, { id: seedNodeIds.v4, axis: "r" });
+    store.set(atomToggleNodeRestrained, { id: seedNodeIds.v4, axis: "x" });
+    const classification = store.get(atomClassification);
+    if (classification.status !== "counted") throw new Error(classification.status);
+    expect(classification.count.degree).toBe(0);
+  });
+
+  it("«restringidos arriba» pone los grados restringidos primero, sin cambiar los resultados", () => {
+    const store = createStore();
+    const before = solvedOf(store);
+    store.set(atomToggleRestrainedFirst);
+    const after = solvedOf(store);
+    expect(after.assembly.dofOrder[0].restrained).toBe(true);
+    expect(before.assembly.dofOrder[0].restrained).toBe(true);
+    // Cambia el orden de las filas, no la física.
+    expect(after.displacements.get(seedNodeIds.v3)![0]).toBeCloseTo(before.displacements.get(seedNodeIds.v3)![0], 12);
+    expect(after.assembly.dofOrder.slice(0, 6).every((d) => d.restrained)).toBe(true);
+  });
+
+  it("la numeración manual se siembra con el orden de la tabla al encenderla", () => {
+    const store = createStore();
+    store.set(atomToggleUseDofNumbers);
+    const [v1, v2] = store.get(atomNodes);
+    expect([v1.dofNumberX, v1.dofNumberZ, v1.dofNumberR, v2.dofNumberX]).toEqual([1, 2, 3, 4]);
+    expect(store.get(atomResults).status).toBe("ok");
+  });
+
+  it("«aplicar a todas» fija A, I y E en cada barra", () => {
+    const store = createStore();
+    store.set(atomSetAllElementsNumber, { area: 2, inertia: 3, elasticity: 4 });
+    for (const e of store.get(atomElements)) expect([e.area, e.inertia, e.elasticity]).toEqual([2, 3, 4]);
+  });
+
+  it("insertar un nudo debajo de otro", () => {
+    const store = createStore();
+    store.set(atomAddNode, seedNodeIds.v1);
+    expect(store.get(atomNodes).map((n) => n.name)).toEqual(["v1", "v5", "v2", "v3", "v4"]);
   });
 });

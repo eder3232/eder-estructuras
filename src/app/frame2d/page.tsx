@@ -1,5 +1,7 @@
 "use client";
 
+import { UnitsNote } from "@/components/custom/units-note";
+import { Classification } from "./components/classification";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
 import { FemTable } from "./components/fem-table";
@@ -23,6 +25,8 @@ export default function Frame2DPage() {
         </p>
       </div>
 
+      <UnitsNote example={FRAME_EXAMPLE} mixing={FRAME_MIXING} />
+
       <div className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Nudos</h2>
         <NodeTable />
@@ -45,9 +49,36 @@ export default function Frame2DPage() {
         <SchemaDiagram />
       </div>
 
+      {/* Entre el dibujo y el cálculo, porque es eso en el pizarrón. */}
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Clasificación</h2>
+        <Classification />
+      </div>
+
       <ErrorsPanel />
 
       <ResultsPanel />
     </div>
   );
 }
+
+const strong = (text: string) => <span className="font-medium text-foreground">{text}</span>;
+
+/** Un pórtico suma inercias, momentos y giros a lo que tiene una armadura: son los que se mezclan. */
+const FRAME_EXAMPLE = (
+  <>
+    Si trabajás en {strong("tonf")} y {strong("m")}: <span className="italic">E</span> va en tonf/m², las coordenadas
+    en m, el área en m², la inercia en m⁴, las cargas puntuales en tonf, las distribuidas en tonf/m y los momentos en
+    tonf·m — y obtenés {strong("desplazamientos en m")}, {strong("giros en radianes")} y{" "}
+    {strong("momentos en tonf·m")}.
+  </>
+);
+
+const FRAME_MIXING = (
+  <>
+    El error más común no es equivocarse de sistema: es <span className="font-medium">mezclar</span>. En pórticos el
+    clásico es la <span className="italic">inercia</span> en cm⁴ —como viene en las tablas de perfiles— con las
+    coordenadas en metros: el error es de un factor de 10⁸, y {strong("el programa no puede detectarlo")}, porque
+    para él son números válidos.
+  </>
+);

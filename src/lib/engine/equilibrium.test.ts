@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { equilibriumCheck } from "./equilibrium";
 import { System } from "./system";
+import { FrameElement2D } from "./frame2d/frame-element-2d";
+import { loadFixedEndForces, memberAxis } from "./frame2d/member-loads";
 import { SpringElement } from "./springs/spring-element";
 import { TrussElement2D } from "./trusses-2d/truss-element-2d";
 
@@ -137,5 +139,62 @@ describe("equilibriumCheck", () => {
     expect(equilibrium.nodes).toHaveLength(2);
     expect(equilibrium.nodes[1].fromElements[0]).toBeCloseTo(-10, 9);
     expect(equilibrium.global[0]).toBeCloseTo(0, 9);
+  });
+
+  it("en un pórtico con carga en la barra, el nudo se ve como su cuerpo libre", () => {
+    // Viga biempotrada con q hacia abajo: los nudos no tienen carga propia, así
+    // que la columna «carga» tiene que dar cero, y la barra tiene que tirar de
+    // cada nudo con su fuerza de extremo verdadera (qL/2 hacia abajo y el
+    // momento de empotramiento), que es lo que el apoyo equilibra.
+    const L = 4;
+    const q = 6;
+    const a = { id: "a", x: 0, z: 0 };
+    const b = { id: "b", x: L, z: 0 };
+    const fem = loadFixedEndForces(
+      { kind: "distributed", direction: "globalZ", q1: -q, q2: -q, a: 0, b: L },
+      memberAxis(a, b),
+    );
+    const system = new System(3);
+    system.addNode({ id: "a", restrained: [true, true, true] });
+    system.addNode({ id: "b", restrained: [true, true, true] });
+    system.addElement(new FrameElement2D("e", a, b, 1, 200, 3, fem));
+
+    const { equilibrium } = system.solve();
+
+    expect(equilibrium.ok).toBe(true);
+    const [na] = equilibrium.nodes;
+    expect(na.applied).toEqual([0, 0, 0]);
+    expect(na.elements[0].force[1]).toBeCloseTo((-q * L) / 2, 9);
+    expect(na.elements[0].force[2]).toBeCloseTo((-q * L ** 2) / 12, 9);
+    expect(na.reaction[1]).toBeCloseTo((q * L) / 2, 9);
+  });
+
+  it("en un pórtico, una reacción de momento que sobra no pasa el control global", () => {
+    // Ménsula con carga en la punta: el empotramiento toma P y P·L. Si a la
+    // reacción de momento le sobra algo, cada nudo por separado puede cerrar
+    // con la barra, pero la suma de momentos respecto del origen ya no.
+    const a = { id: "a", x: 0, z: 0 };
+    const b = { id: "b", x: 3, z: 0 };
+    const element = new FrameElement2D("e", a, b, 1, 200, 3);
+    const system = new System(3);
+    system.addNode({ id: "a", restrained: [true, true, true] });
+    system.addNode({ id: "b", restrained: [false, false, false], force: [0, -5, 0] });
+    system.addElement(element);
+    const solved = system.solve();
+    const reactions = new Map(solved.reactions);
+    const [rx, rz, rm] = reactions.get("a")!;
+    reactions.set("a", [rx, rz, rm + 4]);
+
+    const check = equilibriumCheck({
+      dofPerNode: 3,
+      nodeIds: ["a", "b"],
+      elements: [element],
+      displacements: solved.displacements,
+      appliedForces: new Map([["b", [0, -5, 0]]]),
+      reactions,
+    });
+    expect(solved.equilibrium.ok).toBe(true);
+    expect(check.ok).toBe(false);
+    expect(check.global[2]).toBeCloseTo(4, 9);
   });
 });

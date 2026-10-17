@@ -12,7 +12,10 @@ export interface NodeEquilibrium {
   elements: NodeElementForce[];
   /** La suma de esos aportes. */
   fromElements: number[];
-  /** La carga del usuario, más la carga nodal equivalente de las barras. */
+  /**
+   * La carga que el usuario puso **en el nudo**. Las cargas a lo largo de una
+   * barra no van acá: entran por la fuerza de esa barra (ver `elements`).
+   */
   applied: number[];
   /** La reacción del apoyo — cero en los grados de libertad libres. */
   reaction: number[];
@@ -23,11 +26,17 @@ export interface NodeEquilibrium {
 export interface EquilibriumCheck {
   nodes: NodeEquilibrium[];
   /**
-   * Cargas + reacciones de toda la estructura. Las barras **no** aparecen: cada
-   * una tira de sus dos nudos con fuerzas iguales y opuestas, así que se
-   * cancelan de a pares. Que esto dé cero es una comprobación distinta de la de
-   * cada nudo — dice que cada matriz de rigidez está en equilibrio consigo
-   * misma, no que el sistema se resolvió bien.
+   * Cargas + reacciones de toda la estructura, incluidas las cargas a lo largo
+   * de las barras (por su carga nodal equivalente, que tiene la misma
+   * resultante). Las fuerzas entre barras y nudos **no** aparecen: son
+   * internas. Que esto dé cero es una comprobación distinta de la de cada nudo.
+   *
+   * En un **pórtico plano** la tercera componente es la suma de momentos
+   * **respecto del origen**, con brazos de palanca. Sumar los momentos de los
+   * nudos sin más no es una ecuación de equilibrio: así estaba, y daba «no
+   * cierra» en cualquier pórtico con dos empotramientos (en el inicial, la
+   * suma de los dos momentos de reacción, 9.19). No se había visto porque
+   * `/frame2d` no mostraba esta verificación.
    */
   global: number[];
   /** El mayor `|residuo|` de todos, incluido el global. */
@@ -90,6 +99,9 @@ export function equilibriumCheck({
   const fromElements = new Map(nodeIds.map((id) => [id, zeros()]));
   const applied = new Map(nodeIds.map((id) => [id, appliedForces.get(id)?.slice() ?? zeros()]));
   const perNodeElements = new Map(nodeIds.map((id) => [id, [] as NodeElementForce[]]));
+  // Las cargas de barra, puestas en los nudos: solo cuentan para el equilibrio global.
+  const memberLoadAt = new Map(nodeIds.map((id) => [id, zeros()]));
+  const positions = new Map<string, { x: number; z: number }>();
 
   for (const element of elements) {
     const size = 2 * dofPerNode;
@@ -100,16 +112,25 @@ export function equilibriumCheck({
 
     element.nodeIds.forEach((nodeId, end) => {
       const offset = end * dofPerNode;
-      const force = onElement.slice(offset, offset + dofPerNode).map((value) => -value);
+      const position = element.nodePositions?.[end];
+      if (position) positions.set(nodeId, position);
+      const memberLoad = memberLoadAt.get(nodeId);
+      if (memberLoad) for (let i = 0; i < dofPerNode; i++) memberLoad[i] += equivalentLoad[offset + i];
+      // Lo que la barra le hace al nudo es el opuesto de su fuerza de extremo
+      // **verdadera**: `k·u` más el FEM (en globales, `k·u − F_eq`). En
+      // `solve()` la carga equivalente se suma al vector de cargas del nudo, y
+      // acá se hacía lo mismo — la suma da igual, pero entonces la columna
+      // «carga» de un pórtico mostraba una carga que el alumno nunca puso en
+      // el nudo, y la fuerza de la barra no era la de la tabla de fuerzas
+      // internas. Así el nudo queda dibujado como su diagrama de cuerpo libre.
+      const force = onElement
+        .slice(offset, offset + dofPerNode)
+        .map((value, i) => -(value - equivalentLoad[offset + i]));
       perNodeElements.get(nodeId)?.push({ elementId: element.id, force });
 
       const sum = fromElements.get(nodeId);
-      const load = applied.get(nodeId);
       for (let i = 0; i < dofPerNode; i++) {
         if (sum) sum[i] += force[i];
-        // La carga nodal equivalente de la barra actúa sobre el nudo igual que
-        // una carga del usuario: en `solve()` se suma al mismo vector.
-        if (load) load[i] += equivalentLoad[offset + i];
       }
     });
   }
@@ -126,12 +147,17 @@ export function equilibriumCheck({
     const reaction = reactions.get(nodeId)?.slice() ?? zeros();
     const residual = bars.map((value, i) => value + load[i] + reaction[i]);
 
+    const external = load.map((value, i) => value + reaction[i] + (memberLoadAt.get(nodeId)?.[i] ?? 0));
+    const position = positions.get(nodeId);
     for (let i = 0; i < dofPerNode; i++) {
-      global[i] += load[i] + reaction[i];
+      global[i] += external[i];
       track(bars[i]);
       track(load[i]);
       track(reaction[i]);
     }
+    // Pórtico plano: el momento de las fuerzas del nudo respecto del origen,
+    // M = x·Fz − z·Fx, además de su momento propio.
+    if (position && dofPerNode === 3) global[2] += position.x * external[1] - position.z * external[0];
 
     return {
       nodeId,

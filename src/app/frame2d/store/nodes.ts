@@ -29,6 +29,13 @@ export interface NodeRow {
   restrainedX: boolean;
   restrainedZ: boolean;
   restrainedR: boolean;
+  /**
+   * El número que el alumno le pone a cada grado de libertad, si la numeración
+   * manual está encendida (`atomUseDofNumbers`). `0` es "sin numerar".
+   */
+  dofNumberX: number;
+  dofNumberZ: number;
+  dofNumberR: number;
 }
 
 export const seedNodeIds = {
@@ -45,6 +52,9 @@ const emptyLoads = {
   displacementX: 0,
   displacementZ: 0,
   displacementR: 0,
+  dofNumberX: 0,
+  dofNumberZ: 0,
+  dofNumberR: 0,
 };
 
 const fixed = { restrainedX: true, restrainedZ: true, restrainedR: true };
@@ -63,7 +73,11 @@ const initialNodes: NodeRow[] = [
   { id: seedNodeIds.v4, name: "v4", x: 5, z: 0, ...emptyLoads, ...fixed },
 ];
 
-const atomNodesBase = atom<NodeRow[]>(initialNodes);
+/** El ejemplo inicial, siempre en una copia nueva. */
+export const seedNodes = (): NodeRow[] => initialNodes.map((n) => ({ ...n }));
+
+// Exportado para `dof-order.ts`, que siembra la numeración al encenderla.
+export const atomNodesBase = atom<NodeRow[]>(seedNodes());
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
@@ -97,7 +111,7 @@ export const atomRemoveNode = atom(null, (get, set, id: string) => {
   );
 });
 
-type NumericField =
+export type NodeNumericField =
   | "x"
   | "z"
   | "forceX"
@@ -105,14 +119,17 @@ type NumericField =
   | "momentR"
   | "displacementX"
   | "displacementZ"
-  | "displacementR";
+  | "displacementR"
+  | "dofNumberX"
+  | "dofNumberZ"
+  | "dofNumberR";
 
 export const atomUpdateNodeField = atom(
   null,
   (
     get,
     set,
-    input: { id: string; field: "name"; value: string } | { id: string; field: NumericField; value: number },
+    input: { id: string; field: "name"; value: string } | { id: string; field: NodeNumericField; value: number },
   ) => {
     set(
       atomNodesBase,
@@ -126,19 +143,24 @@ export const atomUpdateNodeField = atom(
   },
 );
 
-const restrainedFieldByAxis = {
+/** Mapas eje → campo: la tabla itera los ejes en vez de repetir el JSX por eje. */
+export const coordinateFieldByAxis = { x: "x", z: "z" } as const;
+
+export const restrainedFieldByAxis = {
   x: "restrainedX",
   z: "restrainedZ",
   r: "restrainedR",
 } as const;
 
-const forceFieldByAxis = { x: "forceX", z: "forceZ", r: "momentR" } as const;
+export const forceFieldByAxis = { x: "forceX", z: "forceZ", r: "momentR" } as const;
 
-const displacementFieldByAxis = {
+export const displacementFieldByAxis = {
   x: "displacementX",
   z: "displacementZ",
   r: "displacementR",
 } as const;
+
+export const dofNumberFieldByAxis = { x: "dofNumberX", z: "dofNumberZ", r: "dofNumberR" } as const;
 
 export const atomToggleNodeRestrained = atom(
   null,

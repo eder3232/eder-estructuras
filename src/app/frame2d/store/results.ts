@@ -19,6 +19,7 @@ import {
 } from "@/lib/engine";
 import { atomNodes, type NodeRow } from "./nodes";
 import { atomElements, type ElementRow } from "./elements";
+import { atomRestrainedFirst, atomUseDofNumbers } from "./dof-order";
 import { atomLoads, toMemberLoad, type LoadRow } from "./loads";
 
 import type { DomainError, DomainIssue } from "@/components/custom/errors-panel";
@@ -176,6 +177,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
         restrained: [node.restrainedX, node.restrainedZ, node.restrainedR],
         force: [node.forceX, node.forceZ, node.momentR],
         displacement: [node.displacementX, node.displacementZ, node.displacementR],
+        dofNumbers: [node.dofNumberX, node.dofNumberZ, node.dofNumberR],
       });
     } catch (e) {
       errors.push({
@@ -222,7 +224,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
   }
 
   try {
-    const solved = system.solve();
+    const solved = system.solve({ restrainedFirst: get(atomRestrainedFirst), useDofNumbers: get(atomUseDofNumbers) });
     return {
       status: "ok",
       solved,

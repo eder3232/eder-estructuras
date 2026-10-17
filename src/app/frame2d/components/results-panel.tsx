@@ -1,17 +1,22 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useAtom } from "jotai";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui-custom/accordion";
 import { CompactNumbersControl } from "@/components/custom/compact-numbers-control";
 import { DecimalsControl } from "@/components/custom/decimals-control";
+import { DecimalsScope } from "@/components/custom/decimals-scope";
 import { DofOrderTable } from "@/components/custom/dof-order-table";
+import { SectionDecimals } from "@/components/custom/section-decimals";
 import { NoResults } from "@/components/custom/no-results";
 import { atomElements, type ElementRow } from "../store/elements";
 import { atomResults, type Frame2DResults } from "../store/results";
 import { dofLabels } from "../store/nodes";
 import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
+import { DofOrderControl } from "./results/dof-order-control";
+import { EquilibriumBadge, EquilibriumSection } from "./results/equilibrium-check";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { MechanismExplanation } from "./results/mechanism-explanation";
@@ -112,59 +117,79 @@ function SolvedResults({
   const { solved, nodesById } = results;
   const { assembly } = solved;
 
+  /** Una sección del acordeón con su propio alcance de decimales (D8): página → sección → tabla. */
+  const section = (id: string, title: ReactNode, body: ReactNode, label?: string) => (
+    <AccordionItem value={id}>
+      <AccordionTrigger>{title}</AccordionTrigger>
+      <AccordionContent>
+        <DecimalsScope id={id}>
+          <div className="flex flex-col gap-6">
+            {label ? <SectionDecimals label={label} hint={false} /> : <SectionDecimals />}
+            {body}
+          </div>
+        </DecimalsScope>
+      </AccordionContent>
+    </AccordionItem>
+  );
+
   return (
     // Techo a toda la prosa del panel: la página es ancha para las matrices,
     // no para los renglones (ver `/armaduras-2d`).
-    <div className="[&_p]:max-w-3xl">
-      <Accordion type="multiple" defaultValue={["dof"]}>
-        <AccordionItem value="dof">
-          <AccordionTrigger>1. Grados de libertad y matrices locales</AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-6">
-            <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
-            <LocalStiffnessList elements={elements} nodesById={nodesById} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="assembly">
-          <AccordionTrigger>2. Ensamblaje de la matriz global</AccordionTrigger>
-          <AccordionContent>
-            <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="partition">
-          <AccordionTrigger>3. Partición y solución</AccordionTrigger>
-          <AccordionContent>
-            <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="internal">
-          <AccordionTrigger>4. Fuerzas internas</AccordionTrigger>
-          <AccordionContent>
+    <DecimalsScope id="frame2d">
+      <div className="[&_p]:max-w-3xl">
+        <Accordion type="multiple" defaultValue={["dof"]}>
+          {section(
+            "dof",
+            "1. Grados de libertad y matrices locales",
+            <>
+              <div className="flex max-w-5xl flex-col gap-3">
+                <DofOrderControl />
+                <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
+              </div>
+              <LocalStiffnessList elements={elements} nodesById={nodesById} />
+            </>,
+          )}
+          {section(
+            "assembly",
+            "2. Ensamblaje de la matriz global",
+            <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />,
+          )}
+          {section("partition", "3. Partición y solución", <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />)}
+          {section(
+            "internal",
+            "4. Fuerzas internas",
             <InternalForcesTable
               elements={elements}
               internalForces={solved.internalForces}
               displacements={solved.displacements}
               nodesById={nodesById}
-            />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="diagrams">
-          <AccordionTrigger>5. Diagramas de fuerza axial, cortante y momento</AccordionTrigger>
-          <AccordionContent>
-            <MemberDiagrams elements={elements} nodesById={nodesById} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="deformed">
-          <AccordionTrigger>6. Forma deformada</AccordionTrigger>
-          <AccordionContent>
-            <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+            />,
+          )}
+          {section(
+            "diagrams",
+            "5. Diagramas de fuerza axial, cortante y momento",
+            <MemberDiagrams elements={elements} nodesById={nodesById} />,
+            "Decimales de las etiquetas:",
+          )}
+          {section(
+            "deformed",
+            "6. Forma deformada",
+            <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />,
+            "Decimales de las etiquetas:",
+          )}
+          {section(
+            "equilibrium",
+            // El veredicto en el título: "¿puedo confiar en esto?" se contesta sin desplegar nada.
+            <span className="flex flex-wrap items-center gap-3">
+              7. Verificación de equilibrio
+              <EquilibriumBadge equilibrium={solved.equilibrium} />
+            </span>,
+            // Sin el tope de `max-w-5xl` de las armaduras: con tres componentes
+            // por nudo son 13 columnas numéricas y la de la suma quedaba tapada.
+            <EquilibriumSection equilibrium={solved.equilibrium} nodesById={nodesById} />,
+          )}
+        </Accordion>
+      </div>
+    </DecimalsScope>
   );
 }

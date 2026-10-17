@@ -85,6 +85,7 @@ export function EquilibriumSection({
   vocabulary,
   equation,
   howElementsPull,
+  structureTotal,
 }: {
   equilibrium: EquilibriumCheck;
   nodeName: (nodeId: string) => string;
@@ -95,6 +96,13 @@ export function EquilibriumSection({
   equation: string;
   /** El párrafo que dice qué fuerza hace cada elemento sobre sus nudos. */
   howElementsPull: ReactNode;
+  /**
+   * Cuando la fila de toda la estructura **no** es la suma de las columnas de
+   * cargas y reacciones. En un pórtico no lo es: entran las cargas a lo largo
+   * de las barras y la suma de momentos lleva brazos de palanca. Ahí la fila
+   * muestra solo el residuo global, y el párrafo de abajo dice por qué.
+   */
+  structureTotal?: { note: string; explanation: ReactNode };
 }) {
   const decimals = useDecimals();
   const tolerance = Math.max(EQUILIBRIUM_TOLERANCE * equilibrium.scale, 1e-9);
@@ -121,13 +129,17 @@ export function EquilibriumSection({
     );
 
   /** Las celdas de un grupo: la primera lleva el borde que separa grupos. */
-  const cells = (values: readonly number[], render: (value: number) => ReactNode = (v) => v.toFixed(decimals)) =>
+  // Un valor que se redondea a cero se escribe sin signo: «−0.0000» es ruido de
+  // punto flotante que, escrito, parece un dato (se vio en los momentos de los
+  // nudos libres de `/frame2d`).
+  const show = (v: number) => (Number(v.toFixed(decimals)) === 0 ? (0).toFixed(decimals) : v.toFixed(decimals));
+  const cells = (values: readonly number[], render: (value: number) => ReactNode = show) =>
     values.map((value, i) => (
       <TableCell key={i} className={`text-right tabular-nums ${i === 0 ? "border-l" : ""}`}>
         {render(value)}
       </TableCell>
     ));
-  const totalCells = (values: readonly number[], render: (value: number) => ReactNode = (v) => v.toFixed(decimals)) =>
+  const totalCells = (values: readonly number[], render: (value: number) => ReactNode = show) =>
     values.map((value, i) => (
       <TableCell key={i} className={`${TOTAL} text-right tabular-nums ${i === 0 ? "border-l" : ""}`}>
         {render(value)}
@@ -192,28 +204,32 @@ export function EquilibriumSection({
             <TableRow className="font-medium">
               <TableCell className={TOTAL}>Toda la estructura</TableCell>
               <TableCell
-                colSpan={axes.length}
+                colSpan={structureTotal ? axes.length * 3 : axes.length}
                 className={`${TOTAL} border-l text-center text-xs text-muted-foreground`}
               >
-                se cancelan
+                {structureTotal?.note ?? "se cancelan"}
               </TableCell>
-              {totalCells(appliedTotal)}
-              {totalCells(reactionTotal)}
+              {!structureTotal && totalCells(appliedTotal)}
+              {!structureTotal && totalCells(reactionTotal)}
               {totalCells(equilibrium.global, residualCell)}
             </TableRow>
           </TableBody>
         </Table>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">
-          Por qué la última fila no tiene columna de {vocabulary.many}:
-        </span>{" "}
-        cada {vocabulary.one} tira de sus dos nudos con fuerzas
-        iguales y opuestas, así que al sumar toda la estructura se cancelan de a pares. Lo que queda es lo que entra y
-        sale del sistema — las cargas y las reacciones—, y por eso ese control se puede hacer sin resolver nada. Es
-        también la razón por la que un apoyo de más no cambia la suma: cambia el reparto.
-      </p>
+      {structureTotal ? (
+        <p className="text-sm text-muted-foreground">{structureTotal.explanation}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">
+            Por qué la última fila no tiene columna de {vocabulary.many}:
+          </span>{" "}
+          cada {vocabulary.one} tira de sus dos nudos con fuerzas
+          iguales y opuestas, así que al sumar toda la estructura se cancelan de a pares. Lo que queda es lo que entra
+          y sale del sistema — las cargas y las reacciones—, y por eso ese control se puede hacer sin resolver nada. Es
+          también la razón por la que un apoyo de más no cambia la suma: cambia el reparto.
+        </p>
+      )}
 
       <p className="text-sm text-muted-foreground">
         {equilibrium.ok ? (

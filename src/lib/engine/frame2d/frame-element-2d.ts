@@ -50,6 +50,7 @@ function toVector({ from, to }: FrameEndForcePair): number[] {
  */
 export class FrameElement2D implements Element {
   readonly nodeIds: readonly [string, string];
+  readonly nodePositions: readonly [{ x: number; z: number }, { x: number; z: number }];
   readonly length: number;
   private readonly cos: number;
   private readonly sin: number;
@@ -78,6 +79,10 @@ export class FrameElement2D implements Element {
     }
 
     this.nodeIds = [from.id, to.id];
+    this.nodePositions = [
+      { x: from.x, z: from.z },
+      { x: to.x, z: to.z },
+    ];
 
     const dx = to.x - from.x;
     const dz = to.z - from.z;

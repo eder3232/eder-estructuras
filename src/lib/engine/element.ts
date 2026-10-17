@@ -17,4 +17,12 @@ export interface Element {
    * sus 2 nodos. La forma del resultado la decide cada Element concreto.
    */
   internalForce(nodeDisplacements: [number[], number[]]): unknown;
+
+  /**
+   * Solo pórticos planos (grados de libertad `[x, z, θ]` por nudo): dónde
+   * están sus dos nudos. El equilibrio global de un pórtico necesita brazos de
+   * palanca —la suma de momentos se toma respecto de un punto—, y el motor no
+   * guarda coordenadas en ningún otro lado.
+   */
+  readonly nodePositions?: readonly [{ x: number; z: number }, { x: number; z: number }];
 }

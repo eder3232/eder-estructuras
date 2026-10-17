@@ -243,6 +243,31 @@ Lo que encontró mirarlo, **midiendo sobre el SVG**:
 
 Lo que **no** se miró: la deformada en oscuro (el trazo es `stroke-foreground`, el mismo de las barras del esquema), y un pórtico inclinado en pantalla.
 
+### Paso 6: lo genérico de los otros sistemas (2026-10-17) — hecho
+
+- **Nudos**: encabezados en dos niveles (U1) con los grupos propios de un pórtico —Coordenadas tiene dos ejes, el resto tres, y el tercero dice `M` en las fuerzas y `θ` en desplazamientos, restricciones y numeración—; insertar fila (D7); **numeración manual de grados de libertad (M1b)**, rescatada del original (`areDofDefinedByUser`). Medido: la tabla entra justo en 1296 px sin valores cortados.
+- **Barras**: insertar fila (D7) y **«Aplicar a las n barras»** con A, I y E (el `changePropertiesForAllEdges` del original).
+- **Orden de grados de libertad (M1a)**: «los restringidos van arriba», en la sección 1, rescatado (`areRestrictedsOnTop`).
+- **Clasificación** `g = 3b + r − 3n` entre el esquema y los resultados, con el veredicto cruzado con el motor. El pórtico inicial da `9 + 6 − 12 = 3`, hiperestático; con articulado y móvil, 0.
+- **Nota de unidades (U5)** con el ejemplo de pórticos (inercia en m⁴, momentos en tonf·m, giros en radianes) y su error típico: la inercia en cm⁴ de una tabla de perfiles con coordenadas en metros, 10⁸.
+- **Cascada de decimales (D8)** por sección (`DecimalsScope` en cada sección del acordeón); la tabla de fuerzas internas lee `useDecimals`. El stepper **por tabla** llega con las matrices del paso 7 — hasta entonces el texto de la sección lo menciona sin que exista.
+- El acordeón pasó al de `ui-custom/` (el contenido puede crecer después de abierto: la sección de diagramas cambia de alto al cambiar de barra o de esfuerzo).
+- **Verificación de equilibrio (N5)**, sección 7, con el sello en el título.
+
+**Lo que encontró** — dos bugs del motor que estaban escondidos porque `/frame2d` nunca mostró esta verificación:
+
+1. **El equilibrio global de un pórtico daba siempre «no cierra»**, aun con el pórtico inicial sin cargas en barras: sumaba los momentos de los nudos como una componente más, sin brazos de palanca (con dos empotramientos, 4.58 + 4.60 = 9.19 de «residuo»). Ahora la tercera componente global es **ΣM respecto del origen**: `Element` ganó `nodePositions` opcional (solo lo tiene `FrameElement2D`; armaduras y resortes no cambian) y las cargas de barra entran por su carga nodal equivalente, que tiene la misma resultante.
+2. **La columna «carga» del nudo incluía la carga equivalente de las barras**, y la fuerza de cada barra sobre el nudo era solo `−k·u`. La suma daba igual, pero el alumno veía en un nudo una carga que nunca puso, y fuerzas de barra que no eran las de la tabla de fuerzas internas. Ahora cada barra aporta su **fuerza de extremo verdadera** `−(k·u + Tᵀ·FEM)` y la carga del nudo es solo la del nudo: el diagrama de cuerpo libre de verdad.
+- Por lo mismo, el texto genérico de la fila final («las barras se cancelan de a pares») era falso en un pórtico: `EquilibriumSection` ganó `structureTotal`, y en `/frame2d` esa fila muestra solo el residuo global, con un párrafo que explica por qué (una barra cargada no tira igual de sus dos extremos, y sus momentos se equilibran con el corte por el largo).
+
+Lo que encontró mirarlo:
+
+- **La fórmula de la clasificación salía «3cdot3»**: al escribir el archivo con un heredoc de bash se perdió una barra del `\\cdot` dentro del template literal. Verificado en el DOM de KaTeX que ahora es `3⋅3`.
+- La tabla de equilibrio se cortaba con el tope `max-w-5xl` de las armaduras (13 columnas numéricas): sin el tope, entra.
+- **«−0.0000»** en los momentos de los nudos libres: ruido redondeado con signo. El componente genérico ahora escribe sin signo lo que se redondea a cero (alcanza a los cuatro sistemas).
+
+Tests: 2 del motor (cuerpo libre de un pórtico cargado; una reacción de momento que sobra no pasa el control global) y 8 del store (equilibrio del inicial y del cargado, clasificación, orden, numeración, «aplicar a todas», insertar). Suite: 471, `tsc` limpio, lint con los 2 de siempre.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.
