@@ -13,11 +13,11 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 
 ### Estado y próximo paso
 
-> **Al 2026-10-17, los cuatro sistemas base están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d` y `/frame2d`. **En curso: `frame2d-seismic`**, como extensión de `/frame2d` y no como copia: casos de carga, combinaciones E.060 y envolvente, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación y las derivas.
+> **Al 2026-10-17, los cinco sistemas están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d`, `/frame2d` y `/frame2d-seismic` (este último, como extensión de `/frame2d` y no como copia: casos de carga, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación, las derivas, las combinaciones E.060 y la envolvente).
 >
-> **Lo siguiente es el primer paso pendiente del plan**, en la sección 6 de [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md).
+> **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue** (las fases 6 a 8 del roadmap; ver la sección 3 de [`docs/estado-actual.md`](./docs/estado-actual.md)).
 >
-> Al cierre todo pasa: 518 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
+> Al cierre todo pasa: 608 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
 
 ## Las páginas
 
@@ -27,7 +27,7 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 | [`/armaduras-2d`](./src/app/armaduras-2d) | Armaduras planas (el sistema de referencia: todo se probó acá primero) | 2 | [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md) |
 | [`/armaduras-3d`](./src/app/armaduras-3d) | Armaduras espaciales, escena en three.js | 3 (traslaciones) | [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) |
 | [`/frame2d`](./src/app/frame2d) | Pórticos planos con cargas en barras, FEM calculado y diagramas N/V/M | 3 (con giro) | [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) |
-| [`/frame2d-seismic`](./src/app/frame2d-seismic) | Pórticos con análisis sísmico: casos de carga, E.030, diafragma rígido, rigidez lateral, derivas, combinaciones E.060 y envolvente (**en curso**) | 3, con un desplazamiento lateral por piso | [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md) |
+| [`/frame2d-seismic`](./src/app/frame2d-seismic) | Pórticos con análisis sísmico: casos de carga, E.030, diafragma rígido, rigidez lateral, derivas, combinaciones E.060 y envolvente | 3, con un desplazamiento lateral por piso | [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md) |
 | [`/estabilidad`](./src/app/estabilidad) | Teoría: por qué `K` es singular sin apoyos, y qué hace un programa de verdad | — | — |
 
 Cada sistema tiene: tablas de datos con fórmulas, clasificación de la estructura, esquema, resultados pedagógicos por acordeón (ensamblaje paso a paso, partición, solución, fuerzas internas, equilibrio), modo práctica, ejemplos precargados, persistencia en el navegador y exportación a Excel con el método vivo. La tabla completa de qué tiene cada uno está en la sección 2 de [`docs/estado-actual.md`](./docs/estado-actual.md).
@@ -69,7 +69,7 @@ Cómo verificar más allá de los tests (mirar la app con el MCP `chrome-devtool
 ```
 src/
   app/
-    <sistema>/            # springs, armaduras-2d, armaduras-3d, frame2d
+    <sistema>/            # springs, armaduras-2d, armaduras-3d, frame2d, frame2d-seismic
       page.tsx
       store/              # átomos de Jotai (datos planos), resultados derivados, ejemplos, persistencia
       components/         # tablas, esquema y panel de resultados del sistema
@@ -83,7 +83,8 @@ src/
   lib/
     engine/               # motor puro: Node/Element/System, un elemento por sistema
                           # (springs, trusses-2d, trusses-3d, frame2d con cargas en barras),
-                          # equilibrio, clasificación, mecanismos, factorización
+                          # equilibrio, clasificación, mecanismos, factorización;
+                          # seismic/: E.030, condensación, derivas, combinaciones
     excel/                # armado de los libros .xlsx con fórmulas vivas
   hooks/
 docs/                     # ver abajo
@@ -104,7 +105,7 @@ La regla que sostiene todo: **el motor es puro y es la única fuente de verdad**
 - [`docs/springs-v1.md`](./docs/springs-v1.md) — `/springs`.
 - [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) — `/armaduras-3d`, con las recetas para capturar WebGL en headless y verificar el Excel por COM.
 - [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) — `/frame2d`: las trece fallas del original en cargas y diagramas, **la convención de signos** (Hibbeler/Beer, sección 4), las cargas en barras con su FEM, los diagramas N/V/M y la deformada exactos.
-- [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md) — `frame2d-seismic` (**en curso**): los bugs del original, **la E.030 2026 y la E.060 leídas en los PDF oficiales** (artículo por artículo, con lo que el pórtico plano no puede representar), el alcance y el plan.
+- [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md) — `/frame2d-seismic`: los bugs del original, **la E.030 2026 y la E.060 leídas en los PDF oficiales** (artículo por artículo, con lo que el pórtico plano no puede representar), el alcance y el plan.
 
 **Patrones y convenciones** (leer antes de tocar esa parte)
 - [`docs/state-pattern.md`](./docs/state-pattern.md) — el patrón de estado (Jotai + motor puro) y de resultados pedagógicos; **antes de construir o cerrar un sistema**.

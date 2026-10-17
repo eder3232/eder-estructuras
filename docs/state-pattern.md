@@ -196,6 +196,16 @@ El cuarto sistema tampoco tocó el patrón, y es el que mejor muestra dónde est
 
 La visualización, que sí cambió de tecnología, está en [`docs/diagram-3d-pattern.md`](./diagram-3d-pattern.md).
 
+## Lo que agregó frame2d-seismic (reusar un sistema sin copiarlo, Tren C)
+
+`/frame2d-seismic` **no copia** `/frame2d`: lo reusa entero con dos piezas, una para cada mitad (detalle en el paso 3 de [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md)).
+
+- **Lo que se edita se aísla con un `Provider` de Jotai.** Los átomos son claves y los valores viven en el store, así que la página monta su propio store (`createSeismicStore`) y reusa tal cual los átomos de nudos, barras y cargas, sus acciones y sus tablas. **Cuidado**: esos átomos traen como valor inicial lo guardado de `/frame2d` (se lee al importar el módulo), así que el store nuevo tiene que **restaurar su propio modelo** antes de dibujar, y guardar con su propia clave.
+- **Lo que se muestra pasa por un contexto** (`frame2d-view.tsx`): los componentes de resultados leen sus átomos de `useFrame2DView()`, cuyo valor por defecto son los de `/frame2d`. La página sísmica arma una `Frame2DView` **por caso** (CM, CV, CS) y muestra el procedimiento entero de cada uno con los mismos componentes.
+- **El cálculo es una función pura** (`solveFrame2D` y compañía), y el átomo de `/frame2d` solo la envuelve: así otro sistema la puede llamar con sus datos.
+
+Si un sistema futuro quiere extender otro, el orden probado es ese: primero sacar el cálculo a funciones puras, después el contexto de vista, y recién entonces el store propio.
+
 ## Checklist ejecutado para portar a armaduras 2D (referencia para el próximo sistema)
 
 Esto es lo que se siguió para dejar `/armaduras-2d` completo — ya hecho. Sirvió tal cual para `/frame2d` (Tren C), ajustando 3 DOF/nudo y rigidez con flexión. Se deja como referencia concreta de pasos para el próximo sistema que necesite este patrón.

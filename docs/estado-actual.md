@@ -1,10 +1,10 @@
-# Estado actual del proyecto (2026-10-17)
+# Estado actual del proyecto (2026-10-17, cierre de `frame2d-seismic`)
 
 > **Empezá acá si retomás en frío.** Este documento es el estado accionable: qué está hecho, qué falta, qué no está verificado y qué leer antes de tocar cada cosa. El README es el mapa del proyecto (páginas, estructura, qué doc leer); la lista de avances está en [`historial.md`](./historial.md); el roadmap ([`refactor-roadmap.md`](./refactor-roadmap.md)) tiene el diagnóstico del proyecto original y la historia hasta el 2026-08-14.
 
 ## 1. Dónde está parado
 
-**El objetivo es terminar la v1**, sistema por sistema. **Los cuatro sistemas base están cerrados para la v1**:
+**El objetivo es terminar la v1**, sistema por sistema. **Los cinco sistemas están cerrados para la v1** (el último, `frame2d-seismic`, el 2026-10-17):
 
 | Sistema | Cerrado | Detalle |
 |---|---|---|
@@ -12,11 +12,11 @@
 | `/springs` | 2026-10-14 | [`springs-v1.md`](./springs-v1.md) |
 | `/armaduras-3d` | 2026-10-16 | [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) |
 | `/frame2d` | 2026-10-17 | [`frame2d-v1.md`](./frame2d-v1.md) |
-| `frame2d-seismic` | **en curso** desde el 2026-10-17 | [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md), ver sección 3 |
+| `/frame2d-seismic` | 2026-10-17 | [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md) (la E.030 2026 y la E.060, leídas en los PDF oficiales, en su sección 3) |
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
-**La tarea en curso es `frame2d-seismic`**: el usuario decidió el alcance el 2026-10-17 y el plan está en la sección 6 de [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md). **Lo siguiente es el primer paso del plan que figure como pendiente.** `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
+**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario qué sigue**: con los sistemas cerrados quedan las fases 6 a 8 del roadmap (sección 3), y antes de la 8 conviene decidir S2 y N6. `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
 
 ## 2. Qué tiene cada sistema
 
@@ -52,22 +52,27 @@ Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 | **Diagramas N, V, M** | — | — | — | ✅ (solo pórticos) |
 | **Deformada real entre nudos** | — recta es exacta | — | — recta es exacta | ✅ (solo pórticos) |
 
+**`/frame2d-seismic` no tiene columna propia** porque el procedimiento de cada caso es el de `/frame2d` (los mismos componentes, con la vista de ese caso): tiene todo lo de esa columna salvo **la clasificación** (con el diafragma la cuenta `3b + r − 3n` no vale, y no se muestra) y **el FEM a mano** (no tiene caso). Lo propio: casos de carga, la E.030 paso a paso, diafragma rígido, rigidez lateral por condensación, derivas, combinaciones E.060 editables, envolvente dibujada, tres ejemplos y Excel con el sismo vivo.
+
 ## 3. Lo que falta para la v1
 
-### `frame2d-seismic`
+**De los sistemas, nada**: los cinco están cerrados.
 
-**En curso.** Todo está en [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md): los bugs del original (S1 a S9: los factores 1.4/1.7 nunca entraban al cálculo, no había combinaciones de norma, la «envolvente» comparaba contra un solo número y nunca se dibujaba), la normativa leída en los PDF oficiales (**E.030 2026**, modificada por la RM 183-2026-VIVIENDA, y **E.060 2009**), el alcance y el plan por pasos.
+### `frame2d-seismic` (cerrado el 2026-10-17)
+
+**Cerrado.** Todo está en [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md): los bugs del original (S1 a S9: los factores 1.4/1.7 nunca entraban al cálculo, no había combinaciones de norma, la «envolvente» comparaba contra un solo número y nunca se dibujaba), la normativa leída en los PDF oficiales (**E.030 2026**, modificada por la RM 183-2026-VIVIENDA, y **E.060 2009**), el alcance y el plan por pasos.
 
 Resumen del alcance (decidido por el usuario el 2026-10-17):
 
 - **Entran los tres niveles**: casos CM/CV/CS con combinaciones y envolvente; el generador sísmico estático E.030 (V = ZUCS/R·P, αᵢ, Fᵢ); y **diafragma rígido, rigidez lateral por condensación estática y derivas**.
 - **Las combinaciones vienen de la E.060 por defecto** (1.4CM+1.7CV, 1.25(CM+CV)±CS, 0.9CM±CS) y son editables.
 - Es **una extensión de `/frame2d`, no un fork**: los casos de carga son exclusivos de este módulo (decisión del 2026-10-17), y `/frame2d` no cambia de comportamiento.
-- **Toca el motor**: el diafragma hace que varios nudos compartan un índice global en `System` (paso 1 del plan).
+- **Tocó el motor**: el diafragma hace que varios nudos compartan un índice global en `System` (`addDiaphragm`), y `src/lib/engine/seismic/` tiene la E.030, la condensación, las derivas y las combinaciones (pasos 1 y 2).
+- **Tocó `/frame2d` sin cambiarle el comportamiento**: el cálculo salió a funciones puras y los componentes de resultados leen de `Frame2DViewProvider` (paso 3). Tres piezas genéricas ganaron algo opcional: la columna «Diafragma» del equilibrio, «todo el nivel» en la tabla de grados de libertad y `skipCrowdedLabels` en el dibujo de esfuerzos. Y el esquema plano esquiva choques del nombre de una barra (D17 a medias).
 
 Dos cosas de la norma que son fáciles de pasar por alto: para el cortante estático, C = 2.5 en todo 0 ≤ T ≤ T_P (18.3, el tramo nuevo 1 + 7.5T/T_P no aplica); y los desplazamientos se calculan **sin** el mínimo C/R ≥ 0.11 (50.3).
 
-### Después de los sistemas
+### Después de los sistemas: lo que hay que preguntarle al usuario
 
 Las fases 6 a 8 del roadmap: armaduras/pórticos plus (temperatura, defectos de fabricación, apoyos inclinados — la Fase 6, ver «v2» abajo), y el contenido educativo (Fase 8), que depende de **S2** (la navegación definitiva; hoy la navbar es provisional) y **N6** (contenido teórico enlazado), ver [`pendientes-comparacion.md`](./pendientes-comparacion.md).
 
@@ -79,6 +84,7 @@ Decidido por el usuario en cada cierre:
 - **`/springs`**: el esquema topológico (nudos en fila, resortes en zigzag, «no está a escala») y lo que depende de él: N3, N4, desplazamiento unitario y mecanismo dibujado.
 - **`/armaduras-3d`**: N4 (matriz ↔ modelo), desplazamiento unitario, Excel con imagen, `K` por bloques de nudo, D16 y vistas predefinidas (planta/elevación).
 - **`/frame2d`** (2026-10-17, delegado al criterio de estabilidad): N4, desplazamiento unitario, el ejercicio de calcular el FEM de una carga, los diagramas en el Excel y el Excel con imagen.
+- **`/frame2d-seismic`** (2026-10-17, sección 4 de su doc): el sismo vertical (artículo 38) como un cuarto caso, la alternancia de la carga viva (E.060 8.9), el análisis modal espectral (el paso natural después de la rigidez lateral), la separación entre edificios (artículo 52) y Z/U/S/R₀ como selectores de las tablas. Y detalles vistos: la clasificación con el diafragma, el diafragma dibujado en el esquema, nombre accesible en los campos de la E.030 (`FormulaInput` no acepta `aria-label`), la fila de un nivel que enciende solo su primer nudo, y «Procedimiento del caso …» es un `h2` adentro de la sección «1.», que también es `h2`.
 
 ## 5. Deudas abiertas
 
@@ -103,15 +109,15 @@ Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el r
 
 ## 6. Cómo verificar
 
-**Lo que pasa hoy** (2026-10-17, cierre de `/frame2d`):
+**Lo que pasa hoy** (2026-10-17, cierre de `/frame2d-seismic`):
 
 ```
-pnpm test          # 608 tests, 84 archivos (2026-10-17, paso 8 de frame2d-seismic)
+pnpm test          # 608 tests, 84 archivos
 npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
 
-**`pnpm build` compila limpio** (2026-10-17, después del commit del paso 10 de `/frame2d`): TypeScript sin errores y las siete rutas generadas como estáticas, `/armaduras-3d` y `/frame2d` con `exceljs` incluidas. Hay que correrlo con el servidor de desarrollo apagado.
+**`pnpm build` compila limpio** (2026-10-17, cierre de `/frame2d-seismic`): TypeScript sin errores y las ocho rutas generadas como estáticas, `/frame2d-seismic` incluida. Hay que correrlo con el servidor de desarrollo apagado. La revisión final de `/frame2d-seismic` se hizo **sobre la build de producción** (`pnpm start`), en claro y en oscuro.
 
 **Mirar la app.** El proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). La receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
 
@@ -124,6 +130,9 @@ Recetas que ya funcionaron con `chrome-devtools`:
 - **Los uid de una captura (`take_snapshot`) vencen** al cambiar la página: sacar una nueva antes de cada click. Guardarla a archivo (`filePath`) y buscar con `grep`: inline gasta miles de líneas.
 - **El hover de la herramienta no alcanza una barra del esquema** (una línea: caja de ancho o alto cero, «no interactiva»). Se verifica con un nudo, y la barra con el test de componentes.
 - **Medir superposiciones de texto** en un SVG: comparar los `getBoundingClientRect()` de todos los `text`, y contra el borde del `svg` para los que se salen.
+- **`FormulaInput` no se edita con `fill`**: el borrador vive en el estado del componente y el valor vuelve. Click, `Control+A`, `type_text` con `submitKey: Enter`.
+- **El menú «Ejemplos» (Base UI) desde un script**: despachar `pointerdown`, `mousedown`, `pointerup`, `mouseup` y `click` sobre el botón y después sobre el `[role=menuitem]`; `.click()` solo no lo abre.
+- **Abrir todas las secciones de un procedimiento**: solo `[data-slot=accordion-trigger][aria-expanded=false]`. Hacer click en todo lo que tenga `aria-expanded` abre también los diálogos de «Ver apilada».
 
 **Excel de verdad**: Excel 16 está instalado y se maneja por COM desde PowerShell. La receta y lo que se verificó están en [`excel-export.md`](./excel-export.md), en el paso 7 de [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) y en el paso 10 de [`frame2d-v1.md`](./frame2d-v1.md) (que deja el script de comparación descripto). Al leer un JSON con tildes en PowerShell 5.1, `Get-Content -Encoding UTF8`.
 
@@ -133,6 +142,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 - **Sobre una captura hay que medir, no mirar.** Para texto, la razón de contraste WCAG (4.5); la distancia RGB sirve para «¿esta zona se distingue?».
 - **Una lección de un ejemplo se mide antes de escribirla**: dos veces una lección supuesta resultó falsa (el asentamiento de la primera cercha de 2D y el del tetraedro de 3D).
 - **Un número de la pantalla tiene que poder rehacerse con los otros números de la pantalla**: así apareció que la tabla rotulada `K_ff⁻¹` mostraba `K_ff` en los cuatro sistemas.
+- **En un componente que importa `Math` de `custom/math`, el `Math` global no existe**: `Math.abs` rompe (tsc lo atrapa). Pasó dos veces en `frame2d-seismic`.
+- **Un carácter invisible no se escribe con `\u`**: Edit, Write y Python lo convierten en el carácter, y en el reemplazo de `sed` `\u` es «mayúscula siguiente». Usar `String.fromCharCode(0xa0)` con nombre (`NBSP`).
 - **TeX solo con Edit/Write**, nunca por el texto de un comando de shell: las barras invertidas dobles se pierden (rompió la partición en los cuatro sistemas, antes del commit). Después de tocar fórmulas, buscar `.katex-error` y TeX colado con todas las secciones abiertas.
 - **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia. HyperFormula lo reproduce, así que el test lo atrapa.
 - **Trampas que se repitieron**: lo que se dibuja en unidades del modelo y no en píxeles (un `stroke` sin `vector-effect`); el `uppercase` de `ui/` reescribiendo texto (KaTeX, títulos, menús); estrenar un componente de `ui/` que nadie usó; en three.js, un material que se atenúa tiene que nacer `transparent`; un bloque (`div`) dentro de un `<p>`, que la consola marca como error de hidratación.
@@ -159,7 +170,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | `frame2d-seismic`: el Excel con el sismo, la rigidez lateral y las combinaciones vivos (paso 8) |
+| (este) | `frame2d-seismic`: el cierre — `pnpm build`, la revisión en producción en claro y en oscuro, y los docs (paso 9) |
+| `60b8a0e` | `frame2d-seismic`: el Excel con el sismo, la rigidez lateral y las combinaciones vivos (paso 8) |
 | `9bc246b` | `frame2d-seismic`: tres ejemplos con lecciones medidas; los rótulos del esquema y de la envolvente que se pisaban (paso 7) |
 | `da6d48d` | `frame2d-seismic`: los resultados — procedimiento por caso, rigidez lateral, derivas y envolvente (paso 6) |
 | `e98b6ba` | `frame2d-seismic`: la página y las tablas, con el esquema por caso (paso 5) |

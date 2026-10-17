@@ -1,6 +1,6 @@
 # `frame2d-seismic` para la v1: revisión, normativa y alcance (2026-10-17)
 
-> **Estado: en curso (2026-10-17).** La revisión del original y de la normativa están hechas, el alcance lo decidió el usuario (sección 4) y el plan es la sección 6. Lo que todavía no se verificó está marcado **sin verificar**.
+> **Estado: terminado (2026-10-17).** `/frame2d-seismic` tiene todo lo acordado para la v1 y queda cerrado como los otros cuatro sistemas. El alcance lo decidió el usuario (sección 4); el avance paso por paso, con lo que encontró cada uno, es la sección 6; lo que queda para la v2, al final de la sección 4. Lo que no se pudo verificar está marcado **sin verificar** (la principal: que la E.060 2009 no tenga modificaciones posteriores).
 
 **Para qué existe el módulo.** Análisis Estructural 2 empieza con el análisis matricial de pórticos (`/frame2d`) y en la tercera fase pasa al análisis sísmico de edificios con la E.030: el cortante basal `V = ZUCS/R · P`, su reparto en altura, el sismo en los dos sentidos, las combinaciones de la E.060 y la envolvente para diseñar, y el control de derivas. El puente entre las dos partes es la **rigidez lateral** del pórtico, que sale por condensación estática. Este módulo es ese puente. **No** elige Z, U, S, R ni clasifica el suelo: esos parámetros los escribe el alumno (sección 3).
 
@@ -128,7 +128,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | **hecho** (ver abajo) |
 | 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | **hecho** (ver abajo) |
 | 8 | **Excel**: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores). Alcance confirmado por el usuario el 2026-10-17 | **hecho** (ver abajo) |
-| 9 | Mirar la app de punta a punta, `pnpm build` y el cierre | pendiente |
+| 9 | Mirar la app de punta a punta, `pnpm build` y el cierre | **hecho** (ver abajo) |
 
 **Sin verificar todavía**: que la E.060 2009 no tenga modificaciones posteriores, y cuál de las dos formas del paso 3 es la más chica.
 
@@ -327,4 +327,14 @@ Verificado:
 - **Trampa**: en un template de JS escrito desde un heredoc, `\${nombre}` no interpoló y la ruta del JSON salió con `${name}` literal. Mejor armar las rutas con `path.join`.
 
 Tests: 608 en total.
+
+### Paso 9: el cierre (2026-10-17) — hecho, y con él `/frame2d-seismic` queda cerrado para la v1
+
+- **`pnpm build`** compila limpio: las ocho rutas estáticas, `/frame2d-seismic` incluida.
+- **La revisión final se hizo sobre la build de producción** (`pnpm start`), con todas las secciones del procedimiento abiertas, sin nada guardado:
+  - **En claro**: 246 fórmulas sin `.katex-error`, 0 textos pisados en los 5 dibujos, sin scroll horizontal, la consola limpia. El rojo de «no cumple» mide 4.77:1 contra el fondo (WCAG pide 4.5).
+  - **En oscuro**: lo mismo, con el rojo a 6.85:1 y el texto más bajo de los dibujos (el azul de las cargas) a 5.26:1.
+- Los docs quedaron para retomar en frío: README, `estado-actual.md` (con lo de este módulo que queda para la v2), `historial.md`, el roadmap y `state-pattern.md` («Lo que agregó frame2d-seismic»).
+
+**Sin verificar, al cierre**: que la E.060 2009 no tenga modificaciones posteriores (por eso las combinaciones son editables); el hover de la tabla de niveles con el mouse de verdad.
 
