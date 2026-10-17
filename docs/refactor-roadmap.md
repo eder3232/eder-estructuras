@@ -2,7 +2,7 @@
 
 Este documento diagnostica el estado real de `thesis-structures` (el proyecto anterior, en `D:\programming\repos_clonados\thesis-structures`) y propone un orden concreto para refactorizarlo en este repo. Es un plan vivo: se actualiza a medida que cada fase se completa o cambia de alcance.
 
-> **¿Retomando el trabajo en frío?** El estado actual (2026-10-16) está en el **README, sección «Próximo paso»**: la tarea anotada es el paso 7 de [`docs/armaduras-3d-v1.md`](./armaduras-3d-v1.md). La sección **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** de este archivo es del 2026-08-14 y sirve por el porqué de las decisiones y la historia de la verificación. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
+> **¿Retomando el trabajo en frío?** El estado actual (2026-10-16) está en el **README, sección «Próximo paso»**: `/armaduras-2d`, `/springs` y `/armaduras-3d` están cerradas para la v1, y lo que sigue (`/frame2d` o `frame2d-seismic`) lo elige el usuario. La sección **[Si estás retomando después de un `/clear`](#si-estás-retomando-después-de-un-clear)** de este archivo es del 2026-08-14 y sirve por el porqué de las decisiones y la historia de la verificación. El resto de este archivo es el porqué de las decisiones, útil pero no urgente.
 
 ## Resumen ejecutivo
 
@@ -167,7 +167,7 @@ Dos cosas que el port mejora respecto del original, además del motor compartido
 
 ## Si estás retomando después de un `/clear`
 
-> **Esta sección quedó en el 2026-08-14.** Desde entonces se cerraron `/armaduras-2d` y `/springs` para la v1 (2026-10-14) y está en curso `/armaduras-3d`, a la que le falta el paso 7 (Excel). **El estado actual está en el README («Próximo paso») y en [`docs/armaduras-3d-v1.md`](./armaduras-3d-v1.md)**; lo de abajo sirve como historia y por el porqué de las decisiones. Y para mirar la app ya no hace falta la receta headless del punto 5: el proyecto tiene configurado el servidor MCP `chrome-devtools`, que hace click y hover de verdad.
+> **Esta sección quedó en el 2026-08-14.** Desde entonces se cerraron para la v1 `/armaduras-2d` y `/springs` (2026-10-14) y `/armaduras-3d` (2026-10-16). **El estado actual está en el README («Próximo paso») y en [`docs/armaduras-3d-v1.md`](./armaduras-3d-v1.md)**; lo de abajo sirve como historia y por el porqué de las decisiones. Y para mirar la app ya no hace falta la receta headless del punto 5: el proyecto tiene configurado el servidor MCP `chrome-devtools`, que hace click y hover de verdad.
 
 Todo lo que hace falta para seguir está en esta sección. Última actualización: **2026-08-14, cierre de `/armaduras-2d`**.
 

@@ -1,6 +1,6 @@
 # Exportación a Excel con el método vivo (Fase 7)
 
-> **Estado (2026-10-14): terminada en `/armaduras-2d` y en `/springs`** (resortes sin imagen: no tienen geometría). Las hojas Ensamblaje y Solución y el botón son comunes a los dos (`matrix-method-sheets.ts`, `custom/excel-export-button.tsx`); cada sistema pone su hoja Datos, la de sus elementos y Resultados. La primera versión, en armaduras, — botón «Descargar Excel» en el encabezado, libro con el método vivo e imagen del esquema, verificado de punta a punta (app → descarga → Excel). Falta propagarla a los otros tres sistemas con el hilo C; el diseño ya es genérico para eso.
+> **Estado (2026-10-16): terminada en `/armaduras-2d`, `/springs` y `/armaduras-3d`** (resortes y armaduras 3D sin imagen: los resortes no tienen geometría, y en 3D los nombres de la escena no están en el lienzo WebGL). Falta `/frame2d`. El libro de 3D y su verificación están en el paso 7 de [`armaduras-3d-v1.md`](./armaduras-3d-v1.md): 12 440 celdas contra Excel por COM, 0 diferencias, y un libro bajado desde la app con el botón real. Las hojas Ensamblaje y Solución y el botón son comunes a los dos (`matrix-method-sheets.ts`, `custom/excel-export-button.tsx`); cada sistema pone su hoja Datos, la de sus elementos y Resultados. La primera versión, en armaduras, — botón «Descargar Excel» en el encabezado, libro con el método vivo e imagen del esquema, verificado de punta a punta (app → descarga → Excel). Falta propagarla a los otros tres sistemas con el hilo C; el diseño ya es genérico para eso.
 
 ## Qué hace
 
@@ -22,6 +22,7 @@ Genera un `.xlsx` **sin macros** donde el método matricial sigue vivo: coordena
 | `src/lib/excel/springs-workbook.ts` | El libro de `/springs`: Datos, Resortes, las dos comunes y Resultados. |
 | `src/lib/excel/testing/expectations.ts` | Solo tests: recorrer todo lo que calcula un libro y compararlo recalculado. |
 | `src/lib/excel/truss-2d-workbook.ts` | Arma el modelo de una armadura 2D a partir de los nudos, las barras y el `SolveResult`. Hojas: Datos, Barras, Ensamblaje, Solución, Resultados. |
+| `src/lib/excel/truss-3d-workbook.ts` | El de una armadura espacial: el de 2D con un eje más (tres cosenos, `A` de 6×2, `K` de barra de 6×6). Mismas hojas, sin imagen. |
 | `src/lib/excel/write-xlsx.ts` | El único que conoce a `exceljs`. Lo carga con `import()` (pesa ~250 KB gzip). |
 | `src/lib/excel/testing/recalculate.ts` | Solo tests: recalcula el modelo con HyperFormula (GPL-3, dependencia de desarrollo), con `MINVERSE` registrado a mano porque no la trae. |
 | `src/components/custom/diagram-2d/schema-png.tsx` | El `SchemaDiagram` de la pantalla como PNG, en tema claro, dibujado en un iframe oculto. Genérico para los sistemas planos. |
@@ -51,7 +52,7 @@ Genera un `.xlsx` **sin macros** donde el método matricial sigue vivo: coordena
 
 ## Lo que falta
 
-- **Propagar** a `/springs`, `/frame2d` y `/armaduras-3d` (hilo C). Lo genérico ya está (`workbook-model`, `write-xlsx`, `schema-png` para los planos, `AssemblyStep.dofs` en el motor); cada sistema necesita su propio armado como `truss-2d-workbook.ts`, porque cambia la rigidez de la barra (`frame2d` tiene 6×6 y momentos de empotramiento; `springs` no tiene transformación) y `armaduras-3d` no tiene esquema SVG sino three.js.
+- **Propagar** a `/frame2d` (`/springs` y `/armaduras-3d` ya lo tienen). Lo genérico ya está (`workbook-model`, `write-xlsx`, `schema-png` para los planos, `AssemblyStep.dofs` en el motor); cada sistema necesita su propio armado como `truss-2d-workbook.ts`, porque cambia la rigidez de la barra (`frame2d` tiene 6×6 y momentos de empotramiento; `springs` no tiene transformación) y `armaduras-3d` no tiene esquema SVG sino three.js.
 - La imagen **incluye los apoyos** (decisión del usuario: son fijos en el libro, así que el dibujo no se desactualiza) y **no las cargas** (se editan en el libro).
 
 Detalles chicos vistos y no resueltos: el ruido numérico (`-2.22E-15` donde va 0) sale tal cual lo calcula Excel; la nota de una línea de Datos queda con alto de dos.

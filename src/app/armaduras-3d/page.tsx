@@ -7,6 +7,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { Classification } from "./components/classification";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
+import { ExcelExportButton } from "./components/excel-export-button";
 import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./components/model-persistence";
 import { NodeTable } from "./components/node-table";
 import { ResultsPanel } from "./components/results-panel";
@@ -49,6 +50,7 @@ export default function Armaduras3DPage() {
             <div className="flex flex-wrap items-center gap-2">
               <ExamplesMenu />
               <ResetModelButton />
+              {hydrated && <ExcelExportButton />}
             </div>
           </div>
           <UnitsNote />
