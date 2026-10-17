@@ -1,6 +1,6 @@
 # Eder Estructuras (thesis-refactor-2026)
 
-Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero con mejores prácticas —arquitectura, convenciones, tests y flujo de trabajo— y conserva y mejora su funcionalidad: módulos interactivos de análisis (resortes, armaduras 2D/3D, pórticos 2D y, falta, pórticos con análisis sísmico) que muestran el método paso a paso, con contenido educativo.
+Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero con mejores prácticas —arquitectura, convenciones, tests y flujo de trabajo— y conserva y mejora su funcionalidad: módulos interactivos de análisis (resortes, armaduras 2D/3D, pórticos 2D y pórticos con análisis sísmico según la norma peruana E.030) que muestran el método paso a paso, con contenido educativo.
 
 ## Empezá acá
 
@@ -15,9 +15,18 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 
 > **Al 2026-10-17, los cinco sistemas están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d`, `/frame2d` y `/frame2d-seismic` (este último, como extensión de `/frame2d` y no como copia: casos de carga, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación, las derivas, las combinaciones E.060 y la envolvente).
 >
-> **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue** (las fases 6 a 8 del roadmap; ver la sección 3 de [`docs/estado-actual.md`](./docs/estado-actual.md)).
+> **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue.**
 >
 > Al cierre todo pasa: 608 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
+
+### Pendientes
+
+La lista completa, ordenada y con el detalle de cada cosa, está en la **sección 3 de [`docs/estado-actual.md`](./docs/estado-actual.md#3-pendientes-por-hacer)**. En corto:
+
+- **Elegir la próxima fase** (no hay nada empezado): la **Fase 6** —temperatura, defectos de fabricación y apoyos inclinados— o la **Fase 8** —contenido educativo—, que antes pide decidir **S2** (la navegación definitiva) y **N6** (la teoría enlazada desde los sistemas), planteadas en [`docs/pendientes-comparacion.md`](./docs/pendientes-comparacion.md).
+- **M2**: validar nombres repetidos de nudos y barras en los cinco sistemas (chico; hoy pasan sin aviso).
+- **La v2 de cada sistema**, decidida en cada cierre (por ejemplo, en `/frame2d-seismic`: sismo vertical, alternancia de la carga viva, análisis modal espectral).
+- **Deudas abiertas** D9, D12, D15, D16 y D17, y lo que no se pudo verificar (entre otras cosas, que la E.060 2009 no tenga modificaciones posteriores).
 
 ## Las páginas
 

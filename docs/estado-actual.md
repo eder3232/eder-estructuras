@@ -54,9 +54,19 @@ Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
 **`/frame2d-seismic` no tiene columna propia** porque el procedimiento de cada caso es el de `/frame2d` (los mismos componentes, con la vista de ese caso): tiene todo lo de esa columna salvo **la clasificación** (con el diafragma la cuenta `3b + r − 3n` no vale, y no se muestra) y **el FEM a mano** (no tiene caso). Lo propio: casos de carga, la E.030 paso a paso, diafragma rígido, rigidez lateral por condensación, derivas, combinaciones E.060 editables, envolvente dibujada, tres ejemplos y Excel con el sismo vivo.
 
-## 3. Lo que falta para la v1
+## 3. Pendientes por hacer
 
-**De los sistemas, nada**: los cinco están cerrados.
+**De los sistemas, nada**: los cinco están cerrados para la v1. Lo que queda, en el orden en que conviene encararlo (el orden lo decide siempre el usuario):
+
+1. **Decidir qué sigue** —no hay nada empezado—. Las opciones son las fases del roadmap que faltan:
+   - **Fase 6, temas del curso** que quedaron para la v2: variación de temperatura, defectos de fabricación y apoyos inclinados (ver la sección 4).
+   - **Fase 8, contenido educativo**. Antes hay que decidir **S2** (la navegación definitiva: la barra de hoy es provisional) y **N6** (el contenido teórico enlazado desde los sistemas). Las dos están planteadas, con sus opciones, en [`pendientes-comparacion.md`](./pendientes-comparacion.md).
+   - **El grupo M**: ese doc marcaba el cierre del Tren C (este) como el momento para encararlo. De él queda solo **M2** —validar nombres repetidos de nudos y barras, que hoy pasan sin aviso y dejan ambiguas las etiquetas de las matrices—; es chico y alcanza a los cinco sistemas.
+2. **La v2 de cada sistema**, decidida en cada cierre: sección 4.
+3. **Las deudas abiertas** (D9, D12, D15, D16, D17) y los detalles chicos vistos: sección 5.
+4. **Lo que no está verificado**: al final de la sección 6.
+
+El resto de esta sección es el resumen del último sistema cerrado.
 
 ### `frame2d-seismic` (cerrado el 2026-10-17)
 
@@ -148,7 +158,7 @@ Recetas que ya funcionaron con `chrome-devtools`:
 - **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia. HyperFormula lo reproduce, así que el test lo atrapa.
 - **Trampas que se repitieron**: lo que se dibuja en unidades del modelo y no en píxeles (un `stroke` sin `vector-effect`); el `uppercase` de `ui/` reescribiendo texto (KaTeX, títulos, menús); estrenar un componente de `ui/` que nadie usó; en three.js, un material que se atenúa tiene que nacer `transparent`; un bloque (`div`) dentro de un `<p>`, que la consola marca como error de hidratación.
 
-**Lo que NO está verificado a mano**: el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests); el hover sobre una barra del esquema de `/frame2d` con la herramienta (sí con el test de componentes); un pórtico inclinado en la pantalla de la deformada.
+**Lo que NO está verificado a mano**: el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests); el hover sobre una barra del esquema de `/frame2d` con la herramienta (sí con el test de componentes); un pórtico inclinado en la pantalla de la deformada; en `/frame2d-seismic`, el hover de la tabla de niveles con el mouse de verdad. **Y de la normativa: que la E.060 2009 no tenga modificaciones posteriores** —no se encontró ninguna, pero la búsqueda no fue concluyente; por eso las combinaciones son editables (sección 3 de [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md)).
 
 ## 7. Qué leer antes de tocar cada cosa
 
@@ -170,7 +180,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | `frame2d-seismic`: el cierre — `pnpm build`, la revisión en producción en claro y en oscuro, y los docs (paso 9) |
+| (este) | docs: los pendientes juntos en la sección 3 y el README al día |
+| `34d21ca` | `frame2d-seismic`: el cierre — `pnpm build`, la revisión en producción en claro y en oscuro, y los docs (paso 9) |
 | `60b8a0e` | `frame2d-seismic`: el Excel con el sismo, la rigidez lateral y las combinaciones vivos (paso 8) |
 | `9bc246b` | `frame2d-seismic`: tres ejemplos con lecciones medidas; los rótulos del esquema y de la envolvente que se pisaban (paso 7) |
 | `da6d48d` | `frame2d-seismic`: los resultados — procedimiento por caso, rigidez lateral, derivas y envolvente (paso 6) |
