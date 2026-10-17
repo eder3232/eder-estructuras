@@ -5,6 +5,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { useHighlightRows } from "@/components/custom/highlight";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ export function NodeTable() {
   const toggleRestrained = useSetAtom(atomToggleNodeRestrained);
   const updateField = useSetAtom(atomUpdateNodeField);
   const toggleUseDofNumbers = useSetAtom(atomToggleUseDofNumbers);
+  const rowHighlight = useHighlightRows();
 
   const groups = [
     ...NUMBER_GROUPS,
@@ -113,7 +115,7 @@ export function NodeTable() {
           </TableHeader>
           <TableBody>
             {nodes.map((node) => (
-              <TableRow key={node.id}>
+              <TableRow key={node.id} {...rowHighlight({ kind: "node", id: node.id })}>
                 <TableCell>
                   <Button
                     size="icon"

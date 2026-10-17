@@ -83,7 +83,7 @@ function WhyThereIsNothing({
       <NoResults
         tone="error"
         title="El cálculo se detuvo: la estructura es un mecanismo"
-        detail={<MechanismExplanation diagnosis={mechanism} nodesById={results.nodesById} />}
+        detail={<MechanismExplanation diagnosis={mechanism} nodesById={results.nodesById} elements={elements} />}
       />
     );
   }

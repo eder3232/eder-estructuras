@@ -287,6 +287,18 @@ Lo que encontró:
 
 Tests: 2 del store (la sustitución reproduce la solución; sin cargas de barra el vector FEM es todo ceros, sin `−0`). Suite: 473, `tsc` limpio, lint con los 2 de siempre.
 
+### Paso 8: hover tabla ↔ esquema y el mecanismo dibujado (2026-10-17) — hecho
+
+- **N3**: la página va dentro de `HighlightProvider`; las filas de nudos y barras se encienden y encienden su dibujo, como en `/armaduras-2d`. **Lo propio de pórticos, las cargas**: una carga no es un objeto del dibujo con identidad propia —es de su barra—, así que su fila enciende la barra (con su carga dibujada) y sus dos nudos, y señalar la barra en el dibujo enciende las filas de todas sus cargas. El esquema sin nudos dice por qué no dibuja (U3).
+- **Mecanismo dibujado**: el modo de cuerpo rígido con `DeformedDiagram`, las barras **rectas** —exacto: un movimiento que no deforma ninguna barra las traslada y gira enteras—, y el veredicto de **Fredholm** (¿la carga empuja en la dirección del movimiento libre?), con el enlace a `/estabilidad`.
+- **La carga del veredicto es toda la del sistema**: `atomMemberLoads` ganó `equivalentByNode`, la carga nodal equivalente de las barras por nudo (`−Tᵀ·FEM`). Contra las cargas nodales solas, un pórtico cargado solo en la viga parecería sin carga. Hay un test de exactamente ese caso: sin apoyos verticales y con q en la viga, el veredicto es «acelera» con la carga equivalente y «hay equilibrio» sin ella.
+
+Verificado en la app con `chrome-devtools`: el nudo v3 del dibujo enciende su fila y apaga 8 elementos (3 barras, 3 nudos, 2 apoyos; la flecha es de v3); la fila de una carga en e1 enciende e1, v1, v2 y su propia fila, y resalta e1 en el dibujo; sin restricción horizontal en las bases, el pórtico se dibuja deslizándose entero y el veredicto es «no hay equilibrio» (la carga de 5 en X empuja en esa dirección).
+
+**Lo que no se pudo verificar con la herramienta**: el hover sobre una **barra** del dibujo. Su zona sensible es una línea transparente de 14 px de trazo, pero su caja mide cero de ancho (o de alto), y `chrome-devtools` la descarta como «no interactiva». Lo cubre el test de componentes (`components/highlight-link.test.tsx`, 3 casos con `user-event`) y es la misma zona que ya usa `/armaduras-2d`.
+
+Suite: 478, `tsc` limpio, lint con los 2 de siempre.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.

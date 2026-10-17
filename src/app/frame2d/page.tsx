@@ -1,5 +1,6 @@
 "use client";
 
+import { HighlightProvider } from "@/components/custom/highlight";
 import { UnitsNote } from "@/components/custom/units-note";
 import { Classification } from "./components/classification";
 import { ElementTable } from "./components/element-table";
@@ -14,51 +15,54 @@ export default function Frame2DPage() {
   return (
     // Tan ancha como las otras tres (`max-w-[84rem]`): la tabla de cargas tiene
     // trece columnas y las matrices de una barra son de 6×6. La prosa tiene
-    // techo propio.
-    <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-bold">Pórticos 2D</h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Pórticos planos — 3 grados de libertad por nudo (x, z y giro). A diferencia de una armadura, cada barra
-          resiste flexión además de fuerza axial, así que su rigidez depende del momento de inercia de la sección y no
-          solo del área.
-        </p>
+    // techo propio. El proveedor de resaltado envuelve la página porque el
+    // vínculo tabla ↔ esquema (N3) cruza las tablas de arriba con el dibujo.
+    <HighlightProvider>
+      <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-8 px-6 py-10">
+        <div>
+          <h1 className="text-2xl font-bold">Pórticos 2D</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Pórticos planos — 3 grados de libertad por nudo (x, z y giro). A diferencia de una armadura, cada barra
+            resiste flexión además de fuerza axial, así que su rigidez depende del momento de inercia de la sección y no
+            solo del área.
+          </p>
+        </div>
+  
+        <UnitsNote example={FRAME_EXAMPLE} mixing={FRAME_MIXING} />
+  
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Nudos</h2>
+          <NodeTable />
+        </div>
+  
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Barras</h2>
+          <ElementTable />
+        </div>
+  
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Cargas en barras</h2>
+          <LoadTable />
+          <h3 className="font-semibold">Momentos de empotramiento perfecto (FEM) por barra</h3>
+          <FemTable />
+        </div>
+  
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Esquema</h2>
+          <SchemaDiagram />
+        </div>
+  
+        {/* Entre el dibujo y el cálculo, porque es eso en el pizarrón. */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Clasificación</h2>
+          <Classification />
+        </div>
+  
+        <ErrorsPanel />
+  
+        <ResultsPanel />
       </div>
-
-      <UnitsNote example={FRAME_EXAMPLE} mixing={FRAME_MIXING} />
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Nudos</h2>
-        <NodeTable />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Barras</h2>
-        <ElementTable />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Cargas en barras</h2>
-        <LoadTable />
-        <h3 className="font-semibold">Momentos de empotramiento perfecto (FEM) por barra</h3>
-        <FemTable />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Esquema</h2>
-        <SchemaDiagram />
-      </div>
-
-      {/* Entre el dibujo y el cálculo, porque es eso en el pizarrón. */}
-      <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Clasificación</h2>
-        <Classification />
-      </div>
-
-      <ErrorsPanel />
-
-      <ResultsPanel />
-    </div>
+    </HighlightProvider>
   );
 }
 

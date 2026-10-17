@@ -5,6 +5,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { useHighlightRows } from "@/components/custom/highlight";
 import { NodeCombobox, type NodeOption } from "@/components/custom/node-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ export function ElementTable() {
   const addElement = useSetAtom(atomAddElement);
   const removeElement = useSetAtom(atomRemoveElement);
   const updateField = useSetAtom(atomUpdateElementField);
+  // N3: una barra enciende además sus dos nudos, como en el dibujo.
+  const rowHighlight = useHighlightRows();
   // Una sola lista estable para toda la tabla: el combobox compara por identidad.
   const options = useMemo<NodeOption[]>(() => nodes.map((n) => ({ value: n.id, label: n.name })), [nodes]);
 
@@ -61,7 +64,10 @@ export function ElementTable() {
           </TableHeader>
           <TableBody>
             {elements.map((element) => (
-              <TableRow key={element.id}>
+              <TableRow
+                key={element.id}
+                {...rowHighlight({ kind: "element", id: element.id, nodeIds: [element.fromNodeId, element.toNodeId] })}
+              >
                 <TableCell>
                   <Button
                     size="icon"

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createStore } from "jotai";
 import { add, inv, multiply, subtract } from "mathjs";
+import { loadCompatibility } from "@/lib/engine";
 
 import { atomClassification } from "./classification";
 import { atomToggleRestrainedFirst, atomToggleUseDofNumbers } from "./dof-order";
@@ -463,5 +464,54 @@ describe("/frame2d — la narrativa reproduce la solución (paso 7)", () => {
     const { fixedEndForces } = solvedOf(createStore()).assembly;
     expect(fixedEndForces.every((v) => v === 0)).toBe(true);
     expect(fixedEndForces.some((v) => Object.is(v, -0))).toBe(false);
+  });
+});
+
+describe("/frame2d — mecanismo con cargas en las barras (paso 8)", () => {
+  function beamLoaded(store = createStore()) {
+    store.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "forceX", value: 0 });
+    store.set(atomAddLoad, { elementId: "seed-e2" });
+    const load = store.get(atomLoads)[0];
+    store.set(atomUpdateLoadField, { id: load.id, field: "q1", value: -10 });
+    store.set(atomUpdateLoadField, { id: load.id, field: "q2", value: -10 });
+    return store;
+  }
+
+  it("la carga equivalente por nudo es la de la tabla: qL/2 hacia abajo y ∓qL²/12", () => {
+    const { equivalentByNode } = beamLoaded().get(atomMemberLoads);
+    const [x2, z2, m2] = equivalentByNode.get(seedNodeIds.v2)!;
+    const [, z3, m3] = equivalentByNode.get(seedNodeIds.v3)!;
+    expect(x2).toBeCloseTo(0, 9);
+    expect(z2).toBeCloseTo(-25, 9);
+    expect(m2).toBeCloseTo(-250 / 12, 9);
+    expect(z3).toBeCloseTo(-25, 9);
+    expect(m3).toBeCloseTo(250 / 12, 9);
+  });
+
+  it("sin apoyos verticales, la carga de la viga empuja en la dirección del mecanismo: no hay equilibrio", () => {
+    // El caso que motivó sumar la carga equivalente: todas las cargas están en
+    // la viga, ninguna en los nudos. Contra las cargas nodales solas, el
+    // veredicto de Fredholm saldría «hay equilibrio».
+    const store = beamLoaded();
+    for (const id of [seedNodeIds.v1, seedNodeIds.v4]) {
+      store.set(atomToggleNodeRestrained, { id, axis: "z" });
+      store.set(atomToggleNodeRestrained, { id, axis: "r" });
+    }
+    const [error] = errorsOf(store);
+    const mode = error.mechanism?.mode;
+    if (!mode) throw new Error("sin modo de mecanismo");
+    const nodes = new Map(store.get(atomNodes).map((n) => [n.id, n]));
+    const { equivalentByNode } = store.get(atomMemberLoads);
+    const forces = mode.map((dof) => {
+      const n = nodes.get(dof.nodeId)!;
+      return [n.forceX, n.forceZ, n.momentR][dof.localDof] + (equivalentByNode.get(dof.nodeId)?.[dof.localDof] ?? 0);
+    });
+    const nodalOnly = mode.map((dof) => {
+      const n = nodes.get(dof.nodeId)!;
+      return [n.forceX, n.forceZ, n.momentR][dof.localDof];
+    });
+    const values = [mode.map((dof) => dof.value)];
+    expect(loadCompatibility(values, forces).verdict).toBe("accelerates");
+    expect(loadCompatibility(values, nodalOnly).verdict).not.toBe("accelerates");
   });
 });

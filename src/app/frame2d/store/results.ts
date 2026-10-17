@@ -80,6 +80,13 @@ function fixedEndForcesByElement(
   /** Las cargas de cada barra ya traducidas al motor, y su eje: con eso se dibujan los diagramas. */
   loadsByElement: Map<string, MemberLoad[]>;
   axisByElement: Map<string, MemberAxis>;
+  /**
+   * La carga nodal equivalente de las barras, sumada por nudo en ejes globales
+   * (`−Tᵀ·FEM`). Es la parte de la carga que el alumno no puso en los nudos:
+   * la necesita el diagnóstico de mecanismo para decidir si la carga empuja en
+   * la dirección del movimiento libre.
+   */
+  equivalentByNode: Map<string, [number, number, number]>;
   errors: DomainError[];
   warnings: DomainIssue[];
 } {
@@ -139,7 +146,26 @@ function fixedEndForcesByElement(
       element.manualFem ? manualFixedEndForces(element) : sumFixedEndForces(perElement.get(element.id) ?? []),
     ]),
   );
-  return { fem, brokenElementIds, loadsByElement, axisByElement, errors, warnings };
+  const equivalentByNode = new Map<string, [number, number, number]>();
+  for (const element of elements) {
+    const axis = axisByElement.get(element.id);
+    const elementFem = fem.get(element.id);
+    if (!axis || !elementFem) continue;
+    const { cos: c, sin: s } = axis;
+    // Tᵀ lleva (axial, corte) locales a (X, Z) globales; el momento no cambia.
+    const add = (nodeId: string, { axial, shear, moment }: { axial: number; shear: number; moment: number }) => {
+      const current = equivalentByNode.get(nodeId) ?? [0, 0, 0];
+      equivalentByNode.set(nodeId, [
+        current[0] - (c * axial - s * shear),
+        current[1] - (s * axial + c * shear),
+        current[2] - moment,
+      ]);
+    };
+    add(element.fromNodeId, elementFem.from);
+    add(element.toNodeId, elementFem.to);
+  }
+
+  return { fem, brokenElementIds, loadsByElement, axisByElement, equivalentByNode, errors, warnings };
 }
 
 /** El FEM de cada barra, calculado o a mano: lo leen el cálculo y la tabla «FEM por barra». */

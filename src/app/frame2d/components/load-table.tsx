@@ -6,6 +6,7 @@ import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { memberAxis, type LoadDirection } from "@/lib/engine";
 import { FormulaInput } from "@/components/custom/formula-input";
+import { useHighlightRows } from "@/components/custom/highlight";
 import { NodeCombobox, type NodeOption } from "@/components/custom/node-combobox";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +44,12 @@ export function LoadTable() {
   const addLoad = useSetAtom(atomAddLoad);
   const removeLoad = useSetAtom(atomRemoveLoad);
   const update = useSetAtom(atomUpdateLoadField);
+  // N3 para las cargas: una fila enciende **su barra** (y la carga dibujada
+  // sobre ella), y señalar la barra en el dibujo enciende las filas de todas
+  // sus cargas. Una carga no es un objeto del dibujo con identidad propia: es
+  // de su barra.
+  const rowHighlight = useHighlightRows();
+  const elementsById = useMemo(() => new Map(elements.map((e) => [e.id, e])), [elements]);
 
   const options = useMemo<NodeOption[]>(() => elements.map((e) => ({ value: e.id, label: e.name })), [elements]);
 
@@ -121,8 +128,16 @@ export function LoadTable() {
               const distributed = load.kind === "distributed";
               const global = load.direction === "globalX" || load.direction === "globalZ";
               const length = lengthOf.get(load.elementId);
+              const element = elementsById.get(load.elementId);
               return (
-                <TableRow key={load.id}>
+                <TableRow
+                  key={load.id}
+                  {...rowHighlight({
+                    kind: "element",
+                    id: load.elementId,
+                    nodeIds: element ? [element.fromNodeId, element.toNodeId] : [],
+                  })}
+                >
                   <TableCell>
                     <Button
                       size="icon"

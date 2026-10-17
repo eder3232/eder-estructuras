@@ -4,6 +4,8 @@ import { useAtom } from "jotai";
 
 import { SchemaDiagram as GenericSchemaDiagram } from "@/components/custom/diagram-2d/schema-diagram";
 import type { DiagramForce, DiagramMemberLoad, DiagramSupport } from "@/components/custom/diagram-2d/types";
+import { useHighlight, useSetHighlight } from "@/components/custom/highlight";
+import { NoResults } from "@/components/custom/no-results";
 import { lengthFactor, memberAxis } from "@/lib/engine";
 import { atomNodes } from "../store/nodes";
 import { atomElements } from "../store/elements";
@@ -13,6 +15,18 @@ export function SchemaDiagram() {
   const [nodes] = useAtom(atomNodes);
   const [elements] = useAtom(atomElements);
   const [loads] = useAtom(atomLoads);
+  // Las dos direcciones de N3: lee lo que señalan las filas y señala lo que toca el mouse acá.
+  const highlight = useHighlight();
+  const setHighlight = useSetHighlight();
+
+  // Sin nudos el diagrama genérico no dibuja nada: se dice por qué (U3).
+  if (nodes.length === 0) {
+    return (
+      <NoResults tone="empty" title="Todavía no hay nada que dibujar">
+        El esquema aparece en cuanto cargues el primer nudo.
+      </NoResults>
+    );
+  }
 
   const supports: DiagramSupport[] = nodes
     .filter((n) => n.restrainedX || n.restrainedZ || n.restrainedR)
@@ -72,12 +86,22 @@ export function SchemaDiagram() {
   });
 
   return (
-    <GenericSchemaDiagram
-      nodes={nodes}
-      elements={elements}
-      supports={supports}
-      forces={forces}
-      memberLoads={memberLoads}
-    />
+    <div className="flex flex-col gap-2">
+      <GenericSchemaDiagram
+        nodes={nodes}
+        elements={elements}
+        supports={supports}
+        forces={forces}
+        memberLoads={memberLoads}
+        highlight={highlight}
+        onHighlight={setHighlight}
+      />
+      <p className="max-w-3xl text-xs text-muted-foreground">
+        Las tablas y el dibujo son lo mismo mirado de dos formas:{" "}
+        <span className="font-medium text-foreground">pasá el mouse por una fila</span> y se enciende acá, o por un
+        nudo o una barra del dibujo y se enciende la fila. Una barra prende también los dos nudos que toca y las filas
+        de sus cargas.
+      </p>
+    </div>
   );
 }
