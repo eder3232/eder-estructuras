@@ -15,7 +15,7 @@ Refactor de **thesis-structures** ([`eder3232/thesis-structures`](https://github
 
 > **Al 2026-10-17, los cinco sistemas están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d`, `/frame2d` y `/frame2d-seismic` (este último, como extensión de `/frame2d` y no como copia: casos de carga, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación, las derivas, las combinaciones E.060 y la envolvente).
 >
-> **En producción en https://tesis.eder3232.com**: cada push a `main` de [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras) despliega en el proyecto de Vercel `eder-estructuras`. El original sigue en https://thesis-structures.vercel.app. Detalle en la sección 1 de [`docs/estado-actual.md`](./docs/estado-actual.md); la home se rehízo el 2026-10-17.
+> **En producción en https://tesis.eder3232.com**: el repo es [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras) y lo que entra a `main` despliega en el proyecto de Vercel `eder-estructuras`. **`main` está protegida: todo cambio va en una rama con PR** ([`docs/git-workflow.md`](./docs/git-workflow.md)). El original sigue en https://thesis-structures.vercel.app. Detalle en la sección 1 de [`docs/estado-actual.md`](./docs/estado-actual.md); la home se rehízo el 2026-10-17.
 >
 > **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue.**
 >
@@ -125,10 +125,10 @@ La regla que sostiene todo: **el motor es puro y es la única fuente de verdad**
 - [`docs/errores.md`](./docs/errores.md) — el contrato de errores y advertencias; **antes de tocar cualquier cosa que produzca o muestre un error**.
 - [`docs/excel-export.md`](./docs/excel-export.md) — la exportación a Excel: qué queda editable, cómo se arma desde el ensamblaje del motor, cómo se verifica y las trampas de `exceljs`.
 - [`docs/components.md`](./docs/components.md) — `ui/` intocable, forks en `ui-custom/`, propios en `custom/`.
-- [`docs/git-workflow.md`](./docs/git-workflow.md) — commits directos a `main` hasta `v1.0.0`, Conventional Commits, SemVer.
+- [`docs/git-workflow.md`](./docs/git-workflow.md) — ramas y PR a `main` (protegida) con preview de Vercel, merge por rebase, Conventional Commits, SemVer.
 
 > **Módulos del motor sin doc propio** (puros y comentados en el archivo): `src/lib/engine/mechanism.ts` (mecanismos, núcleo de la matriz, alternativa de Fredholm), `factorization.ts` (`LDLᵀ`) y `unit-displacement.ts`. Su porqué está en la página [`/estabilidad`](./src/app/estabilidad) y en las entradas del 2026-08-13 de [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md).
 
 ## Flujo de trabajo
 
-Fase pre-`v1.0.0`: commits directos a `main` con Conventional Commits en español ([`docs/git-workflow.md`](./docs/git-workflow.md)). Cada sistema se cerró con el mismo método: revisar el original y el módulo actual, que el usuario decida el alcance, y avanzar por pasos con un commit por paso, verificando cada uno con tests **y mirando la app**. Al terminar una sesión, el README y [`docs/estado-actual.md`](./docs/estado-actual.md) quedan listos para retomar en frío.
+En producción desde el 2026-10-17: cada cambio va en una rama (`feat/`, `fix/`, `docs/`…) con un PR a `main`, se mira en el preview de Vercel y entra por rebase; Conventional Commits en español ([`docs/git-workflow.md`](./docs/git-workflow.md)). Hasta esa fecha se commiteó directo a `main`. Cada sistema se cerró con el mismo método: revisar el original y el módulo actual, que el usuario decida el alcance, y avanzar por pasos con un commit por paso, verificando cada uno con tests **y mirando la app**. Al terminar una sesión, el README y [`docs/estado-actual.md`](./docs/estado-actual.md) quedan listos para retomar en frío.
