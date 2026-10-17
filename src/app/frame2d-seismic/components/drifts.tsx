@@ -120,8 +120,26 @@ export function Drifts() {
             calcularlo con la estructura misma (Rayleigh), en vez de con la fórmula empírica:
           </p>
           <MathBlock
-            tex={String.raw`T = 2\pi\sqrt{\frac{\sum P_i\,\delta_i^2}{g\,\sum F_i\,\delta_i}} = ${num(lateral.rayleighPeriod, d)}\ \text{s} \qquad \text{vs.} \qquad T = \frac{h_n}{C_T} = ${num(forces.T, d)}\ \text{s}`}
+            // El T contra el que se compara es el que se usó: el de C_T o el escrito.
+            tex={String.raw`T = 2\pi\sqrt{\frac{\sum P_i\,\delta_i^2}{g\,\sum F_i\,\delta_i}} = ${num(lateral.rayleighPeriod, d)}\ \text{s} \qquad \text{vs.} \qquad ${params.periodMode === "height" ? String.raw`T = \frac{h_n}{C_T}` : String.raw`T_{\text{escrito}}`} = ${num(forces.T, d)}\ \text{s}`}
           />
+          {params.periodMode === "manual" ? (
+            <p>
+              {/* `Math` acá es el componente de KaTeX: sin `Math.abs`. */}
+              {lateral.rayleighPeriod - forces.T <= 0.02 * forces.T &&
+              forces.T - lateral.rayleighPeriod <= 0.02 * forces.T ? (
+                <>
+                  <strong>El período escrito coincide con el de Rayleigh</strong>: el dato es coherente con la
+                  estructura.
+                </>
+              ) : (
+                <>
+                  <strong>El período escrito no es el de esta estructura</strong> (difiere en más de 2% del de
+                  Rayleigh): conviene revisar de dónde salió.
+                </>
+              )}
+            </p>
+          ) : (
           <p>
             La fórmula empírica supone un edificio con tabiques y losas que lo rigidizan; el pórtico desnudo es más
             flexible, así que su período suele dar mayor.{" "}
@@ -137,6 +155,7 @@ export function Drifts() {
               </>
             )}
           </p>
+          )}
         </div>
       )}
     </div>

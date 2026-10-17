@@ -18,7 +18,7 @@ import { Drifts } from "./components/drifts";
 import { Envelope } from "./components/envelope";
 import { LateralStiffness } from "./components/lateral-stiffness";
 import { LevelsTable } from "./components/levels-table";
-import { ModelPersistence, ResetModelButton } from "./components/model-persistence";
+import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./components/model-persistence";
 import { NodalLoadTable } from "./components/nodal-load-table";
 import { SeismicParamsForm, SeismicSteps } from "./components/seismic-params";
 import { createSeismicStore } from "./store/persistence";
@@ -66,6 +66,7 @@ function SeismicPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <ExamplesMenu />
               <ResetModelButton />
             </div>
           </div>

@@ -19,6 +19,9 @@ const REASON: Record<Extract<LateralResult, { status: "unavailable" }>["reason"]
   "seismic-error": "Las fuerzas sísmicas no se pudieron calcular: el detalle está en la sección del sismo.",
 };
 
+/** Espacio que no parte el renglón: «N1 x» y «Nivel 1» se partían en dos en el rótulo de una fila. */
+const NBSP = String.fromCharCode(0xa0);
+
 /** El rótulo de cada grado de libertad de `K_ff`: el del piso si es de un diafragma. */
 function useFreeLabels(freeGlobalIndices: number[]): string[] {
   const results = useAtomValue(caseViews.CS.atomResults);
@@ -28,11 +31,26 @@ function useFreeLabels(freeGlobalIndices: number[]): string[] {
     return freeGlobalIndices.map((index) => {
       const entry = byIndex.get(index);
       if (!entry) return String(index);
-      // Sin espacio partible: «N1 x» se partía en dos renglones en el rótulo de la fila.
-      if (entry.diaphragmId) return `${entry.diaphragmId.replace("Nivel ", "N")} x`;
+      if (entry.diaphragmId) return `${entry.diaphragmId.replace("Nivel ", "N")}${NBSP}x`;
       return `${results.nodesById.get(entry.nodeId)?.name ?? entry.nodeId}${dofLabels[entry.localDof]}`;
     });
   }, [results, freeGlobalIndices]);
+}
+
+/**
+ * Una matriz con su nombre. **Con scroll propio**: K_bb de un pórtico de tres
+ * pisos y dos vanos es de 18×18 y ensanchaba la página entera (medido, paso 7).
+ * Pasados 19 grados, mapa de calor, como la K de los otros sistemas (D13).
+ */
+function Matrix({ tex, matrix, rows, cols }: { tex: string; matrix: number[][]; rows: string[]; cols: string[] }) {
+  return (
+    <div className="flex w-fit max-w-full flex-col gap-1">
+      <Math tex={tex} />
+      <div className="max-w-full overflow-x-auto">
+        <MatrixTable matrix={matrix} rowLabels={rows} colLabels={cols} heatmap={cols.length > 19} />
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -50,7 +68,7 @@ export function LateralStiffness() {
   const { condensation, levels } = lateral;
   const kept = condensation.keep.map((i) => labels[i]);
   const dropped = condensation.drop.map((i) => labels[i]);
-  const levelNames = levels.map((l) => l.name);
+  const levelNames = levels.map((l) => l.name.replace(" ", NBSP));
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,30 +91,16 @@ export function LateralStiffness() {
 
       <h4 className="font-medium">Las cuatro partes de <Math tex="K_{ff}" /></h4>
       <div className="flex flex-col gap-4">
-        <div className="flex w-fit max-w-full flex-col gap-1">
-          <Math tex="K_{aa}" />
-          <MatrixTable matrix={condensation.kaa} rowLabels={kept} colLabels={kept} />
-        </div>
-        <div className="flex w-fit max-w-full flex-col gap-1">
-          <Math tex="K_{ab}" />
-          <MatrixTable matrix={condensation.kab} rowLabels={kept} colLabels={dropped} />
-        </div>
-        <div className="flex w-fit max-w-full flex-col gap-1">
-          <Math tex="K_{bb}" />
-          <MatrixTable matrix={condensation.kbb} rowLabels={dropped} colLabels={dropped} />
-        </div>
-        <div className="flex w-fit max-w-full flex-col gap-1">
-          <Math tex={String.raw`K_{ab}\,K_{bb}^{-1}\,K_{ba}`} />
-          <MatrixTable matrix={condensation.correction} rowLabels={kept} colLabels={kept} />
-        </div>
-        <div className="flex w-fit max-w-full flex-col gap-1">
-          <Math tex={String.raw`K_L = K_{aa} - K_{ab}\,K_{bb}^{-1}\,K_{ba}`} />
-          <MatrixTable
-            matrix={condensation.condensed}
-            rowLabels={levelNames.map((n) => n.replace(" ", " "))}
-            colLabels={levelNames.map((n) => n.replace(" ", " "))}
-          />
-        </div>
+        <Matrix tex="K_{aa}" matrix={condensation.kaa} rows={kept} cols={kept} />
+        <Matrix tex="K_{ab}" matrix={condensation.kab} rows={kept} cols={dropped} />
+        <Matrix tex="K_{bb}" matrix={condensation.kbb} rows={dropped} cols={dropped} />
+        <Matrix tex={String.raw`K_{ab}\,K_{bb}^{-1}\,K_{ba}`} matrix={condensation.correction} rows={kept} cols={kept} />
+        <Matrix
+          tex={String.raw`K_L = K_{aa} - K_{ab}\,K_{bb}^{-1}\,K_{ba}`}
+          matrix={condensation.condensed}
+          rows={levelNames}
+          cols={levelNames}
+        />
       </div>
 
       <h4 className="font-medium">El control</h4>

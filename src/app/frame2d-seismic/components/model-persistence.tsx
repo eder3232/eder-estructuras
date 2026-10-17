@@ -3,11 +3,14 @@
 import { useAtomValue, useSetAtom } from "jotai";
 
 import {
+  ExamplesMenu as GenericExamplesMenu,
   ModelPersistence as GenericModelPersistence,
   ResetModelButton as GenericResetModelButton,
 } from "@/components/custom/model-persistence";
+import { seismicExamples } from "../store/examples";
 import {
   SEISMIC_MODEL_KEY,
+  atomReplaceSeismicModel,
   atomResetSeismicModel,
   atomRestoreSeismicModel,
   atomSeismicPersistable,
@@ -36,4 +39,11 @@ export function ResetModelButton() {
   const reset = useSetAtom(atomResetSeismicModel);
   const restore = useSetAtom(atomRestoreSeismicModel);
   return <GenericResetModelButton onReset={reset} onRestore={restore} />;
+}
+
+export function ExamplesMenu() {
+  const replace = useSetAtom(atomReplaceSeismicModel);
+  const restore = useSetAtom(atomRestoreSeismicModel);
+  // `start`, como en `/frame2d`: con el párrafo largo los botones bajan debajo del título.
+  return <GenericExamplesMenu examples={seismicExamples} onReplace={replace} onRestore={restore} align="start" />;
 }

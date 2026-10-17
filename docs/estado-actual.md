@@ -97,7 +97,7 @@ La tabla numerada con el detalle está en el roadmap, sección 4. Estado al 2026
 | D14 | Pasos de ensamblaje que crecen | ✅ resuelta (`custom/assembly-steps.tsx`, cerrados pasados 12) |
 | D15 | El motor invierte en vez de factorizar | abierta **por decisión del usuario** |
 | D16 | El esquema no dibuja los desplazamientos prescritos | abierta (en 2D, 3D y pórticos) |
-| D17 | Las etiquetas no se conocen entre sí | abierta en el esquema (nombres de nudos cruzados por las flechas de una carga, en `/frame2d`; en 3D depende del ángulo). **Resuelta en los diagramas N/V/M** de `/frame2d`, que ubican sus números sin pisarse |
+| D17 | Las etiquetas no se conocen entre sí | **a medias** en el esquema: desde el 2026-10-17 el nombre de una barra esquiva los nombres de los nudos y los números de las fuerzas (al 25%, si choca al 50% o al 75%, paso 7 de `frame2d-seismic-v1.md`); siguen sin conocerse los nombres de nudos con las flechas de una carga (el nudo «c» del pórtico a dos aguas de `/frame2d`), y en 3D depende del ángulo. **Resuelta en los diagramas N/V/M** de `/frame2d` y en la envolvente sísmica |
 
 Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el renglón de propiedades de cada barra el valor queda pegado al rótulo siguiente («3.5 Cx = Δx/L»); el ruido numérico (`-2.22E-15`) sale tal cual; en `F = K·U` los renglones de `K` van ~12 px corridos respecto de `F` y `U`; en la barra aislada de `/frame2d`, una carga global se dibuja en los ejes de la barra con el valor escrito (el viento +X sobre una columna se ve como flechas «hacia abajo» con un 3).
 
@@ -106,7 +106,7 @@ Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el r
 **Lo que pasa hoy** (2026-10-17, cierre de `/frame2d`):
 
 ```
-pnpm test          # 587 tests, 82 archivos (2026-10-17, paso 6 de frame2d-seismic)
+pnpm test          # 592 tests, 83 archivos (2026-10-17, paso 7 de frame2d-seismic)
 npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
@@ -159,7 +159,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | `frame2d-seismic`: los resultados — procedimiento por caso, rigidez lateral, derivas y envolvente (paso 6) |
+| (este) | `frame2d-seismic`: tres ejemplos con lecciones medidas; los rótulos del esquema y de la envolvente que se pisaban (paso 7) |
+| `da6d48d` | `frame2d-seismic`: los resultados — procedimiento por caso, rigidez lateral, derivas y envolvente (paso 6) |
 | `e98b6ba` | `frame2d-seismic`: la página y las tablas, con el esquema por caso (paso 5) |
 | `e16b654` | `frame2d-seismic`: el store — casos, niveles, E.030, rigidez lateral, derivas, combinaciones y envolvente (paso 4) |
 | `e02d7b7` | `frame2d-seismic`: `/frame2d` reutilizable — cálculo puro y contexto de vista (paso 3) |

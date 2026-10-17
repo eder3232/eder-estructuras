@@ -237,7 +237,12 @@ export function SeismicSteps() {
         El peso <Math tex={String.raw`P = \sum P_i`} /> (artículo 31) y el cortante en la base (artículo 34.1):
       </p>
       <MathBlock
-        tex={String.raw`V = \frac{Z \cdot U \cdot C \cdot S}{R} \cdot P = \frac{${num(params.Z, 2)} \cdot ${num(params.U, 2)} \cdot ${num(detail.minimumGoverns ? MIN_C_OVER_R * R : amplification.C, d)} \cdot ${num(params.S, 2)}}{${num(R, 2)}} \cdot ${num(P, d)} = ${num(detail.baseShear, d)}`}
+        tex={
+          // Si manda el mínimo, sin «C»: poner ahí 0.11·R se leía como el C del suelo.
+          detail.minimumGoverns
+            ? String.raw`V = Z \cdot U \cdot S \cdot \left(\frac{C}{R}\right)_{\min} \cdot P = ${num(params.Z, 2)} \cdot ${num(params.U, 2)} \cdot ${num(params.S, 2)} \cdot ${MIN_C_OVER_R} \cdot ${num(P, d)} = ${num(detail.baseShear, d)}`
+            : String.raw`V = \frac{Z \cdot U \cdot C \cdot S}{R} \cdot P = \frac{${num(params.Z, 2)} \cdot ${num(params.U, 2)} \cdot ${num(amplification.C, d)} \cdot ${num(params.S, 2)}}{${num(R, 2)}} \cdot ${num(P, d)} = ${num(detail.baseShear, d)}`
+        }
       />
       {detail.minimumGoverns && (
         <>

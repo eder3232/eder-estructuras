@@ -44,6 +44,14 @@ interface InternalForceDiagramProps {
    * 29.93 en una base y −29.93 en la otra, con las dos traccionando adentro.
    */
   unsigned?: boolean;
+  /**
+   * Un número que después de alejarse sigue chocando con otro **no se
+   * escribe**. Solo para dibujos que tienen los números también en una tabla:
+   * la envolvente de `frame2d-seismic`, con dos curvas por barra, en un
+   * pórtico de dos vanos empujaba un número de una columna hasta encima del de
+   * la del medio (medido). Sin esto, se escribe igual, como siempre.
+   */
+  skipCrowdedLabels?: boolean;
   className?: string;
 }
 
@@ -100,6 +108,7 @@ function Canvas({
   positiveSide,
   mergeJointLabels = false,
   unsigned = false,
+  skipCrowdedLabels = false,
   className,
 }: InternalForceDiagramProps) {
   const decimals = useDecimals();
@@ -199,15 +208,18 @@ function Canvas({
   const placed: PlacedLabel[] = [];
   for (const { label, away } of wanted) {
     let candidate = label;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const box = boxOf(candidate, unitSize);
-      const hits = placed.some((other) => {
+    const hits = (at: PlacedLabel) => {
+      const box = boxOf(at, unitSize);
+      return placed.some((other) => {
         const o = boxOf(other, unitSize);
         return o.left < box.right && o.right > box.left && o.top < box.bottom && o.bottom > box.top;
       });
-      if (!hits) break;
+    };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (!hits(candidate)) break;
       candidate = { ...candidate, x: candidate.x + away.x * unitSize * 1.2, y: candidate.y + away.y * unitSize * 1.2 };
     }
+    if (skipCrowdedLabels && hits(candidate)) continue;
     placed.push(candidate);
   }
 

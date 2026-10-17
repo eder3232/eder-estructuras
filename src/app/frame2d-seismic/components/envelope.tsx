@@ -31,35 +31,47 @@ function extreme(points: EnvelopePoint[], quantity: Quantity, which: "max" | "mi
 }
 
 /**
- * Una curva de la envolvente. **Se rotula poco**: con dos curvas por barra, un
- * número en cada extremo y en cada máximo se pisaban en todas las esquinas
- * (lo encontró mirar la app, paso 6). Se escriben los puntos —extremos de la
- * barra y su valor más grande— que llegan al menos a la mitad del máximo de la
- * curva; los demás están en la tabla de abajo.
+ * Las dos curvas de la envolvente de una barra. **Se rotula poco**, porque dos
+ * curvas por barra son el doble de números y se pisaban (paso 6 y, en un
+ * pórtico de dos vanos, de nuevo en los nudos interiores: paso 7). La regla es
+ * la del que diseña:
+ * - **En cada extremo, un solo número: el que manda**, el de mayor módulo
+ *   entre el máximo y el mínimo.
+ * - Adentro de la barra, el valor más grande de cada curva si es un máximo
+ *   interior (el de una viga cargada) y llega a la mitad del mayor de la barra.
+ * - Un esfuerzo constante (N de una columna) va una vez, a mitad de la barra.
+ * El resto está en la tabla de abajo.
  */
-function envelopeCurve(points: EnvelopePoint[], quantity: Quantity, which: "max" | "min", length: number): MemberCurve {
-  const value = (p: EnvelopePoint) => (which === "max" ? p.max[quantity] : p.min[quantity]);
-  const top = extreme(points, quantity, which);
-  const curve = points.map((p) => ({ x: p.x, value: value(p) }));
-  // Constante en toda la barra (N de una columna): una vez, a mitad de la barra,
-  // como en Pórticos 2D. En los extremos, el de una columna caía sobre el de la
-  // de arriba (−32.28 sobre −13.56, medido).
-  const big = Math.max(...curve.map((c) => Math.abs(c.value)));
-  if (curve.every((c) => Math.abs(c.value - curve[0].value) <= 1e-9 * (1 + big))) {
-    const keep = which === "max" ? curve[0].value > 0 : curve[0].value < 0;
-    return { points: curve, labels: keep ? [{ x: length / 2, value: curve[0].value }] : [] };
+function envelopeCurves(points: EnvelopePoint[], quantity: Quantity, length: number): { max: MemberCurve; min: MemberCurve } {
+  const sample = (which: "max" | "min") =>
+    points.map((p) => ({ x: p.x, value: which === "max" ? p.max[quantity] : p.min[quantity] }));
+  const max = sample("max");
+  const min = sample("min");
+  const biggest = Math.max(...[...max, ...min].map((c) => Math.abs(c.value)));
+  const governs = (value: number, which: "max" | "min") => (which === "max" ? value > 0 : value < 0);
+  const labels: Record<"max" | "min", { x: number; value: number }[]> = { max: [], min: [] };
+
+  const constant = (curve: { value: number }[]) =>
+    curve.every((c) => Math.abs(c.value - curve[0].value) <= 1e-9 * (1 + biggest));
+  if (constant(max) && constant(min)) {
+    const which = Math.abs(max[0].value) >= Math.abs(min[0].value) ? "max" : "min";
+    const value = which === "max" ? max[0].value : min[0].value;
+    if (governs(value, which)) labels[which].push({ x: length / 2, value });
+    return { max: { points: max, labels: labels.max }, min: { points: min, labels: labels.min } };
   }
-  const candidates = [
-    { x: 0, value: value(points[0]) },
-    { x: length, value: value(points[points.length - 1]) },
-    ...(top.x > 1e-9 && top.x < length - 1e-9 ? [{ x: top.x, value: value(top) }] : []),
-  ];
-  const biggest = Math.max(...candidates.map((c) => Math.abs(c.value)));
-  // Del lado equivocado (un «máximo» negativo) la curva no es la que manda: no se rotula.
-  const labels = candidates.filter(
-    (c) => Math.abs(c.value) >= 0.5 * biggest && (which === "max" ? c.value > 0 : c.value < 0),
-  );
-  return { points: curve, labels };
+
+  for (const index of [0, points.length - 1]) {
+    const which = Math.abs(max[index].value) >= Math.abs(min[index].value) ? "max" : "min";
+    const value = which === "max" ? max[index].value : min[index].value;
+    if (governs(value, which)) labels[which].push({ x: index === 0 ? 0 : length, value });
+  }
+  for (const which of ["max", "min"] as const) {
+    const top = extreme(points, quantity, which);
+    const value = which === "max" ? top.max[quantity] : top.min[quantity];
+    const interior = top.x > 1e-9 && top.x < length - 1e-9;
+    if (interior && governs(value, which) && Math.abs(value) >= 0.5 * biggest) labels[which].push({ x: top.x, value });
+  }
+  return { max: { points: max, labels: labels.max }, min: { points: min, labels: labels.min } };
 }
 
 /**
@@ -114,8 +126,9 @@ export function Envelope() {
     const points = result.envelope.get(element.id);
     const length = result.combinations[0].diagrams.get(element.id)?.length ?? 0;
     if (!points || points.length === 0) continue;
-    curves.set(`${element.id}·max`, envelopeCurve(points, quantity, "max", length));
-    curves.set(`${element.id}·min`, envelopeCurve(points, quantity, "min", length));
+    const { max, min } = envelopeCurves(points, quantity, length);
+    curves.set(`${element.id}·max`, max);
+    curves.set(`${element.id}·min`, min);
   }
 
   return (
@@ -175,6 +188,8 @@ export function Envelope() {
         positiveSide={QUANTITY[quantity].side}
         mergeJointLabels={quantity === "M"}
         unsigned={quantity === "M"}
+        // Los números están todos en la tabla de abajo: el que no tiene lugar no se escribe.
+        skipCrowdedLabels
       />
 
       <h4 className="font-medium">{QUANTITY[quantity].title}: el máximo y el mínimo de cada barra</h4>

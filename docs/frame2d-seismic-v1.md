@@ -126,7 +126,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 4 | **Store sísmico**: el caso en cada carga (`LoadRow.loadCase`) y en las fuerzas de nudo, los niveles derivados, los parámetros E.030, las combinaciones editables, una solución por caso, las combinaciones, la envolvente y las derivas. Tests del store | **hecho** (ver abajo) |
 | 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | **hecho** (ver abajo) |
 | 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | **hecho** (ver abajo) |
-| 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | pendiente |
+| 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | **hecho** (ver abajo) |
 | 8 | **Excel**, alcance tentativo, a confirmar al llegar: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores) | pendiente |
 | 9 | Mirar la app de punta a punta, `pnpm build` y el cierre | pendiente |
 
@@ -277,3 +277,28 @@ Tests: 2 más en `page-pieces.test.tsx` (el procedimiento con la vista del caso 
 - La clasificación `3b + r − 3n` no se muestra en este módulo: con el diafragma la cuenta tendría que sumar las restricciones del piso, y la de `/frame2d` diría otra cosa.
 - El esquema del procedimiento de cada caso no dibuja el diafragma.
 - (La deformada de CS **sí** se miró: el pórtico se desplaza a la derecha, cada piso en bloque por el diafragma, y las reacciones dibujadas son las de la tabla de equilibrio.)
+
+### Paso 7: los ejemplos (2026-10-17) — hecho
+
+Tres ejemplos en el menú (`store/examples.ts`), cada uno para algo que los otros no muestran, **con la lección medida antes de escribirla** y afirmada en `store/examples.test.ts`:
+
+| Ejemplo | Lo que muestra (medido) |
+|---|---|
+| **Tres pisos y dos vanos** (vanos de 6 m, pisos de 3.5 m, P = 45/45/30 t) | Diafragmas de tres nudos. **La columna del medio, frenada por dos vigas, toma 7.28 t de corte contra 5.64 de las de borde** (un 29% más). **El entrepiso que más deriva es el segundo** (0.0130), no el primero (0.0119); ninguno pasa el 0.007, el de arriba por poco (0.00715) |
+| **Mandó el mínimo de C/R** (columnas de 25×25, P = 60/40 t, suelo S₁) | **T = 1.24 s escrito, que es el de Rayleigh del propio pórtico (la página da 1.242)**: un dato coherente, no inventado. C = 0.806, C/R = 0.1008 < 0.11: V = 4.95 t para diseño y 4.54 t para derivas (× 0.916). Aun así no pasa ninguna deriva: un pórtico así de flexible no sirve |
+| **Fuerzas dadas y bases articuladas** (Fᵢ = 3.5 y 4.3 t escritas, una carga en nudo de CV) | Sin momento en la base, **el primer piso deriva 0.0286: unas cuatro veces lo del mismo pórtico empotrado** (0.0073, el ejemplo inicial, con fuerzas casi iguales) |
+
+**Una lección supuesta resultó falsa, otra vez**: la primera versión del ejemplo del mínimo de C/R escribía T = 1.5 s para el mismo pórtico del ejemplo inicial, cuyo Rayleigh es 0.37 s. La página lo habría mostrado, contradiciéndose. Se rehízo con un pórtico de verdad flexible y su propio período.
+
+**Lo que encontró mirar la app** (los cuatro modelos, el esquema en los tres casos y la envolvente en N, V, M, **midiendo las cajas de texto**):
+
+- **La página entera tenía scroll horizontal**: K_bb del ejemplo de tres pisos es de 18×18 y no tenía contenedor con scroll. Ahora cada matriz de la condensación tiene el suyo (`Matrix` en `lateral-stiffness.tsx`), con mapa de calor pasados 19 grados (D13).
+- **En la envolvente de un pórtico de dos vanos los números se pisaban en los nudos interiores** (7 pares): cuatro barras con dos curvas cada una. Ahora **en cada extremo de barra se rotula solo el valor que manda** (el de mayor módulo entre máximo y mínimo), más el máximo interior de cada curva. `InternalForceDiagram` aceptó `skipCrowdedLabels`, que la envolvente usa: un número que después de alejarse sigue chocando no se escribe, porque está en la tabla. `/frame2d` no lo usa.
+- **En el esquema, los nombres de las columnas interiores caían sobre los de sus nudos**, y el de una viga sobre el número de una fuerza (D17). Ahora el esquema genérico pone el nombre de una barra al 25% salvo que ahí choque con el nombre de un nudo o con el número de una fuerza, y entonces lo prueba al 50% y al 75% (`axialLabelPoint` aceptó `at`). **Donde no había choque no cambia nada**: se midió en `/frame2d` (el inicial y sus tres ejemplos) y en `/armaduras-2d` (el inicial y sus tres). El único choque que queda en `/frame2d` es el de antes: el nudo «c» del pórtico a dos aguas con el rótulo de su carga.
+- **Dos textos decían algo falso con el período escrito**. Cuando manda el mínimo, V ponía 0.88 en el lugar de C (es 0.11·R): ahora es `V = Z·U·S·(C/R)ₘᵢₙ·P`. Y Rayleigh comparaba contra «T = h_n/C_T» cuando el T era escrito: ahora dice `T_escrito` y si coincide con el de Rayleigh (2%).
+- **Medido al final**: 0 superposiciones en el esquema (CM, CV, CS) y en la envolvente (N, V, M) de los cuatro modelos, 0 `.katex-error`, sin scroll horizontal y la consola limpia.
+
+**Receta para la próxima**: el menú «Ejemplos» (Base UI) no se abre con `.click()` desde un script; sí despachando `pointerdown`, `mousedown`, `pointerup`, `mouseup` y `click` sobre el botón y después sobre el `[role="menuitem"]`.
+
+Tests: 5 en `store/examples.test.ts`. 592 en total.
+

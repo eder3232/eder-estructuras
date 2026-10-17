@@ -42,8 +42,9 @@ export function axialLabelPoint(
   unitSize: number,
   center: SvgPoint,
   occupied?: SvgPoint,
+  /** Dónde a lo largo de la barra; el 25% salvo que choque (ver `schema-diagram.tsx`). */
+  at = 0.25,
 ): AxialLabelPlacement {
-  const at = 0.25;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;

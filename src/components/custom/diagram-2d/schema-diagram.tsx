@@ -68,6 +68,41 @@ export function SchemaDiagram({
   const viewBox = computeViewBox(points);
   const unitSize = computeUnitSize(viewBox);
   const nodeRadius = unitSize * 0.35;
+
+  // Las cajas de los textos, estimadas (la fuente mide `unitSize`, y con el
+  // halo ocupa algo más de un renglón): solo para que el nombre de una barra no
+  // caiga sobre el de un nudo ni sobre el número de una fuerza.
+  const CHAR_WIDTH = 0.62;
+  const HALF = 0.65;
+  const box = (left: number, width: number, y: number) => ({ left, right: left + width, top: y - unitSize * HALF, bottom: y + unitSize * HALF });
+  const textWidth = (text: string) => text.length * CHAR_WIDTH * unitSize;
+  const occupiedBoxes = [
+    ...nodes.map((node) => {
+      const { x, y } = projectPoint(node);
+      // El nombre del nudo va arriba a la derecha, con la base del texto ahí.
+      return box(x + nodeRadius * 1.6, textWidth(node.name), y - nodeRadius * 1.6 - unitSize * 0.4);
+    }),
+    // El número de una fuerza, donde lo pone `ForceArrow`.
+    ...forces
+      .filter((f) => f.axis !== "r" && f.value !== 0)
+      .map((f) => {
+        const { x, y } = projectPoint(f);
+        const width = textWidth(f.value.toFixed(4));
+        if (f.axis === "x") {
+          const dir = f.value > 0 ? 1 : -1;
+          const tip = x + dir * unitSize * (2.2 + 0.55);
+          return box(dir > 0 ? tip : tip - width, width, y + unitSize * 0.6);
+        }
+        const tipY = y + (f.value > 0 ? -1 : 1) * unitSize * 2.2;
+        return box(x + unitSize * 0.55, width, tipY);
+      }),
+  ];
+  const labelBox = ({ x, y, anchor }: { x: number; y: number; anchor: "start" | "middle" | "end" }, text: string) => {
+    const width = textWidth(text);
+    return box(anchor === "start" ? x : anchor === "end" ? x - width : x - width / 2, width, y);
+  };
+  const overlaps = (p: ReturnType<typeof box>, q: ReturnType<typeof box>) =>
+    p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom;
   const center = { x: viewBox.minX + viewBox.width / 2, y: viewBox.minY + viewBox.height / 2 };
 
   return (
@@ -91,7 +126,15 @@ export function SchemaDiagram({
               .filter((l) => l.elementId === element.id)
               .map((l) => memberLoadSide(l, from, to))
               .find((side) => side !== null);
-            const { x, y, anchor } = axialLabelPoint(a, b, unitSize, center, occupied ?? undefined);
+            // Al 25%, salvo que ahí choque con el nombre de un nudo: entonces al
+            // 50% o al 75%. En un pórtico de dos vanos el nombre de cada columna
+            // interior caía sobre el del nudo de abajo (D17, medido en el ejemplo
+            // de tres pisos de `frame2d-seismic`). Donde no hay choque no cambia nada.
+            const { x, y, anchor } =
+              [0.25, 0.5, 0.75]
+                .map((at) => axialLabelPoint(a, b, unitSize, center, occupied ?? undefined, at))
+                .find((placement) => !occupiedBoxes.some((taken) => overlaps(taken, labelBox(placement, element.name))))
+              ?? axialLabelPoint(a, b, unitSize, center, occupied ?? undefined);
             return (
               <g key={element.id} className={dim(element.id, "element")}>
                 <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
