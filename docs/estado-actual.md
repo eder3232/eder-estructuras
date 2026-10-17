@@ -16,7 +16,7 @@
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
-**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario** qué sigue: `/frame2d` para la v1 o `frame2d-seismic`. El orden de los sistemas lo decidió siempre él.
+**En curso desde el 2026-10-17: `/frame2d` para la v1** (lo eligió el usuario). La revisión, las decisiones, lo que falta decidir y el plan por pasos están en [`frame2d-v1.md`](./frame2d-v1.md); la sección 3 de acá queda como resumen.
 
 ## 2. Qué tiene cada sistema
 
