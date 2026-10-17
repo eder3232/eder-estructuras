@@ -1,6 +1,6 @@
 # Estado actual del proyecto (2026-10-17)
 
-> **Empezá acá si retomás en frío.** Este documento es el estado accionable: qué está hecho, qué falta, qué no está verificado y qué leer antes de tocar cada cosa. El README tiene el resumen y la lista de avances; el roadmap ([`refactor-roadmap.md`](./refactor-roadmap.md)) tiene el diagnóstico del proyecto original y la historia hasta el 2026-08-14.
+> **Empezá acá si retomás en frío.** Este documento es el estado accionable: qué está hecho, qué falta, qué no está verificado y qué leer antes de tocar cada cosa. El README es el mapa del proyecto (páginas, estructura, qué doc leer); la lista de avances está en [`historial.md`](./historial.md); el roadmap ([`refactor-roadmap.md`](./refactor-roadmap.md)) tiene el diagnóstico del proyecto original y la historia hasta el 2026-08-14.
 
 ## 1. Dónde está parado
 
@@ -152,7 +152,9 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | `/frame2d`: exportación a Excel con el FEM vivo (paso 10, cierre) |
+| (este) | docs: el README pasa a ser un mapa y el historial de avances se muda a `historial.md` |
+| `134fc59` | docs: `pnpm build` verificado al cierre de `/frame2d` |
+| `d7aeefa` | `/frame2d`: exportación a Excel con el FEM vivo (paso 10, cierre) |
 | `d590e1d` | `/frame2d`: persistencia y tres ejemplos con cargas en barras (paso 9) |
 | `128f3a7` | `/frame2d`: hover tabla ↔ esquema y el mecanismo dibujado (paso 8) |
 | `fd6fd26` | `/frame2d`: narrativa, matrices grandes y modo práctica (paso 7); fix de `K_ff⁻¹` en los cuatro sistemas |

@@ -1,135 +1,120 @@
 # Eder Estructuras (thesis-refactor-2026)
 
-Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero aplicando mejores prácticas de desarrollo — arquitectura, convenciones y flujo de trabajo — que no existían (o el autor no conocía) en la versión original.
+Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero con mejores prácticas —arquitectura, convenciones, tests y flujo de trabajo— y conserva y mejora su funcionalidad: módulos interactivos de análisis (resortes, armaduras 2D/3D, pórticos 2D y, falta, pórticos con análisis sísmico) que muestran el método paso a paso, con contenido educativo.
 
-El diagnóstico completo del proyecto anterior y el plan de fases del refactor están en [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — **léelo antes de escribir código de dominio o de visualización**, ahí está el porqué del orden de trabajo.
+## Empezá acá
 
-La app original incluye módulos interactivos de análisis estructural (armaduras 2D/3D, pórticos 2D, pórticos 2D con análisis sísmico, resortes) junto con contenido educativo que explica la teoría detrás del método. El objetivo de este refactor es conservar y mejorar esa funcionalidad sobre una base técnica más sólida.
+| Si querés… | Leé |
+|---|---|
+| **retomar el trabajo en frío** (qué está hecho, qué falta, qué no está verificado) | [`docs/estado-actual.md`](./docs/estado-actual.md) |
+| entender por qué el refactor tiene este orden y qué estaba mal en el original | [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) |
+| ver qué se hizo y cuándo | [`docs/historial.md`](./docs/historial.md) |
+| tocar algo concreto | la tabla [«Qué leer antes de tocar cada cosa»](./docs/estado-actual.md#7-qué-leer-antes-de-tocar-cada-cosa) |
+
+### Estado y próximo paso
+
+> **Al 2026-10-17, los cuatro sistemas base están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d` y `/frame2d`. Falta `frame2d-seismic`, que todavía no existe y va como extensión de `/frame2d`, no como copia.
+>
+> **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue** (lo natural es `frame2d-seismic`, ver la sección 3 de [`docs/estado-actual.md`](./docs/estado-actual.md)).
+>
+> Al cierre todo pasa: 518 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
+
+## Las páginas
+
+| Ruta | Qué es | Grados de libertad por nudo | Cierre de la v1 |
+|---|---|---|---|
+| [`/springs`](./src/app/springs) | Resortes en serie/paralelo | 1 | [`docs/springs-v1.md`](./docs/springs-v1.md) |
+| [`/armaduras-2d`](./src/app/armaduras-2d) | Armaduras planas (el sistema de referencia: todo se probó acá primero) | 2 | [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md) |
+| [`/armaduras-3d`](./src/app/armaduras-3d) | Armaduras espaciales, escena en three.js | 3 (traslaciones) | [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) |
+| [`/frame2d`](./src/app/frame2d) | Pórticos planos con cargas en barras, FEM calculado y diagramas N/V/M | 3 (con giro) | [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) |
+| [`/estabilidad`](./src/app/estabilidad) | Teoría: por qué `K` es singular sin apoyos, y qué hace un programa de verdad | — | — |
+
+Cada sistema tiene: tablas de datos con fórmulas, clasificación de la estructura, esquema, resultados pedagógicos por acordeón (ensamblaje paso a paso, partición, solución, fuerzas internas, equilibrio), modo práctica, ejemplos precargados, persistencia en el navegador y exportación a Excel con el método vivo. La tabla completa de qué tiene cada uno está en la sección 2 de [`docs/estado-actual.md`](./docs/estado-actual.md).
 
 ## Stack
 
-- **[Next.js 16](https://nextjs.org/)** (App Router) — nota: esta versión de Next.js puede tener cambios respecto a lo que conoces; ver `AGENTS.md` antes de tocar APIs de Next.
-- **React 19**
-- **TypeScript**
-- **Tailwind CSS v4**
-- **[shadcn/ui](https://ui.shadcn.com/)** (estilo `radix-sera`, base color `neutral`) — componentes en `src/components/ui`
-- **[three.js](https://threejs.org/)** vía `@react-three/fiber` y `@react-three/drei` — **solo** para la escena 3D de armaduras espaciales; los sistemas planos se dibujan con SVG puro (ver [`docs/diagram-pattern.md`](./docs/diagram-pattern.md))
-- **pnpm** como package manager (`pnpm@10.15.1`)
+- **[Next.js 16](https://nextjs.org/)** (App Router). **Esta versión tiene cambios** respecto de lo conocido: ver `AGENTS.md` y `node_modules/next/dist/docs/` antes de tocar APIs de Next.
+- **React 19**, **TypeScript**, **Tailwind CSS v4**
+- **[shadcn/ui](https://ui.shadcn.com/)** (estilo `radix-sera`, base color `neutral`), en `src/components/ui`
+- **Jotai** para el estado, **mathjs** para las fórmulas de las celdas, **KaTeX** para el álgebra
+- **SVG puro** para los sistemas planos ([`docs/diagram-pattern.md`](./docs/diagram-pattern.md)) y **three.js** (`@react-three/fiber`, `drei`) **solo** para la escena 3D ([`docs/diagram-3d-pattern.md`](./docs/diagram-3d-pattern.md))
+- **exceljs** para la exportación; **Vitest** (con `happy-dom` y testing-library para componentes) y **HyperFormula** para recalcular los libros en los tests
+- **pnpm** (`pnpm@10.15.1`)
 
 ## Primeros pasos
 
-Requiere Node.js y pnpm instalados.
+Requiere Node.js y pnpm.
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev        # http://localhost:3000
 ```
-
-Abre [http://localhost:3000](http://localhost:3000) para ver el resultado. La app se recarga automáticamente al editar archivos dentro de `src/app`.
-
-### Scripts disponibles
 
 | Comando            | Descripción                                    |
 | ------------------ | ---------------------------------------------- |
-| `pnpm dev`         | Levanta el servidor de desarrollo              |
-| `pnpm build`       | Compila la app para producción                 |
+| `pnpm dev`         | Servidor de desarrollo                         |
+| `pnpm build`       | Compila para producción (con el servidor de desarrollo **apagado**) |
 | `pnpm start`       | Sirve la build de producción                   |
-| `pnpm test`        | Corre los tests de motor, stores y componentes (Vitest) |
-| `pnpm lint`        | Corre ESLint sobre el proyecto                 |
-| `npx tsc --noEmit` | Chequea tipos sin compilar                     |
+| `pnpm test`        | Tests de motor, stores y componentes (Vitest)  |
+| `pnpm lint`        | ESLint                                         |
+| `npx tsc --noEmit` | Chequea tipos                                  |
 
-> **Ojo con `pnpm lint`**: hoy reporta **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos `react-hooks/set-state-in-effect`). No son regresiones y no se corrigen: `ui/` es intocable por convención (ver [`docs/components.md`](./docs/components.md)). Si aparece un tercer error, ese sí es nuevo.
+> **Ojo con `pnpm lint`**: reporta **2 errores preexistentes** en archivos de shadcn/ui (`src/components/ui/carousel.tsx` y `src/hooks/use-mobile.ts`, ambos `react-hooks/set-state-in-effect`). No son regresiones y no se corrigen: `ui/` es intocable por convención ([`docs/components.md`](./docs/components.md)). Si aparece un tercero, ese sí es nuevo.
+
+Cómo verificar más allá de los tests (mirar la app con el MCP `chrome-devtools`, abrir el Excel de verdad por COM): sección 6 de [`docs/estado-actual.md`](./docs/estado-actual.md).
 
 ## Estructura del proyecto
 
 ```
 src/
-  app/          # Rutas (App Router)
+  app/
+    <sistema>/            # springs, armaduras-2d, armaduras-3d, frame2d
+      page.tsx
+      store/              # átomos de Jotai (datos planos), resultados derivados, ejemplos, persistencia
+      components/         # tablas, esquema y panel de resultados del sistema
+    estabilidad/          # página de teoría
   components/
-    ui/         # shadcn/ui puro, sin modificar
-    ui-custom/  # Forks de componentes de shadcn/ui modificados
-    custom/     # Componentes propios, no derivados de shadcn
-  hooks/
+    ui/                   # shadcn/ui puro, sin modificar
+    ui-custom/            # forks de shadcn/ui modificados
+    custom/               # componentes propios compartidos (matrices, ecuaciones, decimales, quiz…)
+      diagram-2d/         # esquema, deformada y diagramas N/V/M en SVG
+      diagram-3d/         # escena three.js
   lib/
+    engine/               # motor puro: Node/Element/System, un elemento por sistema
+                          # (springs, trusses-2d, trusses-3d, frame2d con cargas en barras),
+                          # equilibrio, clasificación, mecanismos, factorización
+    excel/                # armado de los libros .xlsx con fórmulas vivas
+  hooks/
+docs/                     # ver abajo
 ```
+
+La regla que sostiene todo: **el motor es puro y es la única fuente de verdad**; los stores guardan datos planos (nunca instancias del motor) y derivan los resultados. Está en [`docs/state-pattern.md`](./docs/state-pattern.md).
 
 ## Documentación
 
-- [`docs/estado-actual.md`](./docs/estado-actual.md) — **el estado accionable del proyecto: empezá acá si retomás en frío.** Qué tiene cada sistema, qué falta para la v1, qué quedó para la v2, deudas abiertas, cómo verificar y qué leer antes de tocar cada cosa.
-- [`docs/springs-v1.md`](./docs/springs-v1.md) — el cierre de `/springs` para la v1: la revisión, el alcance que decidió el usuario y el avance paso por paso.
-- [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) — el cierre de `/armaduras-3d` para la v1, con lo que encontró mirar cada paso (incluidas las recetas para capturar WebGL y verificar el Excel por COM). Es el molde más reciente para cerrar `/frame2d`.
-- [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) — **el cierre de `/frame2d` para la v1 (terminado el 2026-10-17)**: la revisión de cargas y diagramas del original (que no sirve de molde: trece fallas, entre ellas FEM mal calculados y diagramas que ignoran cargas), los bugs del módulo actual, la propuesta (cargas como dato, FEM calculado, diagramas N/V/M exactos en SVG), las decisiones del usuario y el plan por pasos.
-- [`docs/git-workflow.md`](./docs/git-workflow.md) — directriz de control de versiones: fase actual de commits directos a `main`, Conventional Commits, versionado con SemVer y el cambio de flujo a ramas + PR una vez taggeada `v1.0.0`.
-- [`docs/components.md`](./docs/components.md) — convención de organización de componentes: qué queda intocable en `ui/`, cómo forkear a `ui-custom/`, y qué va en `custom/`.
-- [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto anterior (`thesis-structures`) y el orden de fases/trenes propuesto para el refactor: motor de cálculo unificado, patrón de estado, visualización, y la exportación a Excel con fórmulas vivas.
-- [`docs/state-pattern.md`](./docs/state-pattern.md) — **léelo antes de construir la página de un nuevo sistema estructural**: el patrón de estado (Jotai + motor puro) y de resultados pedagógicos que dejaron `/springs`, `/armaduras-2d` y `/frame2d` (1, 2 y 3 DOF por nudo).
-- [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — **léelo antes de tocar visualización de un sistema plano**: el patrón de esquema/forma deformada en SVG puro (sin three.js), con qué es genérico (`src/components/custom/diagram-2d/`) y cómo se resolvió el DOF rotacional (empotramiento, arco de momento, criterio de color) al portarlo a `/frame2d`.
-- [`docs/armaduras-2d-plan.md`](./docs/armaduras-2d-plan.md) — plan de una actualización puntual sobre `/armaduras-2d`: recuperar la narrativa pedagógica que el port perdió respecto del original (transformación `A`/`Aᵀ`, ecuación global, la partición mostrada como partición, sustituciones numéricas, KaTeX). Sale de comparar las dos versiones archivo por archivo.
-- [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md) — **terminada el 2026-08-14, y ahora es la memoria de por qué cada cosa está como está**: los 22 puntos que cerraron `/armaduras-2d`, cada uno con la decisión que se tomó y lo que apareció al implementarlo. Se lee antes de propagar cualquiera de esas funciones a los otros sistemas —el hilo C—, porque ahí está lo que no se deduce del código. Incluye lo que quedó explícitamente afuera y cómo verificar.
-- [`docs/errores.md`](./docs/errores.md) — **léelo antes de tocar cualquier cosa que produzca, transporte o muestre un error**: el contrato de hoy (motor como única fuente de verdad, errores como átomo derivado, y dónde se dice cada uno de los cuatro estados desde U3), más lo que salió de revisar el sistema del proyecto original — incluido el "debouncer", que no era un debounce, y el bug de input que tapaba.
-- [`docs/pendientes-comparacion.md`](./docs/pendientes-comparacion.md) — el resto de lo que encontró esa misma comparación y **no** se va a hacer ahora: shell de la app, numeración de DOF por el usuario, unidades, persistencia, vinculación matriz ↔ modelo. Cada punto con su decisión abierta, para que la discusión arranque de donde quedó. Desde el 2026-08-13 incluye la **segunda pasada** sobre el resto del proyecto v1 —el sistema de errores (grupo **E**), los videos ya grabados (**N7**)— y la lista de **falsos rescates**: lo que v1 aparentaba tener y no calculaba.
-- [`docs/excel-export.md`](./docs/excel-export.md) — **la exportación a Excel con el método vivo (Fase 7)**, hecha en `/armaduras-2d`, `/springs` y `/armaduras-3d`: qué queda editable en el libro y qué no (los apoyos, por decisión del usuario), cómo se arma desde el ensamblaje del motor, cómo se verificó contra Excel de verdad por COM, y las trampas de `exceljs` y del PNG del esquema.
-- [`docs/diagram-3d-pattern.md`](./docs/diagram-3d-pattern.md) — el módulo hermano para sistemas espaciales (`src/components/custom/diagram-3d/`, con three.js): por qué es un módulo aparte y no una extensión del de 2D, la cámara con z hacia arriba sin remapear ejes, y cómo se leen los tokens de tema `oklch` para materiales que no aceptan clases de CSS.
+**Estado e historia**
+- [`docs/estado-actual.md`](./docs/estado-actual.md) — **el estado accionable**: qué tiene cada sistema, qué falta para la v1, qué quedó para la v2, deudas abiertas, cómo verificar, qué leer antes de tocar cada cosa y los últimos commits.
+- [`docs/historial.md`](./docs/historial.md) — los avances en orden, desde el Tren 0 hasta el cierre de `/frame2d`.
+- [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md) — diagnóstico del proyecto original, las fases y trenes del refactor, la tabla de deudas numeradas y la historia de decisiones hasta el 2026-08-14.
+- [`docs/pendientes-comparacion.md`](./docs/pendientes-comparacion.md) — lo que la comparación con el original dejó abierto (navegación definitiva —S2—, contenido teórico enlazado —N6—, unidades…) con su decisión pendiente, y los **falsos rescates**: lo que v1 aparentaba tener y no calculaba. S2 y N6 conviene decidirlos antes de la Fase 8.
 
-> **Módulos del motor que no tienen doc propio** (son puros y están comentados en el archivo): `src/lib/engine/mechanism.ts` —diagnóstico de mecanismos, núcleo de la matriz y la alternativa de Fredholm—, `src/lib/engine/factorization.ts` (`LDLᵀ`) y `src/lib/engine/unit-displacement.ts`. El porqué de los tres está en la página [`/estabilidad`](./src/app/estabilidad) y en las entradas del 2026-08-13 de [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md).
+**Cierre de cada sistema** (la revisión, las decisiones del usuario y el avance paso por paso, con lo que encontró mirar la app)
+- [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md) — los 22 puntos que cerraron `/armaduras-2d`: **el porqué de cada función** que después se propagó a los otros sistemas. Su antecedente es [`docs/armaduras-2d-plan.md`](./docs/armaduras-2d-plan.md) (recuperar la narrativa pedagógica que el port había perdido).
+- [`docs/springs-v1.md`](./docs/springs-v1.md) — `/springs`.
+- [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) — `/armaduras-3d`, con las recetas para capturar WebGL en headless y verificar el Excel por COM.
+- [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) — `/frame2d`: las trece fallas del original en cargas y diagramas, **la convención de signos** (Hibbeler/Beer, sección 4), las cargas en barras con su FEM, los diagramas N/V/M y la deformada exactos.
 
-Más guías (arquitectura, convenciones de código, etc.) se irán agregando en `docs/` a medida que el proyecto lo requiera.
+**Patrones y convenciones** (leer antes de tocar esa parte)
+- [`docs/state-pattern.md`](./docs/state-pattern.md) — el patrón de estado (Jotai + motor puro) y de resultados pedagógicos; **antes de construir o cerrar un sistema**.
+- [`docs/diagram-pattern.md`](./docs/diagram-pattern.md) — esquema y deformada en SVG para sistemas planos, y cómo se dibuja el giro.
+- [`docs/diagram-3d-pattern.md`](./docs/diagram-3d-pattern.md) — la escena 3D: por qué es un módulo aparte, la cámara con z hacia arriba, los colores del tema en materiales.
+- [`docs/errores.md`](./docs/errores.md) — el contrato de errores y advertencias; **antes de tocar cualquier cosa que produzca o muestre un error**.
+- [`docs/excel-export.md`](./docs/excel-export.md) — la exportación a Excel: qué queda editable, cómo se arma desde el ensamblaje del motor, cómo se verifica y las trampas de `exceljs`.
+- [`docs/components.md`](./docs/components.md) — `ui/` intocable, forks en `ui-custom/`, propios en `custom/`.
+- [`docs/git-workflow.md`](./docs/git-workflow.md) — commits directos a `main` hasta `v1.0.0`, Conventional Commits, SemVer.
 
-## Estado del proyecto
+> **Módulos del motor sin doc propio** (puros y comentados en el archivo): `src/lib/engine/mechanism.ts` (mecanismos, núcleo de la matriz, alternativa de Fredholm), `factorization.ts` (`LDLᵀ`) y `unit-displacement.ts`. Su porqué está en la página [`/estabilidad`](./src/app/estabilidad) y en las entradas del 2026-08-13 de [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md).
 
-En desarrollo activo, fase pre-`v1.0.0` (commits directos a `main`, ver [`docs/git-workflow.md`](./docs/git-workflow.md)).
+## Flujo de trabajo
 
-Progreso respecto a las fases de [`docs/refactor-roadmap.md`](./docs/refactor-roadmap.md):
-
-- [x] **Tren 0** — shadcn/ui instalado con la paleta de este repo, convenciones de git y de componentes documentadas (`docs/git-workflow.md`, `docs/components.md`), `NumberInput` (Base UI) y `FormulaInput` (input estilo Excel con `mathjs`) implementados en `src/components/custom/`.
-- [x] **Tren 1** — motor de cálculo genérico (`Node`/`Element`/`System`) en `src/lib/engine/`, validado portando `springs` con tests de Vitest.
-- [x] **Tren 2** — armaduras 2D (`TrussElement2D`) portadas al motor sin tocar `System`/`Element`, confirmando que la abstracción generaliza de 1 a 2 DOF/nodo.
-- [x] **Tren A (springs)** — patrón dominio↔estado con Jotai (átomos de datos planos, nunca instancias del motor) y página `/springs` de punta a punta: tablas de entrada, panel de errores y resultados pedagógicos por acordeón (DOF↔nudo, ensamblaje paso a paso con leyendas físicas, partición y solución, fuerzas internas).
-- [x] **Tren A (armaduras 2D)** — mismo patrón replicado en `/armaduras-2d` (2 DOF/nudo, rigidez axial con transformación geométrica vía `TrussElement2D`). Lo genérico entre ambos sistemas (`matrix-table`, control de decimales, tabla de DOF) se extrajo a `src/components/custom/` para no duplicarlo.
-- [x] **Tren B** — capa de visualización 2D en SVG puro (`src/components/custom/diagram-2d/`, sin three.js): esquema no deformado, forma deformada con slider de escala, barras coloreadas por tracción/compresión y reacciones, conectada a `/armaduras-2d`.
-- [x] **Tren C (frame2d)** — pórticos planos completos de punta a punta: `FrameElement2D` (rigidez 6×6 axial+flexión, fuerzas internas axial/corte/momento) con regresión portada del ejemplo del proyecto original, página `/frame2d` con el patrón de estado, y visualización con el DOF rotacional resuelto (empotramiento, arco de momento, color por fuerza axial). Incluye momentos de empotramiento perfecto por barra, corrigiendo el bug de transformación del original (ver `docs/refactor-roadmap.md`); falta todavía la UI de tablas de carga que los calcule sola.
-- [x] **Tren D (armaduras 3D)** — armaduras espaciales completas de punta a punta: `TrussElement3D` (la misma barra axial del caso plano con un tercer coseno director), página `/armaduras-3d` con el patrón de estado, y visualización real en three.js (rotar con el mouse, apoyos espaciales, forma deformada). Agrega dos cosas que el original no tenía: **fuerzas internas** (que `armor3d` declaraba pero nunca calculaba) y tests del store. Se adelantó a `frame2d-seismic` porque los dos hilos eran independientes.
-- [x] **UI de `/armaduras-2d`** (2026-08-10, fuera de los trenes) — arreglo del render de los apoyos en los diagramas 2D (afecta también a `/frame2d`), restauración del botón de insertar una fila en el medio que el port había perdido, y precisión configurable en cascada (página → bloque → tabla) en vez de un único selector global. Pendiente de propagar a los otros tres sistemas.
-- [x] **UX de los controles de decimales** (2026-08-12, fuera de los trenes) — los dos problemas que el usuario encontró al mirar la cascada de decimales, ambos arreglados: el desplegable de sección mostraba la frase larga del item (`Automático — igual que la página (4)`) cortada por la mitad dentro de un trigger angosto, y el stepper `− n +` de cada tabla estaba anclado al borde derecho de la tabla, así que subir un decimal la ensanchaba y corría el `+` de abajo del cursor. Las reglas para no reintroducirlos quedaron en [`docs/components.md`](./docs/components.md) y [`docs/state-pattern.md`](./docs/state-pattern.md), que es lo que se copia al propagar.
-- [x] **Narrativa pedagógica de `/armaduras-2d`** (2026-08-12, fuera de los trenes) — la comparación con el `armor2d` original mostró que el rework ganó infraestructura y **perdió el andamiaje que explicaba el método**. Recuperado y mejorado: el paso de transformación completo (`K = A · k · Aᵀ` con los tres operandos, no solo el resultado), la ecuación global `F = K·U` **con las incógnitas marcadas**, la partición mostrada como lo que es —la misma matriz reordenada, con las cuatro zonas coloreadas y el corte dibujado, en vez de cuatro tablas sueltas—, las sustituciones numéricas de `Uf` y `Rr`, y KaTeX en todo el álgebra. El plan y lo que apareció al implementarlo están en [`docs/armaduras-2d-plan.md`](./docs/armaduras-2d-plan.md).
-- [x] **Shell de la app** (2026-08-12, fuera de los trenes) — la app se llama **Eder Estructuras**, `lang="es"`, nombre y descripción centralizados en `src/lib/site-config.ts`, y **`next-themes` por fin montado**: estaba instalado desde el principio pero nunca se había montado, así que los tokens `.dark` eran código muerto y el modo oscuro no se podía activar en ningún sistema. Incluye una navbar **provisional** (el toggle tenía que vivir en algún lado) y la primera verificación en oscuro que se hizo nunca. Ver [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md).
-- [x] **Cerrar `/armaduras-2d`** (2026-08-14) — **terminada**: la lista entera de [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md), que se **replanificó el 2026-08-13**: eran 8, y el barrido del proyecto v1 sumó tres —el canal de advertencias y **los dos checkboxes de orden de grados de libertad que el original tenía y este repo perdió**— que reordenaron todo lo demás. Con esto se destraba el **hilo C** (propagar a los otros tres sistemas), que arranca preguntándole al usuario. Lo que entró, del último al primero:
-  - **Infraestructura** — entorno DOM para tests de componentes (`happy-dom` + testing-library, pedidos por archivo con un docblock), que ejercitó **los primeros clicks del repo**.
-  - **Legibilidad** — D6 + U4 (ninguna etiqueta de diagrama se apoya sobre el eje de lo que rotula, halo del color del fondo, y la fuerza axial sobre cada barra), D10 (la página pasó a `max-w-[84rem]` después de medir que la cadena `K = A·k·Aᵀ` no entra en 1024 px a ninguna precisión útil) y las **matrices que crecen** (notación compacta con un `×10³` por matriz, etiquetas fijas al scrollear, y el contenedor de scroll que les faltaba a los pasos de ensamblaje).
-  - **Pedagogía** (2026-08-13, cinco ideas) — el **desplazamiento unitario** que muestra qué *es* una columna de `K`; el **error de matriz singular convertido en lección**, con el mecanismo nombrado y dibujado; la **reciprocidad** `k_ij = k_ji` al pasar el mouse; la **animación** de la deformada; y un **modo práctica** con dos ejercicios corregidos (dónde aporta una barra, y completar su matriz).
-  - **Teoría** — la página [`/estabilidad`](./src/app/estabilidad) y su enganche desde el panel de resultados.
-  - **N4 · vincular matriz ↔ modelo** (2026-08-13) — pasar el mouse por una celda de `K` y ver **de dónde sale ese número**: las barras que aportan ahí y cuánto, con el modelo dibujado al lado. La respuesta es topológica y esa es la lección: una barra aporta a una celda **si toca los dos nudos**, y por eso los ceros son pares de nudos que ninguna barra conecta. Resolvió además la decisión abierta que N3 hereda: el resaltado vive en un **contexto**, no en un átomo, porque es estado efímero de vista y los átomos son del modelo.
-  - **U5 · no hay unidades, y es una decisión** (2026-08-13) — el punto pedía «rotular con un sistema fijo (kN, m, kN/m²)», y el usuario lo corrigió: eso **asume que la app debería elegir un sistema**, cuando en estructuras se trabaja en muchos y ninguno es el correcto. Un rótulo fijo sería *activamente falso* para quien cargue en kgf/cm². Lo que sí faltaba era **decir la regla de coherencia**, que estaba implícita: eso es `custom/units-note.tsx`.
-  - **M1b · numeración de grados de libertad del alumno** (2026-08-13) — el segundo checkbox del original, para cotejar contra un ejercicio donde el profesor numeró distinto. **Y acá el plan cambió al implementarlo**: v1 la trataba como una *sugerencia* —solo la respetaba si los restringidos y los libres quedaban agrupados— y eso era una limitación de v1, no del método. En v2 la partición junta por lista de índices, así que **si el alumno numeró, el alumno manda**: se respeta tal cual aunque intercale los grupos.
-  - **M1a · ¿los grados de libertad restringidos van arriba?** (2026-08-13) — el primero de los dos checkboxes que el original tenía y este repo había perdido. Existe porque cada profesor ensambla la matriz global a su manera, y una matriz que no se parece a la del pizarrón desorienta al que recién aprende. El motor gana la política de orden con el default de hoy, así que **los otros tres sistemas no cambian**; la UI va solo acá. Salió tan barato como se había medido: el ensamblaje, los pasos, las ecuaciones de despeje y el resto del panel **no se tocaron**.
-  - **E2 · canal de advertencias** (2026-08-13) — hasta acá todo lo que entraba al panel bloqueaba. Ahora un error se **tira** y una advertencia se **devuelve** (`SolveResult.warnings`), así que un aviso no puede cortar el cálculo: se calcula **y** se avisa. Y estrenar la variante `warning`, que nadie había usado, destapó que el token `--warning` era ilegible en tema claro (2.3:1 contra el 4.5 que pide WCAG) — **también en las flechas de reacción de los tres sistemas con diagrama**.
-  - **U2 · combobox buscable en Desde/Hacia** (2026-08-13) — se escribe para filtrar en vez de buscar en una lista, y el nudo del otro extremo va deshabilitado (el rechazo de «Desde = Hacia» se previene en vez de reportarse). El `ui/combobox.tsx` instalado es de **Base UI**, no de `cmdk`. Un test encontró que Base UI no selecciona el texto del input al enfocarlo: hacer click y escribir dejaba `v2v3` adentro y la lista vacía.
-  - **U1 · encabezados agrupados en la tabla de nudos** (2026-08-13) — la magnitud arriba y el eje abajo, en dos niveles. Medido: a 760 px de ancho, antes la tabla se desbordaba y las dos columnas de restricción quedaban fuera de vista; ahora entra completa. El rótulo largo por columna (`Desplaz. X`) era el que le fijaba el piso al ancho, no el dato.
-  - **N2 · ejemplos precargados** (2026-08-14) — tres armaduras elegibles de un menú, y **ninguna está por ser otra armadura**: el triángulo isostático muestra que ahí los esfuerzos no dependen del material, la cercha tiene los apoyos en el **medio de la tabla** (que es donde se ve qué hace el interruptor de orden), y el apoyo que cede 5 mm es el único que usa el **desplazamiento prescrito**, la rama del método que ninguna pantalla ejercitaba. Los tres pasan por el motor en los tests —resuelven y cierran en equilibrio—, porque un ejemplo que no resuelve es peor que no tenerlo. Y armarlos corrigió una creencia: la primera versión del asentamiento dio **cero en todas las barras**, porque ese descenso era compatible con un movimiento sin deformar — *hiperestática + asentamiento* no implica esfuerzos.
-  - **N1 · persistencia en `localStorage`** (2026-08-13) — recargar ya no pierde nada, con un botón de **volver al ejemplo inicial** que se puede **deshacer** (un diálogo de confirmación frena al que sabe lo que quiere; el undo salva también al que se dio cuenta después, y es el mismo mecanismo que va a usar N2). Se **espera a leer lo guardado antes de dibujar**, con el espacio reservado: mostrar el ejemplo inicial y saltar al modelo del alumno se lee como «se perdió mi trabajo». La versión va adentro del payload y lo que no se entiende se descarta avisando. Y al estrenar el `Toaster` —que nadie había usado— apareció que salía en sans-serif contra toda la app en mono, más una corrección al método: **`forcedTheme` no sirve para capturar un toast**.
-  - **N5 · verificación de equilibrio** (2026-08-13) — las cinco secciones anteriores muestran **cómo se llega** al resultado y ninguna mostraba que el resultado **esté bien**. La sexta hace la comprobación del pizarrón: nudo por nudo, las barras que llegan tiran, la carga empuja, el apoyo sostiene, y los tres suman cero. El cálculo es **genérico y vive en el motor** (`SolveResult.equilibrium`), así que propagarlo no toca motor. El veredicto va **en el título de la sección** —la decisión que el usuario tomó— para poder contestar «¿puedo confiar en esto?» sin desplegar nada. La captura encontró dos cosas: el sello medía **2.78:1** en oscuro (la trampa de `--warning` otra vez) y la raya del total no se dibujaba, porque `TableBody` lleva `[&_tr:last-child]:border-0`.
-  - **N3 · vincular tabla ↔ diagrama** (2026-08-13) — la otra mitad de N4, y la que hace que **la tabla y el dibujo dejen de ser dos cosas**: pasar el mouse por una fila enciende su nudo o su barra en el esquema, y pasarlo por el esquema enciende la fila (una barra prende además los dos nudos que toca). Salió barato porque N4 ya había decidido dónde vive el resaltado. La captura encontró dos cosas: que **los apoyos y las flechas no se apagaban con su nudo** —con la figura al 20%, lo más fuerte de la pantalla era justo lo que no se estaba señalando— y que el tinte de la fila **necesita una opacidad distinta por tema** para decir lo mismo (105 contra 29 de distancia RGB con la misma mezcla).
-  - **U3 · feedback en vez de resultados vacíos** (2026-08-13) — el panel devolvía `null` en todo lo que no fuera "resuelto", así que la sección quedaba con su título, el selector de decimales al lado y nada debajo. Ahora cada estado dice por qué: faltan datos, el modelo tiene errores, o el cálculo se detuvo. El **diagnóstico de mecanismo se mudó de las alertas al panel de resultados** —no es un dato mal cargado, es lo que produjo el cálculo— y se dice una sola vez.
-- [x] **Exportación a Excel en `/armaduras-2d`** (2026-10-14, adelanto de la Fase 7) — botón «Descargar Excel» que genera un `.xlsx` sin macros donde el método sigue vivo: coordenadas, cargas, desplazamientos prescritos, área y elasticidad se editan y todo lo demás —`A·k·Aᵀ` de cada barra, `K`, la partición, `Uf`, `Rr`, fuerzas axiales— se recalcula en Excel. Los apoyos y la conectividad quedan fijos y el libro lo dice. Lleva el esquema como imagen. Verificado contra Excel de verdad por COM. Ver [`docs/excel-export.md`](./docs/excel-export.md); falta propagarla a los otros tres sistemas.
-- [x] **Clasificación de la estructura en `/armaduras-2d`** (2026-10-14) — sección nueva entre el esquema y los resultados, porque es el primer paso del pizarrón: `g = b + r − 2n` con los números del modelo, y un veredicto que **cruza el conteo con lo que encontró el motor**. Eso es lo que tiene valor académico: el conteo es condición necesaria, no suficiente, y la app muestra el caso que el conteo no ve (un cuadro sin diagonales con dos apoyos fijos da `4 + 4 − 8 = 0` y es un mecanismo). La cuenta vive en el motor (`determinacy`, con los coeficientes como parámetro) para que propagarla a pórticos (`3b + r − 3n`) y armaduras 3D (`b + r − 3n`) sea cambiar dos números.
-- [x] **`/springs` completo para la v1** (2026-10-14) — la revisión encontró seis bugs (entre ellos `k ≤ 0` aceptada, e ids internos en los mensajes de error, **que también afectaba a `/armaduras-2d`**) y le llevó todo lo de `/armaduras-2d` que no depende de un dibujo: estado vacío, advertencias, clasificación `g = b + r − n`, equilibrio, orden de grados de libertad, narrativa en KaTeX, modo práctica, persistencia, ejemplos (serie, paralelo y apoyo que cede) y **exportación a Excel sin imagen**. Lo reutilizable se extrajo a `src/components/custom/` y `src/lib/` en vez de copiarse — es el trabajo del hilo C hecho a medida que se necesitó. Detalle y lo que encontró mirarlo en [`docs/springs-v1.md`](./docs/springs-v1.md).
-- [x] **`/armaduras-3d` completo para la v1** (2026-10-15 a 2026-10-16, detalle en [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md)) — terminado con la **exportación a Excel sin imagen**, verificada contra Excel de verdad por COM (12 440 celdas, 0 diferencias) y con la descarga real desde la app. Además: la escena por fin sigue al tema (nunca lo había hecho: en oscuro, barras negras sobre fondo negro), los seis bugs de la revisión, todo lo de `/armaduras-2d` que no pide dibujo (la tabla de barras de las dos armaduras es ahora una sola), las **herramientas de matrices grandes aplicadas a los tres sistemas** (vista apilada, pantalla completa, `K` como mapa, pasos de ensamblaje cerrados), la narrativa en KaTeX con el modo práctica de un bloque de 3×3, el **hover tabla ↔ escena** sin pelear con la rotación, el **mecanismo dibujado**, y la persistencia con tres ejemplos (trípode isostático, tetraedro aplastado, torre de 9 nudos). Armar los ejemplos encontró que **el asentamiento del tetraedro inicial, solo, no tensiona ninguna barra**: lo contrario de lo que el plan le atribuía.
-- [x] **`/frame2d` completo para la v1** (2026-10-17, detalle en [`docs/frame2d-v1.md`](./docs/frame2d-v1.md)) — el sistema donde el original estaba peor: sus cargas en barras tenían el FEM del momento concentrado mal y la carga intermedia nunca se sumaba, y sus diagramas de corte y momento ignoraban cargas y se dibujaban como cajas. Ahora: **las cargas son el dato y el FEM se calcula** (distribuida lineal, puntual y momento, en cuatro direcciones y por planta, integradas en forma exacta contra las funciones de forma), con FEM a mano como escape; **diagramas N, V y M exactos** sobre el pórtico (momento del lado traccionado) y por barra con cursor; **la deformada real** entre nudos; todo lo de los otros tres sistemas; tres ejemplos con lecciones medidas; y **Excel con el FEM vivo**, verificado por COM. En el camino aparecieron dos bugs del motor (el equilibrio global de un pórtico daba siempre «no cierra») y uno en los cuatro sistemas (la tabla rotulada `K_ff⁻¹` mostraba `K_ff`).
-- [ ] **Tren C (frame2d-seismic)**: extensión real sobre `frame2d`, no un fork copiado. Ver `docs/refactor-roadmap.md`.
-- [ ] Fases 6 a 8 (armaduras plus/frame plus, exportación a Excel, contenido educativo): ver tabla completa en `docs/refactor-roadmap.md`.
-
-Ya existen cuatro páginas funcionales: [`/springs`](./src/app/springs), [`/armaduras-2d`](./src/app/armaduras-2d), [`/frame2d`](./src/app/frame2d) y [`/armaduras-3d`](./src/app/armaduras-3d) — 1, 2, 3 y 3 grados de libertad por nudo (las dos últimas con la misma cantidad pero distinta naturaleza: una rotación vs. tres traslaciones). Juntas confirman el patrón (Jotai + motor puro + resultados pedagógicos por acordeón + visualización) que se replica para el resto de los sistemas.
-
-Además de los sistemas hay una primera página de **teoría**: [`/estabilidad`](./src/app/estabilidad) — por qué la matriz de rigidez es singular *siempre* antes de poner apoyos, por qué el determinante no sirve para darse cuenta, qué hace un programa de cálculo de verdad (factorizar, no invertir) y qué significa que el sistema no tenga solución única. Es contenido que no estaba en el proyecto original ni en la cursada, y salió de un bug real.
-
-### Próximo paso
-
-> **Estado al 2026-10-17: los cuatro sistemas base están cerrados para la v1** — `/armaduras-2d`, `/springs`, `/armaduras-3d` y `/frame2d`. Falta `frame2d-seismic` (que no existe). **No hay tarea anotada: lo siguiente es preguntarle al usuario cuál sigue**. `pnpm build` compila limpio (verificado el 2026-10-17, con el servidor de desarrollo apagado: las siete rutas estáticas).
->
-> **El estado completo y accionable está en [`docs/estado-actual.md`](./docs/estado-actual.md)** — empezá por ahí si retomás en frío: qué tiene cada sistema (tabla comparativa), qué falta para la v1 y con qué molde se cerraron los otros tres, qué quedó para la v2, las deudas abiertas, cómo verificar (con el MCP `chrome-devtools` y Excel por COM) y qué leer antes de tocar cada cosa.
-
-Lo que **no** está en ese documento y sigue siendo útil:
-
-- **El porqué de cada función** que se propagó desde `/armaduras-2d`: [`docs/armaduras-2d-cierre.md`](./docs/armaduras-2d-cierre.md).
-- **La historia de las decisiones de orden** hasta el 2026-08-14 (los hilos A, B y C, la decisión de terminar `/armaduras-2d` antes que nada) y el registro de qué se miró en cada sesión: el roadmap, sección [«Si estás retomando después de un `/clear`»](./docs/refactor-roadmap.md#si-estás-retomando-después-de-un-clear), que quedó como historia.
-- **Lo que la comparación con el proyecto original dejó pendiente** (shell y navegación definitiva —S2—, contenido teórico enlazado —N6—, y los falsos rescates): [`docs/pendientes-comparacion.md`](./docs/pendientes-comparacion.md). S2 y N6 se condicionan mutuamente y conviene decidirlos antes de la Fase 8.
+Fase pre-`v1.0.0`: commits directos a `main` con Conventional Commits en español ([`docs/git-workflow.md`](./docs/git-workflow.md)). Cada sistema se cerró con el mismo método: revisar el original y el módulo actual, que el usuario decida el alcance, y avanzar por pasos con un commit por paso, verificando cada uno con tests **y mirando la app**. Al terminar una sesión, el README y [`docs/estado-actual.md`](./docs/estado-actual.md) quedan listos para retomar en frío.
