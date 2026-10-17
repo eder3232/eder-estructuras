@@ -16,7 +16,7 @@
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad), y desde el 2026-10-17 **una home de verdad** (`src/app/page.tsx`, con sus datos e imágenes en `src/app/_home/`): el método en cuatro pasos, una tarjeta con foto por sistema y lo que tienen todos. Las fotos son ilustrativas, generadas con Gemini (`gemini-3-pro-image`) y pasadas a WebP.
 
-**Está en producción** en Vercel, en el proyecto **`eder-estructuras`** (cuenta `eder3232s-projects`): **https://eder-estructuras.vercel.app**. El original sigue en el proyecto `thesis-structures` (tesis.eder3232.com); pasar el dominio al refactor es una decisión pendiente del usuario. El repo **no tiene remoto de git**: se despliega con `vercel deploy --prod` desde la carpeta (`.vercel/` está ignorado).
+**Está en producción en https://tesis.eder3232.com** (desde el 2026-10-17). El código está en el repo **público** [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras), conectado al proyecto de Vercel **`eder-estructuras`** (cuenta `eder3232s-projects`, también en https://eder-estructuras.vercel.app): **cada push a `main` despliega a producción**. El original sigue público en su proyecto `thesis-structures`, ahora solo en **https://thesis-structures.vercel.app**: el subdominio se le pasó al refactor con el endpoint de *move* de Vercel. El DNS de `eder3232.com` lo maneja Vercel (nameservers `vercel-dns.com`), así que mover un subdominio entre proyectos no toca registros.
 
 **No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario qué sigue**: con los sistemas cerrados quedan las fases 6 a 8 del roadmap (sección 3), y antes de la 8 conviene decidir S2 y N6. `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
 
@@ -131,7 +131,7 @@ pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts
 
 **`pnpm build` compila limpio** (2026-10-17, cierre de `/frame2d-seismic`): TypeScript sin errores y las ocho rutas generadas como estáticas, `/frame2d-seismic` incluida. Hay que correrlo con el servidor de desarrollo apagado. La revisión final de `/frame2d-seismic` se hizo **sobre la build de producción** (`pnpm start`), en claro y en oscuro.
 
-**Desplegar en Vercel**: `vercel deploy --prod --yes`. El build de Vercel es el mismo `pnpm build` y lista las ocho rutas como estáticas. Trampa que ya pasó: un proyecto creado con `vercel project add` nace con el preset **«Other»**, publica `public/` y **todas las rutas dan 404 aunque el build termine bien**. Se arregla con `vercel api /v9/projects/<id> -X PATCH -f framework=nextjs` y otro deploy. Después de desplegar, pedir las rutas y mirar la home: el «Ready» del CLI no dice que la app se vea.
+**Desplegar en Vercel**: `git push` a `main` (o, a mano, `vercel deploy --prod --yes`). El build de Vercel es el mismo `pnpm build` y lista las ocho rutas como estáticas. Trampa que ya pasó: un proyecto creado con `vercel project add` nace con el preset **«Other»**, publica `public/` y **todas las rutas dan 404 aunque el build termine bien**. Se arregla con `vercel api /v9/projects/<id> -X PATCH -f framework=nextjs` y otro deploy. Después de desplegar, pedir las rutas y mirar la home: el «Ready» del CLI no dice que la app se vea.
 
 **Mirar la app.** El proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). La receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
 
@@ -184,7 +184,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | docs: el despliegue en Vercel y la home |
+| (este) | docs: repo en GitHub, deploy desde `main` y tesis.eder3232.com |
+| `52b0fac` | docs: el despliegue en Vercel y la home |
 | `837ee6f` | la home: el método, los sistemas con fotos y lo que tienen todos |
 | `cdacce5` | docs: los pendientes juntos en la sección 3 y el README al día |
 | `34d21ca` | `frame2d-seismic`: el cierre — `pnpm build`, la revisión en producción en claro y en oscuro, y los docs (paso 9) |

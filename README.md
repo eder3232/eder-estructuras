@@ -1,6 +1,6 @@
 # Eder Estructuras (thesis-refactor-2026)
 
-Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structures`), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero con mejores prácticas —arquitectura, convenciones, tests y flujo de trabajo— y conserva y mejora su funcionalidad: módulos interactivos de análisis (resortes, armaduras 2D/3D, pórticos 2D y pórticos con análisis sísmico según la norma peruana E.030) que muestran el método paso a paso, con contenido educativo.
+Refactor de **thesis-structures** ([`eder3232/thesis-structures`](https://github.com/eder3232/thesis-structures), en https://thesis-structures.vercel.app), una aplicación web sobre el **método matricial de rigideces** (análisis estructural) desarrollada originalmente para una tesis. Este repo reconstruye ese proyecto desde cero con mejores prácticas —arquitectura, convenciones, tests y flujo de trabajo— y conserva y mejora su funcionalidad: módulos interactivos de análisis (resortes, armaduras 2D/3D, pórticos 2D y pórticos con análisis sísmico según la norma peruana E.030) que muestran el método paso a paso, con contenido educativo.
 
 ## Empezá acá
 
@@ -15,7 +15,7 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 
 > **Al 2026-10-17, los cinco sistemas están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d`, `/frame2d` y `/frame2d-seismic` (este último, como extensión de `/frame2d` y no como copia: casos de carga, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación, las derivas, las combinaciones E.060 y la envolvente).
 >
-> **En producción**: https://eder-estructuras.vercel.app (proyecto de Vercel `eder-estructuras`; cómo desplegar, en la sección 6 de [`docs/estado-actual.md`](./docs/estado-actual.md)). La home se rehízo el 2026-10-17.
+> **En producción en https://tesis.eder3232.com**: cada push a `main` de [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras) despliega en el proyecto de Vercel `eder-estructuras`. El original sigue en https://thesis-structures.vercel.app. Detalle en la sección 1 de [`docs/estado-actual.md`](./docs/estado-actual.md); la home se rehízo el 2026-10-17.
 >
 > **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue.**
 >
