@@ -52,8 +52,13 @@ export interface MemberDiagram {
   keyPoints: DiagramKeyPoint[];
   /** Lo que el diagrama da en `x = L` menos lo que dio el motor en «hacia». Tiene que ser ~0. */
   closure: DiagramValues;
-  /** El valor exacto en cualquier `x` de la barra (a la derecha, si cae en un salto): lo usa el cursor. */
-  at: (x: number) => DiagramValues;
+  /**
+   * El valor exacto en cualquier `x` de la barra: lo usa el cursor. En un
+   * salto, `side` elige el lado (por defecto la derecha). En los extremos de
+   * la barra el lado de afuera no existe: en `x = 0` es siempre la derecha y
+   * en `x = L`, la izquierda.
+   */
+  at: (x: number, side?: "left" | "right") => DiagramValues;
 }
 
 /** Una carga ya reducida a ejes locales y por metro de barra. */
@@ -211,7 +216,8 @@ export function memberDiagram(endForces: FrameEndForcePair, loads: readonly Memb
     points,
     keyPoints: keyPoints.sort((p, q) => p.x - q.x),
     closure: { N: end.N - to.axial, V: end.V + to.shear, M: end.M - to.moment },
-    at: (x) => valuesAt(endForces, local, Math.min(Math.max(x, 0), length), x >= length ? "left" : "right"),
+    at: (x, side = "right") =>
+      valuesAt(endForces, local, Math.min(Math.max(x, 0), length), x <= 0 ? "right" : x >= length ? "left" : side),
   };
 }
 

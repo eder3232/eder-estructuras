@@ -52,3 +52,35 @@ export { memberDeflection } from "./frame2d/member-deflection";
 export type { DeflectionPoint, MemberDeflection } from "./frame2d/member-deflection";
 export { SpringElement } from "./springs/spring-element";
 export type { SpringInternalForce } from "./springs/spring-element";
+export {
+  MIN_C_OVER_R,
+  amplificationFactor,
+  heightExponent,
+  inelasticFactor,
+  periodFromHeight,
+  rayleighPeriod,
+  staticAmplificationFactor,
+  staticSeismicForces,
+} from "./seismic/e030";
+export type {
+  Amplification,
+  AmplificationBranch,
+  RayleighLevel,
+  SeismicLevel,
+  SeismicLevelInput,
+  StaticSeismic,
+  StaticSeismicInput,
+} from "./seismic/e030";
+export { condense, lateralStiffness } from "./seismic/condensation";
+export type { Condensation, LateralStiffness } from "./seismic/condensation";
+export { DRIFT_LIMITS, storyDrifts } from "./seismic/drift";
+export type { DriftInput, StoryDrift } from "./seismic/drift";
+export {
+  E060_COMBINATIONS,
+  combineEndForces,
+  combineVectors,
+  combinedMemberDiagram,
+  diagramEnvelope,
+  scaleMemberLoad,
+} from "./seismic/combinations";
+export type { CaseMember, EnvelopePoint, LoadCombination } from "./seismic/combinations";
