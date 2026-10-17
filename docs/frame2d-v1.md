@@ -343,7 +343,7 @@ Lo que encontró:
 - **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia, al revés que en matemática y en JavaScript. La función de forma `−ξ² + ξ³` escrita así daba `ξ² + ξ³`, y el momento del extremo «hacia» salía mal en todas las cargas. Lo atrapó el test (HyperFormula reproduce la regla de Excel); ahora se escribe `ξ³ − ξ²`, y no queda ninguna negación delante de una potencia.
 - El test intermitente de `/armaduras-3d` volvió a fallar con la suite entera: se le subió el límite a 20 s (tarda ~2 s solo).
 
-**No verificado**: `pnpm build` (el servidor de desarrollo estuvo levantado toda la sesión). Es lo primero que hay que correr.
+**`pnpm build`**: compila limpio (corrido después del commit, con el servidor de desarrollo apagado).
 
 ## Decisiones (2026-10-17)
 

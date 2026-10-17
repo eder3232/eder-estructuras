@@ -16,7 +16,7 @@
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
-**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario** qué sigue: lo natural es `frame2d-seismic` (ver sección 3), pero el orden lo decidió siempre él. **Antes de nada, correr `pnpm build`** con el servidor de desarrollo apagado: no se corrió desde el 2026-10-14 (ver sección 6).
+**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario** qué sigue: lo natural es `frame2d-seismic` (ver sección 3), pero el orden lo decidió siempre él. `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
 
 ## 2. Qué tiene cada sistema
 
@@ -105,7 +105,7 @@ npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
 
-**`pnpm build` no se corrió desde el 2026-10-14** —el servidor de desarrollo estuvo levantado en las sesiones del 16 y del 17—, así que no está comprobado que `/armaduras-3d` y `/frame2d` con `exceljs` compilen en producción (el de `/armaduras-2d` sí compilaba). **Es lo primero que hay que hacer**, con el servidor apagado.
+**`pnpm build` compila limpio** (2026-10-17, después del commit del paso 10 de `/frame2d`): TypeScript sin errores y las siete rutas generadas como estáticas, `/armaduras-3d` y `/frame2d` con `exceljs` incluidas. Hay que correrlo con el servidor de desarrollo apagado.
 
 **Mirar la app.** El proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). La receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
 
@@ -131,7 +131,7 @@ Recetas que ya funcionaron con `chrome-devtools`:
 - **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia. HyperFormula lo reproduce, así que el test lo atrapa.
 - **Trampas que se repitieron**: lo que se dibuja en unidades del modelo y no en píxeles (un `stroke` sin `vector-effect`); el `uppercase` de `ui/` reescribiendo texto (KaTeX, títulos, menús); estrenar un componente de `ui/` que nadie usó; en three.js, un material que se atenúa tiene que nacer `transparent`; un bloque (`div`) dentro de un `<p>`, que la consola marca como error de hidratación.
 
-**Lo que NO está verificado a mano**: el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests); el hover sobre una barra del esquema de `/frame2d` con la herramienta (sí con el test de componentes); un pórtico inclinado en la pantalla de la deformada; `pnpm build`.
+**Lo que NO está verificado a mano**: el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests); el hover sobre una barra del esquema de `/frame2d` con la herramienta (sí con el test de componentes); un pórtico inclinado en la pantalla de la deformada.
 
 ## 7. Qué leer antes de tocar cada cosa
 

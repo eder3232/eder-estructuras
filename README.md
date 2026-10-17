@@ -124,7 +124,7 @@ Además de los sistemas hay una primera página de **teoría**: [`/estabilidad`]
 
 ### Próximo paso
 
-> **Estado al 2026-10-17: los cuatro sistemas base están cerrados para la v1** — `/armaduras-2d`, `/springs`, `/armaduras-3d` y `/frame2d`. Falta `frame2d-seismic` (que no existe). **No hay tarea anotada: lo siguiente es preguntarle al usuario cuál sigue**, y antes que nada correr `pnpm build` con el servidor apagado (no se corrió desde el 2026-10-14).
+> **Estado al 2026-10-17: los cuatro sistemas base están cerrados para la v1** — `/armaduras-2d`, `/springs`, `/armaduras-3d` y `/frame2d`. Falta `frame2d-seismic` (que no existe). **No hay tarea anotada: lo siguiente es preguntarle al usuario cuál sigue**. `pnpm build` compila limpio (verificado el 2026-10-17, con el servidor de desarrollo apagado: las siete rutas estáticas).
 >
 > **El estado completo y accionable está en [`docs/estado-actual.md`](./docs/estado-actual.md)** — empezá por ahí si retomás en frío: qué tiene cada sistema (tabla comparativa), qué falta para la v1 y con qué molde se cerraron los otros tres, qué quedó para la v2, las deudas abiertas, cómo verificar (con el MCP `chrome-devtools` y Excel por COM) y qué leer antes de tocar cada cosa.
 
