@@ -36,5 +36,14 @@ export type {
   FrameFixedEndForces,
   FrameInternalForce,
 } from "./frame2d/frame-element-2d";
+export {
+  lengthFactor,
+  loadFixedEndForces,
+  localDirection,
+  memberAxis,
+  memberLoadProblem,
+  sumFixedEndForces,
+} from "./frame2d/member-loads";
+export type { LoadDirection, MemberAxis, MemberLoad } from "./frame2d/member-loads";
 export { SpringElement } from "./springs/spring-element";
 export type { SpringInternalForce } from "./springs/spring-element";

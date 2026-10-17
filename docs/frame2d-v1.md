@@ -171,6 +171,19 @@ Tests: `src/app/frame2d/store/store.test.ts`, 11 casos (el primer archivo de tes
 
 Lo que **no** se miró todavía: el estado vacío en pantalla (sí el de mecanismo), y nada en tema oscuro.
 
+### Paso 2: cargas en barras en el motor (2026-10-17) — hecho
+
+`src/lib/engine/frame2d/member-loads.ts`, puro y sin tocar `FrameElement2D` ni `System`: el FEM sigue entrando al elemento como antes, solo que ahora sale de las cargas.
+
+- **Modelo**: `MemberLoad` = distribuida lineal (`q1`→`q2` sobre `[a, b]`, con `projected` opcional), puntual o momento. Direcciones `perpendicular` (`+y'`), `axial` (`+x'`), `globalX`, `globalZ`; el momento, antihorario positivo. **Las posiciones van a lo largo de la barra** desde «desde», también en las cargas por proyección: lo que se proyecta es la intensidad, no la ubicación. La UI lo tiene que decir.
+- **Cálculo**: carga nodal equivalente por trabajo virtual contra las funciones de forma (lineales en la axial, Hermite en la flexión; sus derivadas para el momento concentrado) y FEM = su opuesto. La distribuida se integra con Gauss de 3 puntos, **exacto** para lineal × cúbica.
+- **Validación**: `memberLoadProblem` devuelve el problema en castellano sin nombrar la carga (el store le antepone la fila): posición fuera de `[0, L]` (con tolerancia relativa, porque `L` viene con ruido de punto flotante), `b ≤ a`, valores no numéricos. `loadFixedEndForces` tira si hay problema.
+- **Tests (37)**, `member-loads.test.ts`: las tablas de los libros (uniforme, parcial, triangular `3qL/20`–`7qL/20`, puntual, momento concentrado —**el caso V2 del original**—, momento sobre el extremo, axial); direcciones globales en una barra 3-4-5, la proyección (las reacciones verticales suman `q·3`, no `q·5`) y una columna con carga +X; **equilibrio de 21 combinaciones** de carga y orientación integradas a fuerza bruta sin funciones de forma (la prueba que no depende de ninguna tabla); los rechazos; y dos casos con `System` de solución cerrada (simplemente apoyada: `qL/2`, momento nulo en los apoyos, giro `qL³/24EI`; ménsula con `P` al medio: flecha `5PL³/48EI`).
+
+Lo que encontró: **un valor esperado mío estaba mal**, no el código — una carga `+X` sobre una columna es `−y'`, el mismo caso que una carga hacia abajo sobre una viga, y su FEM en «desde» es `+PL/8`, no `−PL/8`. Es exactamente la confusión de signos que la tabla de cargas le tiene que ahorrar al alumno.
+
+Suite: 429 tests, `tsc` limpio.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.
