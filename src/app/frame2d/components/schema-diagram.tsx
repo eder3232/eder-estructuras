@@ -6,7 +6,7 @@ import { SchemaDiagram as GenericSchemaDiagram } from "@/components/custom/diagr
 import type { DiagramForce, DiagramMemberLoad, DiagramSupport } from "@/components/custom/diagram-2d/types";
 import { useHighlight, useSetHighlight } from "@/components/custom/highlight";
 import { NoResults } from "@/components/custom/no-results";
-import { lengthFactor, memberAxis } from "@/lib/engine";
+import { memberAxis } from "@/lib/engine";
 import { atomNodes } from "../store/nodes";
 import { atomElements } from "../store/elements";
 import { atomLoads, toMemberLoad } from "../store/loads";
@@ -46,10 +46,10 @@ export function SchemaDiagram() {
     if (n.momentR !== 0) forces.push({ nodeId: n.id, x: n.x, z: n.z, axis: "r", value: n.momentR });
   }
 
-  // El diagrama recibe la dirección ya en ejes globales y la intensidad **por
-  // metro de barra**: una carga por proyección se dibuja —flechas y número—
-  // con lo que de verdad le llega a la barra, para que el dibujo y el número
-  // digan lo mismo. Lo escrito por el alumno sigue a la vista en la tabla.
+  // El diagrama recibe la dirección ya en ejes globales y la intensidad **como
+  // la escribió el alumno**. Una carga por proyección se marca «por planta»: la
+  // primera versión dibujaba lo que le llega por metro de barra (8·cos α) y el
+  // número del dibujo (−7.43) no aparecía en ninguna tabla.
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
   const memberLoads = loads.flatMap<DiagramMemberLoad>((load) => {
     const element = elements.find((e) => e.id === load.elementId);
@@ -68,17 +68,17 @@ export function SchemaDiagram() {
             globalZ: { x: 0, z: 1 },
           }[member.direction];
     if (member.kind === "distributed") {
-      const factor = lengthFactor(member, axis);
       return [
         {
           id: load.id,
           elementId: element.id,
           kind: "distributed",
           direction,
-          q1: member.q1 * factor,
-          q2: member.q2 * factor,
+          q1: member.q1,
+          q2: member.q2,
           a: member.a,
           b: member.b,
+          projected: member.projected,
         },
       ];
     }

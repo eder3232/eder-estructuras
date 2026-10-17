@@ -4,6 +4,7 @@ import { produce } from "immer";
 import type { LoadDirection, MemberLoad } from "@/lib/engine";
 import { insertIndex, nextRowName } from "@/lib/row-names";
 import { atomElements } from "./elements";
+import { storedModel } from "./persisted-model";
 
 export type LoadKind = MemberLoad["kind"];
 
@@ -41,7 +42,8 @@ export interface LoadRow {
   projected: boolean;
 }
 
-const atomLoadsBase = atom<LoadRow[]>([]);
+// Exportado solo para la persistencia, que lo pisa al restaurar.
+export const atomLoadsBase = atom<LoadRow[]>(storedModel?.loads ?? []);
 
 export const atomLoads = atom((get) => get(atomLoadsBase));
 

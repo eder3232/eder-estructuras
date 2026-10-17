@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 
 import {
-  lengthFactor,
   localDirection,
   type DiagramValues,
   type MemberAxis,
@@ -59,7 +58,13 @@ function curveOf(diagram: MemberDiagram, quantity: Quantity): MemberCurve {
     if (key.kind === "extremum") return quantity === "M" ? [{ x: key.x, value: key.left.M }] : [];
     if (key.kind === "end") return [{ x: key.x, value: key.left[quantity] }];
     const [l, r] = [key.left[quantity], key.right[quantity]];
-    return Math.abs(l - r) > 1e-9 * (1 + Math.abs(l)) ? [{ x: key.x, value: l }, { x: key.x, value: r }] : [];
+    const jumps = Math.abs(l - r) > 1e-9 * (1 + Math.abs(l));
+    if (jumps) return [{ x: key.x, value: l }, { x: key.x, value: r }];
+    // El momento bajo una carga puntual no salta —el que salta es V— y ahí
+    // suele estar el máximo: V cruza el cero de golpe, sin pasar por él, así
+    // que no es un «extremo» de V = 0. Sin esto el pórtico isostático mostraba
+    // un solo número de momento y no el mayor (42.67, bajo la carga de la viga).
+    return quantity === "M" ? [{ x: key.x, value: l }] : [];
   });
   return { points, labels };
 }
@@ -74,16 +79,18 @@ function toLocalGlyph(load: MemberLoad, axis: MemberAxis, i: number): DiagramMem
   if (load.kind === "point") {
     return { id: String(i), elementId: "", kind: "point", direction, q1: load.value, q2: 0, a: load.a, b: load.a };
   }
-  const factor = lengthFactor(load, axis);
+  // Como la escribió el alumno, marcada si es por planta: el número del dibujo
+  // tiene que poder buscarse en la tabla (ver el esquema).
   return {
     id: String(i),
     elementId: "",
     kind: "distributed",
     direction,
-    q1: load.q1 * factor,
-    q2: load.q2 * factor,
+    q1: load.q1,
+    q2: load.q2,
     a: load.a,
     b: load.b,
+    projected: load.projected,
   };
 }
 
@@ -126,7 +133,9 @@ export function MemberDiagrams({ elements, nodesById }: { elements: ElementRow[]
         <p>
           Convención de los textos (Hibbeler, Beer), con cada barra mirada de «desde» a «hacia»: N{" "}
           {QUANTITY.N.rule}; V {QUANTITY.V.rule}; M {QUANTITY.M.rule}. N y V positivos se dibujan del lado izquierdo
-          de la barra (<code>+y′</code>).
+          de la barra (<code>+y′</code>). En el momento, dibujado del lado traccionado, <strong>el lado ya dice el
+          signo</strong> y el pórtico lo escribe sin él: con signo, el mismo momento cambiaba según hacia dónde se
+          dibujó cada barra. La barra aislada y las tablas sí lo llevan.
         </p>
         {manual.length > 0 && (
           <p>
@@ -158,6 +167,7 @@ export function MemberDiagrams({ elements, nodesById }: { elements: ElementRow[]
           curves={curves}
           positiveSide={QUANTITY[quantity].side}
           mergeJointLabels={quantity === "M"}
+          unsigned={quantity === "M"}
         />
       </div>
 

@@ -85,7 +85,7 @@ export function MemberLoadGlyph({ load, from, to, unitSize }: MemberLoadGlyphPro
     x: from.x + ((to.x - from.x) * s) / length,
     z: from.z + ((to.z - from.z) * s) / length,
   });
-  const label = (value: number) => scale.format(value, decimals);
+  const label = (value: number) => `${scale.format(value, decimals)}${load.projected ? " por planta" : ""}`;
 
   if (load.kind === "moment") {
     if (load.q1 === 0) return null;
@@ -171,14 +171,22 @@ export function MemberLoadGlyph({ load, from, to, unitSize }: MemberLoadGlyphPro
     return { x: p.x - d.x * k, y: p.y - d.y * k };
   };
   const envelope = stations.map(tailAt);
-  const labelAt = (s: number) => {
+  // El texto es horizontal y la envolvente sigue a la barra: sobre una barra
+  // inclinada, medio texto quedaba encima de las flechas (se vio en el pórtico
+  // a dos aguas). La etiqueta se aleja lo que la envolvente sube a lo largo de
+  // medio ancho de texto, medido en la dirección de la carga.
+  const textHalf = (text: string) => text.length * 0.3 * unitSize;
+  const rise = (text: string) =>
+    (textHalf(text) * Math.abs(barDir.y) * Math.abs(d.y)) / Math.max(Math.abs(barDir.x), 0.2);
+  const labelAt = (s: number, text: string) => {
     const tail = tailAt(s);
     const sign = Math.sign(q(s)) || 1;
-    return { x: tail.x - sign * d.x * unitSize * 0.7, y: tail.y - sign * d.y * unitSize * 0.7 };
+    const away = unitSize * 0.7 + rise(text);
+    return { x: tail.x - sign * d.x * away, y: tail.y - sign * d.y * away };
   };
-  const start = labelAt(load.a);
-  const end = labelAt(load.b);
-  const middle = labelAt((load.a + load.b) / 2);
+  const start = labelAt(load.a, label(load.q1));
+  const end = labelAt(load.b, label(load.q2));
+  const middle = labelAt((load.a + load.b) / 2, label(load.q1));
 
   return (
     <g className={COLOR_CLASS}>

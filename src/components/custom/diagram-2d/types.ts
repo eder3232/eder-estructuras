@@ -54,4 +54,11 @@ export interface DiagramMemberLoad {
   q2: number;
   a: number;
   b: number;
+  /**
+   * La intensidad es por metro de **planta** (o de altura), no de barra. El
+   * número se escribe como lo cargó el alumno, marcado: tiene que poder
+   * buscarse en la tabla. La altura de las flechas no cambia, porque se mide
+   * contra la propia carga.
+   */
+  projected?: boolean;
 }

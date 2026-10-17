@@ -299,6 +299,28 @@ Verificado en la app con `chrome-devtools`: el nudo v3 del dibujo enciende su fi
 
 Suite: 478, `tsc` limpio, lint con los 2 de siempre.
 
+### Paso 9: persistencia y ejemplos (2026-10-17) — hecho
+
+- **Persistencia (N1)** con las piezas genéricas, clave `eder-estructuras:frame2d`, versión 1. Se guarda el modelo y nada más: nudos, barras, **cargas en barras** (las cargas, no los FEM: guardar FEM calculados sería volver al V3) y los dos interruptores de orden. Guarda de forma a mano: un campo mal descarta todo, y se avisa. La página reserva el espacio hasta hidratar. «Volver al ejemplo inicial» con «Deshacer».
+- **Tres ejemplos (N2)**, todos con cargas en barras —lo que el inicial, que es la regresión del motor, no tiene—, cada uno con su lección **medida en `examples.test.ts`**:
+  - **Viga continua de dos tramos**: `−qL²/8 = 31.25` sobre el apoyo del medio, `3qL/8` y `10qL/8` de reacciones, máximo de tramo `9qL²/128 = 17.58`. Es el caso para cotejar con el libro, y se verificó también en la pantalla.
+  - **Pórtico a dos aguas** con la cubierta por planta: la reacción vertical total es `q × luz = 80`, no `q × largo de las vigas`; las vigas inclinadas trabajan a compresión; el FEM de cada una es `q·(luz en planta)²/12 = 16.67`.
+  - **Pórtico isostático** (articulado y móvil), con viento repartido en una columna y una puntual en la viga: `g = 0`, y quintuplicar la inercia de la viga no mueve los momentos (sí la deformada).
+
+Lo que encontró mirarlo (tres de cuatro, en el diagrama de momentos — que con el pórtico inicial no se veían):
+
+- **El momento bajo una carga puntual no se rotulaba.** Ahí M no salta (salta V, y cruza el cero de golpe, sin pasar por él), así que no era ni salto de M ni extremo de V = 0. En el pórtico isostático el diagrama mostraba **un solo número** y no el mayor, 42.67. Ahora cada punto de carga concentrada lleva su momento. Un test de componente lo fija, y falla sin el arreglo (comprobado).
+- **El momento con signo cambiaba según hacia dónde se dibujó la barra**: el pórtico a dos aguas, simétrico, decía 29.93 en una base y −29.93 en la otra, con las dos traccionando adentro. Dibujado del lado traccionado, el lado ya dice el signo, y los textos que dibujan así lo escriben sin él: la vista del pórtico escribe el momento **sin signo**; la barra aislada y las tablas mantienen el de la convención. N y V siguen con signo.
+- **Tres números de la cumbrera, encimados** (el momento ahí y los máximos de las dos vigas, a menos de una unidad). `InternalForceDiagram` ubica ahora las etiquetas en dos pasadas: la que choca con una ya puesta se aleja hacia afuera. Las medidas de la caja de un texto se calibraron contra el texto renderizado (con 0.6 × 1.1 dos números se seguían tocando; 0.62 × 1.4).
+- **Un número cortado contra el borde** («.9521»): el lienzo se calculaba con los nudos. Ahora incluye las curvas y sus etiquetas.
+- **La carga por planta se rotulaba −7.43** (lo que le llega por metro de barra, 8·cos α) cuando el alumno había escrito −8: un número que no aparecía en ninguna tabla. Ahora dice «−8.0000 por planta», en el esquema y en la barra aislada; la altura de las flechas no cambia porque se mide contra la propia carga. Y el texto horizontal sobre una envolvente inclinada quedaba sobre las flechas: se aleja lo que la envolvente sube a lo largo de medio ancho de texto.
+
+Medición final con un script (texto que pisa a otro o sale del lienzo) en los tres ejemplos y los tres diagramas: **cero**.
+
+Queda menor: en la barra aislada, una carga global se dibuja en los ejes de la barra y se rotula con el valor escrito — el viento +3 en X sobre la columna se ve como flechas «hacia abajo» (−y′) con el número 3. Es correcto, pero podría desorientar. Y el nombre del nudo de la cumbrera roza la caja de una etiqueta (D17).
+
+Suite: 493, `tsc` limpio, lint con los 2 de siempre.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.

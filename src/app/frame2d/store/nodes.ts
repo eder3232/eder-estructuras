@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 
 import { insertIndex, nextRowName } from "@/lib/row-names";
+import { storedModel } from "./persisted-model";
 
 /** Los 3 DOF de un nudo de pórtico plano: traslación x, traslación z, rotación. */
 export type NodeAxis = "x" | "z" | "r";
@@ -76,8 +77,9 @@ const initialNodes: NodeRow[] = [
 /** El ejemplo inicial, siempre en una copia nueva. */
 export const seedNodes = (): NodeRow[] => initialNodes.map((n) => ({ ...n }));
 
-// Exportado para `dof-order.ts`, que siembra la numeración al encenderla.
-export const atomNodesBase = atom<NodeRow[]>(seedNodes());
+// Exportado para `dof-order.ts`, que siembra la numeración al encenderla, y
+// para la persistencia, que lo pisa al restaurar.
+export const atomNodesBase = atom<NodeRow[]>(storedModel?.nodes ?? seedNodes());
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 
