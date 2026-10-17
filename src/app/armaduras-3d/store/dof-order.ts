@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 
 import { atomNodes, atomNodesBase, type NodeRow } from "./nodes";
+import { storedModel } from "./persisted-model";
 
 /**
  * Los dos interruptores de orden de los grados de libertad (M1a y M1b), los
@@ -10,7 +11,7 @@ import { atomNodes, atomNodesBase, type NodeRow } from "./nodes";
  * una preferencia de pantalla: los decidió el enunciado. El porqué de cada uno
  * está en `src/app/armaduras-2d/store/dof-order.ts`.
  */
-export const atomRestrainedFirstBase = atom(false);
+export const atomRestrainedFirstBase = atom(storedModel?.restrainedFirst ?? false);
 
 export const atomRestrainedFirst = atom((get) => get(atomRestrainedFirstBase));
 
@@ -18,7 +19,7 @@ export const atomToggleRestrainedFirst = atom(null, (get, set) => {
   set(atomRestrainedFirstBase, !get(atomRestrainedFirstBase));
 });
 
-export const atomUseDofNumbersBase = atom(false);
+export const atomUseDofNumbersBase = atom(storedModel?.useDofNumbers ?? false);
 
 export const atomUseDofNumbers = atom((get) => get(atomUseDofNumbersBase));
 

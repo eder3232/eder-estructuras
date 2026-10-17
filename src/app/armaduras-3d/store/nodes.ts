@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 
 import { insertIndex, nextRowName } from "@/lib/row-names";
+import { storedModel } from "./persisted-model";
 
 /** Los 3 DOF de un nudo de armadura espacial: las tres traslaciones. */
 export type NodeAxis = "x" | "y" | "z";
@@ -87,8 +88,12 @@ const initialNodes: NodeRow[] = [
   { id: seedNodeIds.d, name: "d", x: 1.5, y: 1.2, z: 3, ...emptyLoads, forceZ: -25, ...freeNode },
 ];
 
-// Exportado para `dof-order.ts`, que siembra la numeración al encenderla.
-export const atomNodesBase = atom<NodeRow[]>(initialNodes);
+/** El ejemplo inicial, siempre en una copia nueva (ver `seedNodes` de `/armaduras-2d`). */
+export const seedNodes = (): NodeRow[] => initialNodes.map((n) => ({ ...n }));
+
+// Exportado para `dof-order.ts`, que siembra la numeración al encenderla, y
+// para la persistencia, que lo pisa al restaurar.
+export const atomNodesBase = atom<NodeRow[]>(storedModel?.nodes ?? seedNodes());
 
 export const atomNodes = atom((get) => get(atomNodesBase));
 

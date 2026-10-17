@@ -2,6 +2,7 @@ import { atom } from "jotai";
 import { produce } from "immer";
 import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
+import { storedModel } from "./persisted-model";
 
 export interface ElementRow {
   id: string;
@@ -25,7 +26,11 @@ const initialElements: ElementRow[] = [
   { id: "seed-e6", name: "e6", fromNodeId: seedNodeIds.c, toNodeId: seedNodeIds.d, area: AREA, elasticity: ELASTICITY },
 ];
 
-const atomElementsBase = atom<ElementRow[]>(initialElements);
+/** El ejemplo inicial, siempre en una copia nueva. */
+export const seedElements = (): ElementRow[] => initialElements.map((e) => ({ ...e }));
+
+// Exportado solo para la persistencia, que lo pisa al restaurar.
+export const atomElementsBase = atom<ElementRow[]>(storedModel?.elements ?? seedElements());
 
 export const atomElements = atom((get) => get(atomElementsBase));
 

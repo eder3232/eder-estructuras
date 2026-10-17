@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 
 import type { Diagram3DForce, Diagram3DSupport } from "@/components/custom/diagram-3d/types";
 import { useHighlight, useSetHighlight } from "@/components/custom/highlight";
 import { atomNodes, nodeAxes, forceFieldByAxis, restrainedFieldByAxis } from "../store/nodes";
 import { atomElements } from "../store/elements";
 import { mechanismMotion } from "../store/mechanism-motion";
+import { atomModelGeneration } from "../store/persistence";
 import { atomResults } from "../store/results";
 
 /**
@@ -32,6 +33,7 @@ export function SchemaDiagram() {
   const [nodes] = useAtom(atomNodes);
   const [elements] = useAtom(atomElements);
   const [results] = useAtom(atomResults);
+  const generation = useAtomValue(atomModelGeneration);
   // Las dos direcciones de N3, como en el esquema 2D: lee lo que señalan las
   // filas y señala lo que toca el mouse acá.
   const highlight = useHighlight();
@@ -64,6 +66,8 @@ export function SchemaDiagram() {
   return (
     <div className="flex flex-col gap-2">
       <SchemaScene
+        // Un modelo nuevo monta una escena nueva, y con ella un encuadre nuevo.
+        key={generation}
         nodes={nodes}
         elements={elements}
         supports={supports}

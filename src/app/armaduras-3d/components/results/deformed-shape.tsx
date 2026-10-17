@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useAtomValue } from "jotai";
 
 import type { SolveResult, Truss3DInternalForce } from "@/lib/engine";
 import type { Diagram3DForce, Point3 } from "@/components/custom/diagram-3d/types";
 import type { ElementRow } from "../../store/elements";
 import { nodeAxes, restrainedFieldByAxis, type NodeRow } from "../../store/nodes";
+import { atomModelGeneration } from "../../store/persistence";
 
 const DeformedScene = dynamic(
   () => import("@/components/custom/diagram-3d/deformed-scene").then((m) => m.DeformedScene),
@@ -26,6 +28,7 @@ interface DeformedShapeProps {
 }
 
 export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProps) {
+  const generation = useAtomValue(atomModelGeneration);
   const nodes = [...nodesById.values()];
 
   const displacements = new Map<string, Point3>(
@@ -53,6 +56,8 @@ export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProp
 
   return (
     <DeformedScene
+      // Un modelo nuevo, un encuadre nuevo (ver `atomModelGeneration`).
+      key={generation}
       nodes={nodes}
       elements={elements}
       displacements={displacements}
