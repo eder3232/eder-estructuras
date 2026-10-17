@@ -106,7 +106,7 @@ Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el r
 **Lo que pasa hoy** (2026-10-17, cierre de `/frame2d`):
 
 ```
-pnpm test          # 518 tests, 74 archivos
+pnpm test          # 527 tests, 75 archivos (2026-10-17, paso 1 de frame2d-seismic)
 npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
@@ -159,7 +159,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | docs: revisión, normativa y plan de `frame2d-seismic` |
+| (este) | `frame2d-seismic`: el diafragma rígido en el motor (paso 1) |
+| `bf2b7ee` | docs: revisión, normativa y plan de `frame2d-seismic` (paso 0) |
 | `6089a2a` | docs: el README pasa a ser un mapa y el historial de avances se muda a `historial.md` |
 | `134fc59` | docs: `pnpm build` verificado al cierre de `/frame2d` |
 | `d7aeefa` | `/frame2d`: exportación a Excel con el FEM vivo (paso 10, cierre) |

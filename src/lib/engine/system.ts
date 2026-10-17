@@ -18,10 +18,24 @@ export interface AddNodeInput {
 }
 
 export interface DofOrderEntry {
+  /** Con un diafragma, el **primer** nudo del grupo: el índice es de todos (ver `diaphragmId`). */
   nodeId: string;
   localDof: number;
   globalIndex: number;
   restrained: boolean;
+  /** Si este grado de libertad es el de un diafragma, cuál. Ver `System.addDiaphragm`. */
+  diaphragmId?: string;
+}
+
+/**
+ * Nudos que comparten **un** grado de libertad: el diafragma rígido de un
+ * piso, que obliga a todos sus nudos a desplazarse lo mismo en x (E.030, 30.3).
+ */
+export interface DiaphragmInput {
+  id: string;
+  nodeIds: string[];
+  /** El grado de libertad compartido; en un pórtico plano, 0 (x). */
+  localDof: number;
 }
 
 export interface PartitionResult {
@@ -126,11 +140,19 @@ interface DofEntry {
   restrained: boolean;
   /** El número que pidió el alumno, o 0 si no pidió ninguno. */
   number: number;
+  diaphragmId?: string;
 }
 
 interface DofIndex {
-  /** Índice global (0..t-1) por nodo, uno por grado de libertad local. */
+  /**
+   * Índice global (0..t-1) por nodo, uno por grado de libertad local. Los
+   * nudos de un diafragma **repiten** el índice del grado compartido.
+   */
   byNode: Map<string, number[]>;
+  /** Cuántos índices distintos hay: el tamaño de `K`. Sin diafragmas, nudos × grados por nudo. */
+  size: number;
+  /** El diafragma de cada índice compartido. */
+  diaphragmAt: Map<number, string>;
   free: number[];
   restrained: number[];
   /** Los números que pidió el alumno, en el orden que salieron. Vacío si no numeró. */
@@ -140,6 +162,7 @@ interface DofIndex {
 export class System {
   private readonly nodes = new Map<string, Node>();
   private readonly elements = new Map<string, Element>();
+  private readonly diaphragms = new Map<string, DiaphragmInput>();
 
   constructor(private readonly dofPerNode: number) {
     if (!Number.isInteger(dofPerNode) || dofPerNode < 1) {
@@ -198,6 +221,56 @@ export class System {
   }
 
   /**
+   * Hace que los nudos de `nodeIds` compartan el grado de libertad `localDof`:
+   * **un solo índice global** para todos, así que se desplazan lo mismo.
+   *
+   * No hace falta nada más para ensamblar: cada barra suma su rigidez en el
+   * índice de sus nudos, y si dos nudos tienen el mismo, se suma ahí. La
+   * matriz queda más chica (un grado por grupo en vez de uno por nudo), que
+   * es justamente la hipótesis del diafragma rígido: el piso tiene **una**
+   * traslación.
+   *
+   * Lo que se pierde, y es la limitación conocida del modelo: una viga entre
+   * dos nudos del diafragma no se estira, así que **su fuerza axial no sale
+   * del análisis** (da cero). La fuerza que reparte el piso la lleva el
+   * diafragma; el equilibrio la muestra (ver `equilibrium.ts`).
+   *
+   * Un nudo restringido en ese grado no puede entrar: el apoyo fijaría el
+   * piso entero, y casi seguro es un error del modelo.
+   */
+  addDiaphragm({ id, nodeIds, localDof }: DiaphragmInput): void {
+    if (this.diaphragms.has(id)) {
+      throw new Error(`El diafragma ${id} ya existe.`);
+    }
+    if (!Number.isInteger(localDof) || localDof < 0 || localDof >= this.dofPerNode) {
+      throw new Error(`El diafragma ${id} pide el grado de libertad ${localDof}, que no existe.`);
+    }
+    if (new Set(nodeIds).size !== nodeIds.length) {
+      throw new Error(`El diafragma ${id} repite un nudo.`);
+    }
+    if (nodeIds.length < 2) {
+      throw new Error(`El diafragma ${id} necesita al menos dos nudos.`);
+    }
+    for (const nodeId of nodeIds) {
+      const node = this.nodes.get(nodeId);
+      if (!node) {
+        throw new Error(`El diafragma ${id} referencia al nodo ${nodeId}, que no existe.`);
+      }
+      if (node.dof[localDof].restrained) {
+        throw new Error(
+          `El nodo ${nodeId} no puede estar en el diafragma ${id}: su grado de libertad ${localDof} está restringido.`,
+        );
+      }
+      for (const other of this.diaphragms.values()) {
+        if (other.localDof === localDof && other.nodeIds.includes(nodeId)) {
+          throw new Error(`El nodo ${nodeId} ya está en el diafragma ${other.id}.`);
+        }
+      }
+    }
+    this.diaphragms.set(id, { id, nodeIds: [...nodeIds], localDof });
+  }
+
+  /**
    * El orden de los grados de libertad, que es **una sola decisión** de la que
    * cuelga todo lo demás: el ensamblaje usa `byNode`, la partición junta por
    * lista de índices y la UI se etiqueta con `dofOrder`. Nada de eso supone un
@@ -207,16 +280,31 @@ export class System {
    * mismo cambio le costaba duplicar la función que la partía.)
    */
   private buildDOFOrder({ restrainedFirst = false, useDofNumbers = false }: DofOrderOptions): DofIndex {
+    // Un grado de un diafragma entra una sola vez, con el **primer nudo del
+    // grupo en el orden de la tabla**; los demás nudos lo reusan más abajo.
+    const owner = new Map<string, { nodeId: string; diaphragmId: string }>();
+    const aliases: { nodeId: string; localDof: number; ownerId: string }[] = [];
+    for (const diaphragm of this.diaphragms.values()) {
+      const first = [...this.nodes.keys()].find((id) => diaphragm.nodeIds.includes(id))!;
+      for (const nodeId of diaphragm.nodeIds) {
+        owner.set(`${nodeId}:${diaphragm.localDof}`, { nodeId: first, diaphragmId: diaphragm.id });
+        if (nodeId !== first) aliases.push({ nodeId, localDof: diaphragm.localDof, ownerId: first });
+      }
+    }
+
     const entries: DofEntry[] = [];
     for (const node of this.nodes.values()) {
-      node.dof.forEach((dof, localDof) =>
+      node.dof.forEach((dof, localDof) => {
+        const shared = owner.get(`${node.id}:${localDof}`);
+        if (shared && shared.nodeId !== node.id) return;
         entries.push({
           nodeId: node.id,
           localDof,
           restrained: dof.restrained,
           number: useDofNumbers ? (node.dofNumbers?.[localDof] ?? 0) : 0,
-        }),
-      );
+          diaphragmId: shared?.diaphragmId,
+        });
+      });
     }
 
     // `sort` es estable desde ES2019, así que empatar —o no numerar nada— deja
@@ -239,15 +327,30 @@ export class System {
     const byNode = new Map<string, number[]>();
     const free: number[] = [];
     const restrained: number[] = [];
+    const diaphragmAt = new Map<number, string>();
 
     ordered.forEach((entry, globalIndex) => {
       const indices = byNode.get(entry.nodeId) ?? [];
       indices[entry.localDof] = globalIndex;
       byNode.set(entry.nodeId, indices);
       (entry.restrained ? restrained : free).push(globalIndex);
+      if (entry.diaphragmId) diaphragmAt.set(globalIndex, entry.diaphragmId);
     });
 
-    return { byNode, free, restrained, numbers: useDofNumbers ? ordered.map((e) => e.number) : [] };
+    for (const { nodeId, localDof, ownerId } of aliases) {
+      const indices = byNode.get(nodeId) ?? [];
+      indices[localDof] = byNode.get(ownerId)![localDof];
+      byNode.set(nodeId, indices);
+    }
+
+    return {
+      byNode,
+      size: ordered.length,
+      diaphragmAt,
+      free,
+      restrained,
+      numbers: useDofNumbers ? ordered.map((e) => e.number) : [],
+    };
   }
 
   private elementDofMap(element: Element, dofIndex: DofIndex): number[] {
@@ -256,7 +359,7 @@ export class System {
   }
 
   private assembleGlobal(dofIndex: DofIndex): { k: number[][]; f0: number[]; steps: AssemblyStep[] } {
-    const t = this.nodes.size * this.dofPerNode;
+    const t = dofIndex.size;
     const k: number[][] = zeros(t, t).valueOf() as number[][];
     const f0: number[] = new Array(t).fill(0);
     const steps: AssemblyStep[] = [];
@@ -331,14 +434,15 @@ export class System {
     if (numbering) warnings.push(numbering);
 
     const nodesInOrder = [...this.nodes.values()];
-    const t = nodesInOrder.length * this.dofPerNode;
+    const t = dofIndex.size;
 
     const appliedForce = new Array(t).fill(0);
     const prescribedDisplacement = new Array(t).fill(0);
     for (const node of nodesInOrder) {
       const indices = dofIndex.byNode.get(node.id)!;
       node.dof.forEach((d, i) => {
-        appliedForce[indices[i]] = d.force;
+        // `+=`: en un diafragma, las fuerzas de todos sus nudos caen en el mismo índice.
+        appliedForce[indices[i]] += d.force;
         prescribedDisplacement[indices[i]] = d.displacement;
       });
     }
@@ -437,10 +541,21 @@ export class System {
     }
 
     const dofOrder: DofOrderEntry[] = [];
+    const listed = new Set<number>();
     for (const node of nodesInOrder) {
       const indices = dofIndex.byNode.get(node.id)!;
       node.dof.forEach((d, i) => {
-        dofOrder.push({ nodeId: node.id, localDof: i, globalIndex: indices[i], restrained: d.restrained });
+        // Un índice de diafragma aparece una vez, con el primer nudo del grupo.
+        if (listed.has(indices[i])) return;
+        listed.add(indices[i]);
+        const diaphragmId = dofIndex.diaphragmAt.get(indices[i]);
+        dofOrder.push({
+          nodeId: node.id,
+          localDof: i,
+          globalIndex: indices[i],
+          restrained: d.restrained,
+          ...(diaphragmId ? { diaphragmId } : {}),
+        });
       });
     }
     // **`dofOrder[i]` tiene que ser la fila `i` de la matriz.** Se arma
@@ -461,6 +576,7 @@ export class System {
       displacements,
       appliedForces: new Map(nodesInOrder.map((node) => [node.id, node.dof.map((d) => d.force)])),
       reactions,
+      diaphragms: [...this.diaphragms.values()],
     });
 
     return {

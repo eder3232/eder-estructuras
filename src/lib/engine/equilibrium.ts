@@ -19,8 +19,28 @@ export interface NodeEquilibrium {
   applied: number[];
   /** La reacción del apoyo — cero en los grados de libertad libres. */
   reaction: number[];
-  /** `fromElements + applied + reaction`. Tiene que dar cero. */
+  /**
+   * Solo nudos de un diafragma rígido: la fuerza que **el diafragma** le hace
+   * al nudo en el grado compartido (cero en los demás). No sale de ninguna
+   * barra —es la que reparte el piso entre sus nudos—, así que se deduce: es
+   * lo que le falta al nudo para estar en equilibrio. Lo que se comprueba de
+   * verdad es que esas fuerzas sumen cero en el grupo (`diaphragms`).
+   */
+  diaphragm?: number[];
+  /** `fromElements + applied + reaction` (`+ diaphragm`). Tiene que dar cero. */
   residual: number[];
+}
+
+/**
+ * El diafragma es interno a la estructura: lo que les da a unos nudos se lo
+ * quita a otros. **Sus fuerzas suman cero**, y eso es lo que se controla.
+ */
+export interface DiaphragmEquilibrium {
+  id: string;
+  /** Por nudo, en el orden del grupo. */
+  forces: { nodeId: string; force: number }[];
+  /** La suma de `forces`. Tiene que dar cero. */
+  residual: number;
 }
 
 export interface EquilibriumCheck {
@@ -39,7 +59,9 @@ export interface EquilibriumCheck {
    * `/frame2d` no mostraba esta verificación.
    */
   global: number[];
-  /** El mayor `|residuo|` de todos, incluido el global. */
+  /** Uno por diafragma rígido; vacío si no hay. */
+  diaphragms: DiaphragmEquilibrium[];
+  /** El mayor `|residuo|` de todos, incluido el global y el de los diafragmas. */
   maxResidual: number;
   /** La mayor fuerza en juego, que es contra lo que se juzga ese residuo. */
   scale: number;
@@ -65,6 +87,8 @@ interface EquilibriumInput {
   /** La carga que cargó el usuario, por nudo. */
   appliedForces: Map<string, number[]>;
   reactions: Map<string, number[]>;
+  /** Los diafragmas rígidos del sistema (ver `System.addDiaphragm`). */
+  diaphragms?: readonly { id: string; nodeIds: readonly string[]; localDof: number }[];
 }
 
 /**
@@ -94,7 +118,12 @@ export function equilibriumCheck({
   displacements,
   appliedForces,
   reactions,
+  diaphragms = [],
 }: EquilibriumInput): EquilibriumCheck {
+  const diaphragmDof = new Map<string, number>();
+  for (const diaphragm of diaphragms) {
+    for (const nodeId of diaphragm.nodeIds) diaphragmDof.set(nodeId, diaphragm.localDof);
+  }
   const zeros = () => new Array<number>(dofPerNode).fill(0);
   const fromElements = new Map(nodeIds.map((id) => [id, zeros()]));
   const applied = new Map(nodeIds.map((id) => [id, appliedForces.get(id)?.slice() ?? zeros()]));
@@ -146,6 +175,14 @@ export function equilibriumCheck({
     const load = applied.get(nodeId) ?? zeros();
     const reaction = reactions.get(nodeId)?.slice() ?? zeros();
     const residual = bars.map((value, i) => value + load[i] + reaction[i]);
+    const sharedDof = diaphragmDof.get(nodeId);
+    let diaphragm: number[] | undefined;
+    if (sharedDof !== undefined) {
+      diaphragm = zeros();
+      // `0 -` y no `-`: un `-0` no es un dato.
+      diaphragm[sharedDof] = 0 - residual[sharedDof];
+      residual[sharedDof] = 0;
+    }
 
     const external = load.map((value, i) => value + reaction[i] + (memberLoadAt.get(nodeId)?.[i] ?? 0));
     const position = positions.get(nodeId);
@@ -165,11 +202,22 @@ export function equilibriumCheck({
       fromElements: bars,
       applied: load,
       reaction,
+      ...(diaphragm ? { diaphragm } : {}),
       residual,
     };
   });
 
-  const maxResidual = [...nodes.flatMap((n) => n.residual), ...global].reduce(
+  const byId = new Map(nodes.map((n) => [n.nodeId, n]));
+  const diaphragmChecks: DiaphragmEquilibrium[] = diaphragms.map(({ id, nodeIds: members, localDof }) => {
+    const forces = members.map((nodeId) => ({ nodeId, force: byId.get(nodeId)?.diaphragm?.[localDof] ?? 0 }));
+    return { id, forces, residual: forces.reduce((sum, f) => sum + f.force, 0) };
+  });
+
+  const maxResidual = [
+    ...nodes.flatMap((n) => n.residual),
+    ...global,
+    ...diaphragmChecks.map((d) => d.residual),
+  ].reduce(
     (max, value) => Math.max(max, Math.abs(value)),
     0,
   );
@@ -177,6 +225,7 @@ export function equilibriumCheck({
   return {
     nodes,
     global,
+    diaphragms: diaphragmChecks,
     maxResidual,
     scale,
     ok: maxResidual <= EQUILIBRIUM_TOLERANCE * scale || maxResidual < ABSOLUTE_FLOOR,

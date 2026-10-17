@@ -8,6 +8,7 @@ export type {
   AssemblyResult,
   AssemblyStep,
   DofOrderEntry,
+  DiaphragmInput,
   PartitionResult,
 } from "./system";
 export { CONDITION_LIMIT, SingularStiffnessError, conditionEstimate, loadCompatibility, nullMode, nullSpace, spectrum, zeroStiffnessRows } from "./mechanism";
@@ -15,7 +16,7 @@ export type { LoadCompatibility, LoadVerdict, MechanismDiagnosis, MechanismDof }
 export { CONDITION_WARNING, dofNumberingWarning, illConditionedWarning, unconnectedNodeWarnings } from "./warnings";
 export type { SolveWarning } from "./warnings";
 export { EQUILIBRIUM_TOLERANCE, equilibriumCheck } from "./equilibrium";
-export type { EquilibriumCheck, NodeEquilibrium, NodeElementForce } from "./equilibrium";
+export type { DiaphragmEquilibrium, EquilibriumCheck, NodeEquilibrium, NodeElementForce } from "./equilibrium";
 export { determinacy } from "./classification";
 export type { Determinacy, StructureCount } from "./classification";
 export { cellContributions } from "./cell-contributions";
