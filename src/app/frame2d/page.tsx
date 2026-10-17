@@ -7,6 +7,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { Classification } from "./components/classification";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
+import { ExcelExportButton } from "./components/excel-export-button";
 import { FemTable } from "./components/fem-table";
 import { LoadTable } from "./components/load-table";
 import { ExamplesMenu, ModelPersistence, ResetModelButton } from "./components/model-persistence";
@@ -50,6 +51,7 @@ export default function Frame2DPage() {
             <div className="flex flex-wrap items-center gap-2">
               <ExamplesMenu />
               <ResetModelButton />
+              {hydrated && <ExcelExportButton />}
             </div>
           </div>
           <UnitsNote example={FRAME_EXAMPLE} mixing={FRAME_MIXING} />

@@ -41,7 +41,10 @@ describe("/armaduras-3d — panel de resultados", () => {
     // F = K·U, y las dos ecuaciones de la partición.
     expect(screen.getAllByRole("button", { name: /Pantalla completa/ })).toHaveLength(3);
     expect(screen.getByRole("switch", { name: /como mapa/ })).toBeTruthy();
-  });
+    // Abre todo el panel de una armadura de 6 barras en happy-dom: solo tarda
+    // ~2 s, pero con la suite entera en paralelo pasaba de los 5 s por defecto
+    // y fallaba de vez en cuando (visto el 2026-10-17, dos veces).
+  }, 20000);
 
   it("el modo práctica pide las 36 posiciones de una barra", async () => {
     const user = setup();

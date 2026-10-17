@@ -1,6 +1,6 @@
 # `/frame2d` para la v1: revisión y alcance (2026-10-17)
 
-> **Estado: revisado y con el alcance decidido (2026-10-17).** Las decisiones están en «Decisiones» y en la sección 6. El avance va en la sección 7.
+> **Estado: terminado (2026-10-17).** `/frame2d` tiene todo lo acordado para la v1 y queda cerrado como los otros tres. El avance paso por paso, con lo que encontró cada uno, es la sección 7; las decisiones, la sección 6 y «Decisiones»; lo que queda para la v2, al final de la sección 6.
 
 Cómo se revisó: el `frame2d` original entero en lo que toca a **cargas en barras** y **diagramas de corte y momento** (`thesis-structures/src/programs/frame2d/store/fem/`, `store/graphics/`, `components/edgesTable/fem/`, `components/graphs/`, `components/results/graphsForEachEdge/`), lo que heredó `frame2d-seismic`, y el módulo de este repo (`src/app/frame2d/`, 1240 líneas, y `src/lib/engine/frame2d/`). Las fórmulas de empotramiento perfecto del original **se verificaron numéricamente**: la carga repartida integrando cargas puntuales, y el momento concentrado como límite de un par de fuerzas (script en el scratchpad de la sesión, no versionado; la idea se repite en los tests del paso 2).
 
@@ -320,6 +320,30 @@ Medición final con un script (texto que pisa a otro o sale del lienzo) en los t
 Queda menor: en la barra aislada, una carga global se dibuja en los ejes de la barra y se rotula con el valor escrito — el viento +3 en X sobre la columna se ve como flechas «hacia abajo» (−y′) con el número 3. Es correcto, pero podría desorientar. Y el nombre del nudo de la cumbrera roza la caja de una etiqueta (D17).
 
 Suite: 493, `tsc` limpio, lint con los 2 de siempre.
+
+### Paso 10: exportación a Excel (2026-10-17) — hecho, y con él `/frame2d` queda cerrado para la v1
+
+- **`src/lib/excel/frame-2d-workbook.ts`**: hojas Datos, **Cargas**, Barras, Ensamblaje, Solución y Resultados. Editables: coordenadas, cargas de los nudos, prescritos, A, I y E, el FEM a mano de las barras que lo usan, y **los valores y las posiciones de las cargas en las barras**. Fijos (y el libro lo dice): apoyos, conectividad y, de cada carga, su barra, tipo, dirección y si es por planta — deciden con qué fórmula se calcula.
+- **El FEM es una fórmula viva, y es la misma integral del motor**: cada carga tiene tres puntos `(ξₖ, wₖ)` —los de Gauss en una distribuida, uno solo en `a` en una puntual— y sus seis componentes son `−Σ N(ξₖ)·wₖ·(ux′, uy′)`; el momento concentrado usa las derivadas de las funciones de forma. La dirección se descompone con los `c` y `s` de la barra, la proyección con `ABS(c)` o `ABS(s)`, y «toda la barra» pone `b = L` como fórmula. Así una carga parcial, triangular o inclinada sigue viva, no solo las tres de la tabla.
+- **Barras**: `L`, `c`, `s`, los cinco escalares, `T` y `k` de 6×6, `K = Tᵀ·k·T` y el FEM de la barra (la suma de sus cargas, o el escrito a mano) llevado a globales `Tᵀ·FEM`.
+- **Las hojas comunes** (`matrix-method-sheets.ts`) ganaron `femRef` opcional: la Ensamblaje suma el vector FEM con el mismo recorrido que `K`, y la Solución despeja `Uf = Kff⁻¹·(Ff − FEMf − Kfr·Ur)` y `Rr = … + FEMr`. Los otros tres libros no lo pasan y no cambian (79 tests).
+- **Resultados**: desplazamientos y giros, reacciones, por barra `f = k·T·u + FEM` y los esfuerzos de viga en cada extremo, y el equilibrio global **con las cargas de las barras y ΣM respecto del origen**.
+- **Sin imagen**: en un pórtico lo que más dice el dibujo son las cargas, y se editan en el libro. Queda para la v2 junto con los diagramas en Excel.
+- **Botón** «Descargar Excel» en el encabezado, habilitado con resultados.
+
+Verificado:
+
+- **Test** (`store/excel-workbook.test.ts`, 25 casos): el inicial, los tres ejemplos, un modelo con **todas las clases de carga** (trapezoidal parcial, puntual inclinada, momento, axial y por planta) y una barra con FEM a mano, cada uno con los dos órdenes de grados de libertad; recalculado con HyperFormula, cada fórmula da lo del motor, y **editar en el libro** —mover un nudo, una carga nodal, la inercia, un prescrito, el valor de una carga y su posición— da lo mismo que el motor resolviendo el modelo editado. Prueba de mutación: sacar `FEMf` del despeje rompe 20 de 25 (los 5 que pasan son los sin cargas en barras).
+- **Excel de verdad, por COM**: los 5 libros, **3419 celdas, 0 diferencias** al abrir y **0 después de editar** (6838 comparaciones; entre 105 y 207 celdas matriciales por libro, reconocidas). Script: un test temporal escribe cada libro con `write-xlsx` y un JSON con lo que tiene que dar cada celda antes y después de las ediciones; un `.ps1` abre cada libro, compara con la tolerancia de los tests, edita, `CalculateFull()` y vuelve a comparar.
+- **De punta a punta**: el libro bajado con el botón real de la app (el pórtico isostático): 627 celdas, 0 diferencias antes y después de editar.
+- **Mirado** (PDF desde Excel, abierto en Chrome porque sale protegido): la hoja Cargas se lee — editables en amarillo, los puntos de integración y el FEM a la derecha.
+
+Lo que encontró:
+
+- **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia, al revés que en matemática y en JavaScript. La función de forma `−ξ² + ξ³` escrita así daba `ξ² + ξ³`, y el momento del extremo «hacia» salía mal en todas las cargas. Lo atrapó el test (HyperFormula reproduce la regla de Excel); ahora se escribe `ξ³ − ξ²`, y no queda ninguna negación delante de una potencia.
+- El test intermitente de `/armaduras-3d` volvió a fallar con la suite entera: se le subió el límite a 20 s (tarda ~2 s solo).
+
+**No verificado**: `pnpm build` (el servidor de desarrollo estuvo levantado toda la sesión). Es lo primero que hay que correr.
 
 ## Decisiones (2026-10-17)
 

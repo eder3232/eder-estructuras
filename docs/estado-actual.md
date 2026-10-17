@@ -1,22 +1,22 @@
-# Estado actual del proyecto (2026-10-16)
+# Estado actual del proyecto (2026-10-17)
 
 > **Empezá acá si retomás en frío.** Este documento es el estado accionable: qué está hecho, qué falta, qué no está verificado y qué leer antes de tocar cada cosa. El README tiene el resumen y la lista de avances; el roadmap ([`refactor-roadmap.md`](./refactor-roadmap.md)) tiene el diagnóstico del proyecto original y la historia hasta el 2026-08-14.
 
 ## 1. Dónde está parado
 
-**El objetivo es terminar la v1**, sistema por sistema. Tres de los cuatro sistemas están **cerrados para la v1**:
+**El objetivo es terminar la v1**, sistema por sistema. **Los cuatro sistemas base están cerrados para la v1**:
 
 | Sistema | Cerrado | Detalle |
 |---|---|---|
 | `/armaduras-2d` | 2026-08-14 (Excel y clasificación el 2026-10-14) | [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md), [`armaduras-2d-plan.md`](./armaduras-2d-plan.md), [`excel-export.md`](./excel-export.md) |
 | `/springs` | 2026-10-14 | [`springs-v1.md`](./springs-v1.md) |
 | `/armaduras-3d` | 2026-10-16 | [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) |
-| `/frame2d` | **no** — sigue como quedó en el Tren C (2026-08) | ver sección 3 |
+| `/frame2d` | 2026-10-17 | [`frame2d-v1.md`](./frame2d-v1.md) |
 | `frame2d-seismic` | **no existe todavía** | ver sección 3 |
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
-**En curso desde el 2026-10-17: `/frame2d` para la v1** (lo eligió el usuario). La revisión, las decisiones, lo que falta decidir y el plan por pasos están en [`frame2d-v1.md`](./frame2d-v1.md); la sección 3 de acá queda como resumen.
+**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario** qué sigue: lo natural es `frame2d-seismic` (ver sección 3), pero el orden lo decidió siempre él. **Antes de nada, correr `pnpm build`** con el servidor de desarrollo apagado: no se corrió desde el 2026-10-14 (ver sección 6).
 
 ## 2. Qué tiene cada sistema
 
@@ -24,53 +24,42 @@ Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
 | Función | `/armaduras-2d` | `/springs` | `/armaduras-3d` | `/frame2d` |
 |---|---|---|---|---|
-| Bugs de la revisión para la v1 | ✅ | ✅ (6) | ✅ (6) | ✗ sin revisar |
-| Estado vacío y por qué no hay resultados (U3) | ✅ | ✅ | ✅ | ✗ |
-| Advertencias (E2) | ✅ | ✅ | ✅ | ✗ |
-| Clasificación `g` cruzada con el motor | ✅ `b+r−2n` | ✅ `b+r−n` | ✅ `b+r−3n` | ✗ (`3b+r−3n`) |
-| Verificación de equilibrio (N5) | ✅ | ✅ | ✅ | ✗ |
-| Nota de unidades (U5) | ✅ | ✅ | ✅ | ✗ |
-| Insertar fila en el medio (D7) | ✅ | ✅ | ✅ | ✗ |
-| Decimales por sección y por tabla (D8) | ✅ | ✅ | ✅ | ✗ solo el de página |
-| Combobox buscable Desde/Hacia (U2) | ✅ | ✅ | ✅ | ✗ |
-| Encabezados agrupados (U1) | ✅ | — 3 columnas | ✅ | ✗ |
-| Orden de grados de libertad (M1a/M1b) | ✅ | ✅ | ✅ | ✗ |
-| Narrativa en KaTeX (D11) | ✅ | ✅ sin transformación | ✅ | ✗ texto plano |
-| Matrices grandes: apilada, pantalla completa, `K` como mapa, pasos cerrados | ✅ | ✅ | ✅ | ✗ usa sus propios `assembly-steps` |
-| Modo práctica | ✅ | ✅ | ✅ bloque 3×3 | ✗ |
-| Mecanismo explicado en texto | ✅ | ✅ | ✅ | ✗ |
-| Mecanismo dibujado | ✅ | — sin dibujo | ✅ | ✗ |
-| Tabla ↔ dibujo por hover (N3) | ✅ | — sin dibujo | ✅ | ✗ |
-| Matriz ↔ modelo por hover (N4) | ✅ | — | v2 | ✗ |
-| Desplazamiento unitario | ✅ | — v2 | v2 | ✗ |
-| Persistencia con «Deshacer» (N1) | ✅ | ✅ | ✅ | ✗ |
-| Ejemplos precargados (N2) | ✅ 3 | ✅ 3 | ✅ 3 + el inicial | ✗ |
-| Excel con el método vivo | ✅ con imagen | ✅ sin imagen | ✅ sin imagen | ✗ |
-| Tests del store | ✅ | ✅ | ✅ | ✗ ninguno (solo la regresión del motor) |
-| Página ancha `max-w-[84rem]` | ✅ | — `max-w-5xl` alcanza | ✅ | ✗ |
+| Bugs de la revisión para la v1 | ✅ | ✅ (6) | ✅ (6) | ✅ (8, más 2 del motor) |
+| Estado vacío y por qué no hay resultados (U3) | ✅ | ✅ | ✅ | ✅ |
+| Advertencias (E2) | ✅ | ✅ | ✅ | ✅ |
+| Clasificación `g` cruzada con el motor | ✅ `b+r−2n` | ✅ `b+r−n` | ✅ `b+r−3n` | ✅ `3b+r−3n` |
+| Verificación de equilibrio (N5) | ✅ | ✅ | ✅ | ✅ con ΣM respecto del origen |
+| Nota de unidades (U5) | ✅ | ✅ | ✅ | ✅ |
+| Insertar fila en el medio (D7) | ✅ | ✅ | ✅ | ✅ |
+| Decimales por sección y por tabla (D8) | ✅ | ✅ | ✅ | ✅ |
+| Combobox buscable Desde/Hacia (U2) | ✅ | ✅ | ✅ | ✅ (también la barra de una carga) |
+| Encabezados agrupados (U1) | ✅ | — 3 columnas | ✅ | ✅ |
+| Orden de grados de libertad (M1a/M1b) | ✅ | ✅ | ✅ | ✅ |
+| Narrativa en KaTeX (D11) | ✅ | ✅ sin transformación | ✅ | ✅ con `F = K·U + FEM` |
+| Matrices grandes: apilada, pantalla completa, `K` como mapa, pasos cerrados | ✅ | ✅ | ✅ | ✅ |
+| Modo práctica | ✅ | ✅ | ✅ bloque 3×3 | ✅ bloque 3×3 global |
+| Mecanismo explicado en texto | ✅ | ✅ | ✅ | ✅ |
+| Mecanismo dibujado | ✅ | — sin dibujo | ✅ | ✅ |
+| Tabla ↔ dibujo por hover (N3) | ✅ | — sin dibujo | ✅ | ✅ (y las cargas) |
+| Matriz ↔ modelo por hover (N4) | ✅ | — | v2 | v2 |
+| Desplazamiento unitario | ✅ | — v2 | v2 | v2 |
+| Persistencia con «Deshacer» (N1) | ✅ | ✅ | ✅ | ✅ |
+| Ejemplos precargados (N2) | ✅ 3 | ✅ 3 | ✅ 3 + el inicial | ✅ 3, con cargas en barras |
+| Excel con el método vivo | ✅ con imagen | ✅ sin imagen | ✅ sin imagen | ✅ sin imagen, FEM vivo |
+| Tests del store | ✅ | ✅ | ✅ | ✅ |
+| Página ancha `max-w-[84rem]` | ✅ | — `max-w-5xl` alcanza | ✅ | ✅ |
+| **Cargas en barras y FEM calculado** | — | — | — | ✅ (solo pórticos) |
+| **Diagramas N, V, M** | — | — | — | ✅ (solo pórticos) |
+| **Deformada real entre nudos** | — recta es exacta | — | — recta es exacta | ✅ (solo pórticos) |
 
 ## 3. Lo que falta para la v1
 
-### `/frame2d` para la v1
-
-Es el más atrasado: tiene el motor (`FrameElement2D`, 6×6 con axial y flexión, momentos de empotramiento perfecto) y la visualización con el giro resuelto, pero **ninguna** de las funciones de la tabla de arriba. Por eso conviene hacerlo con **el molde que se repitió en los tres cierres**:
-
-1. **Revisión** del módulo entero, con un sondeo del store con casos borde. En `/springs` y `/armaduras-3d` encontró seis bugs cada una, y cuatro eran los mismos (filas nuevas que nacen en error, ids internos en los mensajes, nombres repetidos, signo doble en las sustituciones): **lo más probable es que `/frame2d` los tenga**.
-2. **El alcance lo decide el usuario**, con una tabla «qué tiene 2D y este no» como la de [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) (sección 2).
-3. **Un doc `docs/frame2d-v1.md`** con el avance paso por paso y lo que encontró mirarlo.
-4. **Extraer a genérico en vez de copiar**: casi todo ya está en `src/components/custom/` y `src/lib/` (ver qué usa `/armaduras-3d`).
-
-Lo propio de pórticos que no se resuelve cableando:
-
-- **La `A` es de 6×6** (el giro entra sin transformar) y la `K` de cada barra también: la cadena `A·k·Aᵀ` es más grande que la de 3D. Para eso están la vista apilada y la pantalla completa.
-- **Los momentos de empotramiento perfecto se cargan a mano**, 6 por barra. Falta la UI de tablas de carga que los calcule (distribuida, puntual, momento, distribuida intermedia). Fue el «hilo B» del 2026-08-14.
-- **El Excel** tiene que llevar los FEM como vector de cargas equivalentes, y la rigidez 6×6 con flexión.
-- **Deudas propias**: la deformada es una recta entre nudos en vez de la cúbica de Hermite (**D3**), y faltan los diagramas de corte y momento (**D4**).
-- **Nunca se miró** su forma deformada después de los cambios compartidos del 2026-08-13.
-
 ### `frame2d-seismic`
 
-No existe. Va como **extensión real sobre `frame2d`, no un fork copiado**: ese fue el bug diagnosticado en el original (ver el roadmap). Tiene sentido después de `/frame2d`.
+No existe. Va como **extensión real sobre `frame2d`, no un fork copiado**: ese fue el bug diagnosticado en el original (ver el roadmap). Lo que ya está preparado para eso:
+
+- **Casos de carga (muerta/viva)**: por decisión del usuario (2026-10-17) son **exclusivos de `frame2d-seismic`**, no de `/frame2d`. El modelo de cargas de `/frame2d` (`store/loads.ts`) no los tiene; agregarlos es sumar un campo a `LoadRow` y una combinación antes de `loadFixedEndForces`.
+- El original sísmico tenía además una envolvente; sus bugs (la carga muerta contada dos veces, la viva nunca) están en la sección 1 de [`frame2d-v1.md`](./frame2d-v1.md).
 
 ### Después de los sistemas
 
@@ -83,59 +72,66 @@ Decidido por el usuario en cada cierre:
 - **Temas del curso** (de `/armaduras-2d`, 2026-10-14): **variación de temperatura** y **defectos de fabricación** (entran como carga nodal equivalente, `N = k·(u − δ₀)`; el motor ya tiene el gancho `Element.equivalentLoad()`), y **apoyos inclinados** (rotar los grados de libertad de un nudo; toca el motor y el Excel).
 - **`/springs`**: el esquema topológico (nudos en fila, resortes en zigzag, «no está a escala») y lo que depende de él: N3, N4, desplazamiento unitario y mecanismo dibujado.
 - **`/armaduras-3d`**: N4 (matriz ↔ modelo), desplazamiento unitario, Excel con imagen, `K` por bloques de nudo, D16 y vistas predefinidas (planta/elevación).
+- **`/frame2d`** (2026-10-17, delegado al criterio de estabilidad): N4, desplazamiento unitario, el ejercicio de calcular el FEM de una carga, los diagramas en el Excel y el Excel con imagen.
 
 ## 5. Deudas abiertas
 
-La tabla numerada con el detalle está en el roadmap, sección 4. Estado al 2026-10-16:
+La tabla numerada con el detalle está en el roadmap, sección 4. Estado al 2026-10-17:
 
 | # | Qué | Estado |
 |---|---|---|
 | D2 | Las tablas de barras de las dos armaduras | ✅ resuelta: una sola, `custom/truss-element-table.tsx` |
-| D3 | Deformada de `frame2d` como recta | ✅ resuelta el 2026-10-17 (`member-deflection.ts`: Hermite + flecha biempotrada; ver [`frame2d-v1.md`](./frame2d-v1.md), paso 5) |
+| D3 | Deformada de `frame2d` como recta | ✅ resuelta el 2026-10-17 (`member-deflection.ts`: Hermite + flecha biempotrada; [`frame2d-v1.md`](./frame2d-v1.md), paso 5) |
 | D4 | Diagramas de corte y momento | ✅ resuelta el 2026-10-17 (`member-diagrams.ts`, N/V/M exactos; paso 4) |
 | D5 | Verificación visual pendiente | ✅ la deformada de `/frame2d` se miró y se midió el 2026-10-17 |
-| D7, D8, D11 | Insertar filas, decimales en cascada, narrativa | ✅ en tres sistemas; falta `/frame2d` |
+| D7, D8, D11 | Insertar filas, decimales en cascada, narrativa | ✅ en los cuatro sistemas |
 | D9 | El stepper de decimales puede saltar de renglón | abierta, afuera a propósito |
 | D12 | La ecuación que no se adapta a sus operandos | mitigada: «Ver apilada» y «Pantalla completa» (`custom/chain-equation.tsx`, `MatrixEquation expand`); el responsive sigue abierto |
 | D13 | `K` como mapa | ✅ resuelta (`MatrixTable heatmap`, pasados 19 grados de libertad) |
 | D14 | Pasos de ensamblaje que crecen | ✅ resuelta (`custom/assembly-steps.tsx`, cerrados pasados 12) |
 | D15 | El motor invierte en vez de factorizar | abierta **por decisión del usuario** |
-| D16 | El esquema no dibuja los desplazamientos prescritos | abierta (en 2D y 3D) |
-| D17 | Las etiquetas no se conocen entre sí | abierta; en 3D depende del ángulo (en la torre de 9 nudos se apilan alrededor de `b4`) |
+| D16 | El esquema no dibuja los desplazamientos prescritos | abierta (en 2D, 3D y pórticos) |
+| D17 | Las etiquetas no se conocen entre sí | abierta en el esquema (nombres de nudos cruzados por las flechas de una carga, en `/frame2d`; en 3D depende del ángulo). **Resuelta en los diagramas N/V/M** de `/frame2d`, que ubican sus números sin pisarse |
 
-Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el renglón de propiedades de cada barra el valor queda pegado al rótulo siguiente («3.5 Cx = Δx/L»); el ruido numérico (`-2.22E-15`) sale tal cual; en `F = K·U` los renglones de `K` van ~12 px corridos respecto de `F` y `U`.
+Detalles chicos vistos y no resueltos: en el Excel de las dos armaduras, en el renglón de propiedades de cada barra el valor queda pegado al rótulo siguiente («3.5 Cx = Δx/L»); el ruido numérico (`-2.22E-15`) sale tal cual; en `F = K·U` los renglones de `K` van ~12 px corridos respecto de `F` y `U`; en la barra aislada de `/frame2d`, una carga global se dibuja en los ejes de la barra con el valor escrito (el viento +X sobre una columna se ve como flechas «hacia abajo» con un 3).
 
 ## 6. Cómo verificar
 
-**Lo que pasa hoy** (2026-10-16, commit `5748fb6`):
+**Lo que pasa hoy** (2026-10-17, cierre de `/frame2d`):
 
 ```
-pnpm test          # 381 tests, 65 archivos
+pnpm test          # 518 tests, 74 archivos
 npx tsc --noEmit   # sin salida
 pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts): no se tocan; un tercero sí es nuevo
 ```
 
-`pnpm build` **no se corrió** en la sesión del 2026-10-16 (el servidor de desarrollo estaba levantado), así que no está comprobado que la página de 3D con `exceljs` compile en producción; el de `/armaduras-2d` sí compilaba. Conviene correrlo con el servidor apagado antes de dar algo por cerrado.
+**`pnpm build` no se corrió desde el 2026-10-14** —el servidor de desarrollo estuvo levantado en las sesiones del 16 y del 17—, así que no está comprobado que `/armaduras-3d` y `/frame2d` con `exceljs` compilen en producción (el de `/armaduras-2d` sí compilaba). **Es lo primero que hay que hacer**, con el servidor apagado.
 
-**Mirar la app.** Desde el 2026-10-16 el proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). Antes no había forma de hacer hover; la receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
+**Mirar la app.** El proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). La receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
 
 Recetas que ya funcionaron con `chrome-devtools`:
 
-- **Forzar tema**: `initScript` con `localStorage.setItem("theme", "light")` y recargar.
+- **Forzar tema**: `initScript` con `localStorage.setItem("theme", "light")` y recargar; o el botón del tema, sin recargar (no pierde el modelo).
 - **Empezar sin lo guardado**: `initScript` que borre la clave del sistema (`eder-estructuras:<sistema>`).
 - **Un toast con «Deshacer»** dura 10 s: hacer click por `evaluate_script` en el mismo paso, no buscar el uid después.
 - **Descargar el Excel**: `initScript` que intercepte `URL.createObjectURL` y guarde el blob en `window`, click real en el botón, y `evaluate_script` con `filePath` para volcarlo en base64.
+- **Los uid de una captura (`take_snapshot`) vencen** al cambiar la página: sacar una nueva antes de cada click. Guardarla a archivo (`filePath`) y buscar con `grep`: inline gasta miles de líneas.
+- **El hover de la herramienta no alcanza una barra del esquema** (una línea: caja de ancho o alto cero, «no interactiva»). Se verifica con un nudo, y la barra con el test de componentes.
+- **Medir superposiciones de texto** en un SVG: comparar los `getBoundingClientRect()` de todos los `text`, y contra el borde del `svg` para los que se salen.
 
-**Excel de verdad**: Excel 16 está instalado y se maneja por COM desde PowerShell. La receta y lo que se verificó están en [`excel-export.md`](./excel-export.md) y en el paso 7 de [`armaduras-3d-v1.md`](./armaduras-3d-v1.md). Al leer un JSON con tildes en PowerShell 5.1, `Get-Content -Encoding UTF8`.
+**Excel de verdad**: Excel 16 está instalado y se maneja por COM desde PowerShell. La receta y lo que se verificó están en [`excel-export.md`](./excel-export.md), en el paso 7 de [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) y en el paso 10 de [`frame2d-v1.md`](./frame2d-v1.md) (que deja el script de comparación descripto). Al leer un JSON con tildes en PowerShell 5.1, `Get-Content -Encoding UTF8`.
 
 **Reglas de método** que se confirmaron sesión tras sesión:
 
-- **Mirar la app encuentra lo que los tests no**: en cada cierre apareció algo (en el paso 6 de 3D, la cámara del modelo anterior y el menú fuera de la columna).
+- **Mirar la app encuentra lo que los tests no**: en cada cierre apareció algo. En `/frame2d`, casi todo lo de los diagramas apareció recién al cargar los ejemplos, que tienen formas que el pórtico inicial no tiene.
 - **Sobre una captura hay que medir, no mirar.** Para texto, la razón de contraste WCAG (4.5); la distancia RGB sirve para «¿esta zona se distingue?».
-- **Una lección de un ejemplo se mide antes de escribirla**: dos veces una lección supuesta resultó falsa (el asentamiento de la primera cercha de 2D y el del tetraedro de 3D: *hiperestática + asentamiento* no implica esfuerzos).
-- **Trampas que se repitieron**: lo que se dibuja en unidades del modelo y no en píxeles (un `stroke` sin `vector-effect`); el `uppercase` de `ui/` reescribiendo texto (KaTeX, títulos, menús); estrenar un componente de `ui/` que nadie usó (el `Alert` warning ilegible, el `Toaster` con otra tipografía, el `Dialog` angosto y en mayúsculas); en three.js, un material que se atenúa tiene que nacer `transparent`.
+- **Una lección de un ejemplo se mide antes de escribirla**: dos veces una lección supuesta resultó falsa (el asentamiento de la primera cercha de 2D y el del tetraedro de 3D).
+- **Un número de la pantalla tiene que poder rehacerse con los otros números de la pantalla**: así apareció que la tabla rotulada `K_ff⁻¹` mostraba `K_ff` en los cuatro sistemas.
+- **TeX solo con Edit/Write**, nunca por el texto de un comando de shell: las barras invertidas dobles se pierden (rompió la partición en los cuatro sistemas, antes del commit). Después de tocar fórmulas, buscar `.katex-error` y TeX colado con todas las secciones abiertas.
+- **En Excel, `-x^2` es (−x)²**: la negación unaria va antes que la potencia. HyperFormula lo reproduce, así que el test lo atrapa.
+- **Trampas que se repitieron**: lo que se dibuja en unidades del modelo y no en píxeles (un `stroke` sin `vector-effect`); el `uppercase` de `ui/` reescribiendo texto (KaTeX, títulos, menús); estrenar un componente de `ui/` que nadie usó; en three.js, un material que se atenúa tiene que nacer `transparent`; un bloque (`div`) dentro de un `<p>`, que la consola marca como error de hidratación.
 
-**Lo que NO está verificado a mano**: la deformada de `/frame2d` después de los cambios del 2026-08-13; el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests; ahora `chrome-devtools` lo permite).
+**Lo que NO está verificado a mano**: el hover de N3 y N4 en `/armaduras-2d` con el mouse de verdad (se verificó sembrando el estado y con tests); el hover sobre una barra del esquema de `/frame2d` con la herramienta (sí con el test de componentes); un pórtico inclinado en la pantalla de la deformada; `pnpm build`.
 
 ## 7. Qué leer antes de tocar cada cosa
 
@@ -145,6 +141,7 @@ Recetas que ya funcionaron con `chrome-devtools`:
 | propagar una función de `/armaduras-2d` | [`armaduras-2d-cierre.md`](./armaduras-2d-cierre.md) (el porqué de cada una) |
 | tocar algo que produce o muestra un error | [`errores.md`](./errores.md) |
 | tocar diagramas planos / la escena 3D | [`diagram-pattern.md`](./diagram-pattern.md) / [`diagram-3d-pattern.md`](./diagram-3d-pattern.md) |
+| tocar cargas en barras, diagramas N/V/M o la deformada de pórticos | [`frame2d-v1.md`](./frame2d-v1.md), secciones 4 y pasos 2–5 (la convención de signos está en la sección 4) |
 | tocar la exportación a Excel | [`excel-export.md`](./excel-export.md) |
 | tocar componentes de `ui/` | [`components.md`](./components.md): `ui/` es intocable, se forkea a `ui-custom/` |
 | hacer commits | [`git-workflow.md`](./git-workflow.md): commits directos a `main` hasta `v1.0.0`, Conventional Commits |
@@ -155,13 +152,15 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| `5748fb6` | `/armaduras-3d`: exportación a Excel sin imagen (paso 7, cierre) |
-| `003738d` | `/armaduras-3d`: persistencia y tres ejemplos (paso 6) |
-| `9a5011a` | `/armaduras-3d`: hover tabla ↔ escena y el mecanismo dibujado (paso 5) |
-| `269186a` | `/armaduras-3d`: narrativa de 2D y modo práctica de 3×3 (paso 4) |
-| `e1eb504` | matrices grandes en los tres sistemas (paso 3) |
-| `d15609a` | `/armaduras-3d`: lo de 2D que no pide dibujo (paso 2) |
-| `5d70090` | `/armaduras-3d`: los bugs de la revisión (paso 1) |
-| `09477f3` | la escena 3D sigue al tema (paso 0) |
-| `84b20a9` | el plan de `/armaduras-3d` |
-| `5f66cea` | `/springs` terminado para la v1 |
+| (este) | `/frame2d`: exportación a Excel con el FEM vivo (paso 10, cierre) |
+| `d590e1d` | `/frame2d`: persistencia y tres ejemplos con cargas en barras (paso 9) |
+| `128f3a7` | `/frame2d`: hover tabla ↔ esquema y el mecanismo dibujado (paso 8) |
+| `fd6fd26` | `/frame2d`: narrativa, matrices grandes y modo práctica (paso 7); fix de `K_ff⁻¹` en los cuatro sistemas |
+| `79f2363` | `/frame2d`: lo genérico de los otros sistemas, y el equilibrio de un pórtico (paso 6) |
+| `74e35eb` | `/frame2d`: la deformada real (paso 5) |
+| `aee8af7` | `/frame2d`: diagramas N, V, M (paso 4) |
+| `3505d80` | `/frame2d`: tabla de cargas, FEM por barra y su dibujo (paso 3) |
+| `02a2fdf` | `/frame2d`: cargas en barras y su FEM en el motor (paso 2) |
+| `d4a81e8` | `/frame2d`: los bugs de la revisión (paso 1) |
+| `3aa24bd` | la revisión y el plan de `/frame2d` |
+| `5748fb6` | `/armaduras-3d`: exportación a Excel sin imagen (cierre) |

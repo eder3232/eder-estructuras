@@ -26,6 +26,13 @@ export interface MatrixMethodSheetsInput {
   prescribedRef: (g: number) => string;
   /** La nota de la hoja Ensamblaje, en el idioma del sistema. */
   assemblyNote: string;
+  /**
+   * Solo pórticos con cargas en las barras: la celda de la componente `i` del
+   * FEM del elemento **en ejes globales**. Con esto la hoja Ensamblaje arma el
+   * vector FEM igual que `K`, y la Solución despeja con él:
+   * `Uf = Kff⁻¹·(Ff − FEMf − Kfr·Ur)` y `Rr = Krf·Uf + Krr·Ur + FEMr`.
+   */
+  femRef?: (elementId: string, i: number) => string;
 }
 
 export const MATRIX_METHOD_SHEETS = {
@@ -40,6 +47,8 @@ export interface MatrixMethodSheets {
   ufRef: Map<number, string>;
   /** Dónde quedó cada reacción, por grado global. */
   rrRef: Map<number, string>;
+  /** Dónde quedó cada componente del vector FEM global, si lo hay. */
+  femVectorRef: Map<number, string>;
 }
 
 export function buildMatrixMethodSheets({
@@ -50,6 +59,7 @@ export function buildMatrixMethodSheets({
   force,
   prescribedRef,
   assemblyNote,
+  femRef,
 }: MatrixMethodSheetsInput): MatrixMethodSheets {
   const { dofOrder, partition, globalStiffness, steps } = solved.assembly;
   const stepByElement = new Map(steps.map((step) => [step.elementId, step]));
@@ -85,6 +95,25 @@ export function buildMatrixMethodSheets({
   assembly.width(1, 12);
   for (let col = 2; col <= t + 1; col++) assembly.width(col, 13);
 
+  // El vector FEM, ensamblado con el mismo recorrido que K: una columna más a
+  // la derecha, separada por una vacía.
+  const femVectorRef = new Map<number, string>();
+  const femCol = t + 3;
+  if (femRef) {
+    const { fixedEndForces } = solved.assembly;
+    const femContributions: string[][] = Array.from({ length: t }, () => []);
+    for (const elementId of elementIds) {
+      stepByElement.get(elementId)!.dofs.forEach((row, i) => femContributions[row].push(femRef(elementId, i)));
+    }
+    assembly.text(kTop - 1, femCol, "FEM", "header");
+    for (let r = 0; r < t; r++) {
+      if (femContributions[r].length > 0) assembly.formula(kTop + r, femCol, femContributions[r].join("+"), fixedEndForces[r]);
+      else assembly.set(kTop + r, femCol, { role: "computed", value: 0 });
+      femVectorRef.set(r, assembly.ref(kTop + r, femCol));
+    }
+    assembly.width(femCol, 13);
+  }
+
   // ---------------------------------------------------------------- Solución
   const solution = new SheetBuilder(MATRIX_METHOD_SHEETS.solution);
   const { free, restrained } = partition;
@@ -94,7 +123,9 @@ export function buildMatrixMethodSheets({
   solution.text(
     2,
     1,
-    "K se parte en grados libres (f) y restringidos (r). Los desplazamientos libres salen de Uf = Kff⁻¹ · (Ff − Kfr · Ur) y las reacciones de Rr = Krf · Uf + Krr · Ur.",
+    femRef
+      ? "K se parte en grados libres (f) y restringidos (r). Con cargas en las barras, F = K·U + FEM: los desplazamientos libres salen de Uf = Kff⁻¹ · (Ff − FEMf − Kfr · Ur) y las reacciones de Rr = Krf · Uf + Krr · Ur + FEMr."
+      : "K se parte en grados libres (f) y restringidos (r). Los desplazamientos libres salen de Uf = Kff⁻¹ · (Ff − Kfr · Ur) y las reacciones de Rr = Krf · Uf + Krr · Ur.",
     "note",
   );
   solution.merge(2, 1, 1, Math.max(nf + nr + 3, 10));
@@ -138,8 +169,8 @@ export function buildMatrixMethodSheets({
 
   const ffLeft = 1;
   const urLeft = 4;
-  const ufLeft = 7;
-  const rrLeft = 10;
+  const ufLeft = femRef ? 10 : 7;
+  const rrLeft = femRef ? 13 : 10;
   const ff = vector("Ff (cargas)", ffLeft, free, (row, col, g) => {
     const { ref, value } = force(g);
     solution.formula(row, col, ref, value);
@@ -147,6 +178,32 @@ export function buildMatrixMethodSheets({
   const ur = vector("Ur (desplaz. prescritos)", urLeft, restrained, (row, col, g) => {
     solution.formula(row, col, prescribedRef(g), valueAt(solved.displacements, g));
   });
+
+  // Con FEM, sus dos mitades van entre los datos y las incógnitas.
+  const femFLeft = 7;
+  const femFRange =
+    femRef && nf > 0
+      ? (() => {
+          solution.text(vectorTop, femFLeft, "FEMf", "label");
+          free.forEach((g, i) => {
+            solution.text(vectorTop + 1 + i, femFLeft, dofLabel(g), "label");
+            solution.formula(vectorTop + 1 + i, femFLeft + 1, femVectorRef.get(g)!, solved.assembly.fixedEndForces[g]);
+          });
+          return rangeAddress(vectorTop + 1, femFLeft + 1, nf, 1);
+        })()
+      : null;
+  const femRLeft = femFLeft;
+  const femRTop = vectorTop + nf + 2;
+  const femRRange = femRef
+    ? (() => {
+        solution.text(femRTop, femRLeft, "FEMr", "label");
+        restrained.forEach((g, i) => {
+          solution.text(femRTop + 1 + i, femRLeft, dofLabel(g), "label");
+          solution.formula(femRTop + 1 + i, femRLeft + 1, femVectorRef.get(g)!, solved.assembly.fixedEndForces[g]);
+        });
+        return rangeAddress(femRTop + 1, femRLeft + 1, nr, 1);
+      })()
+    : null;
 
   const ufRef = new Map<number, string>();
   const rrRef = new Map<number, string>();
@@ -159,7 +216,8 @@ export function buildMatrixMethodSheets({
       ufRef.set(g, solution.ref(vectorTop + 1 + i, ufLeft + 1));
     });
     uf = rangeAddress(vectorTop + 1, ufLeft + 1, nf, 1);
-    const rhs = nr > 0 ? `${ff}-MMULT(${kfr},${ur})` : ff;
+    const loads = femFRange ? `${ff}-${femFRange}` : ff;
+    const rhs = nr > 0 ? `${loads}-MMULT(${kfr},${ur})` : loads;
     solution.array(
       vectorTop + 1,
       ufLeft + 1,
@@ -176,10 +234,10 @@ export function buildMatrixMethodSheets({
   solution.array(
     vectorTop + 1,
     rrLeft + 1,
-    uf ? `MMULT(${krf},${uf})+MMULT(${krr},${ur})` : `MMULT(${krr},${ur})`,
+    (uf ? `MMULT(${krf},${uf})+MMULT(${krr},${ur})` : `MMULT(${krr},${ur})`) + (femRRange ? `+${femRRange}` : ""),
     restrained.map((g) => [valueAt(solved.reactions, g)]),
   );
   for (let col = 1; col <= Math.max(rightLeft + nr, rrLeft + 1); col++) solution.width(col, 13);
 
-  return { assembly: assembly.sheet, solution: solution.sheet, ufRef, rrRef };
+  return { assembly: assembly.sheet, solution: solution.sheet, ufRef, rrRef, femVectorRef };
 }
