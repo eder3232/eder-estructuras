@@ -28,6 +28,7 @@ Hasta el 2026-10-17 el trabajo fue **directo sobre `main`** (pre-producción, un
 - no se puede hacer push directo: todo entra por PR;
 - el check «Vercel» tiene que pasar antes del merge;
 - sin force push ni borrado de la rama;
+- historial lineal: el repo **solo permite merge por rebase** (squash y merge commit están apagados) y borra la rama al mergear;
 - **aplica también a los administradores** (`enforce_admins`): un push directo a `main` lo rechaza GitHub, no la memoria de nadie.
 
 No se exigen aprobaciones (0 reviews): con un solo desarrollador, nadie podría aprobar.
