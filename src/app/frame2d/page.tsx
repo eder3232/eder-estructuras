@@ -1,7 +1,5 @@
 "use client";
 
-import { CompactNumbersControl } from "@/components/custom/compact-numbers-control";
-import { DecimalsControl } from "@/components/custom/decimals-control";
 import { ElementTable } from "./components/element-table";
 import { ErrorsPanel } from "./components/errors-panel";
 import { NodeTable } from "./components/node-table";
@@ -37,16 +35,7 @@ export default function Frame2DPage() {
 
       <ErrorsPanel />
 
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Resultados</h2>
-          <div className="flex items-center gap-4">
-            <CompactNumbersControl />
-            <DecimalsControl />
-          </div>
-        </div>
-        <ResultsPanel />
-      </div>
+      <ResultsPanel />
     </div>
   );
 }

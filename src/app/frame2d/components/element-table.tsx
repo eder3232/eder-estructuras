@@ -1,12 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 import { FormulaInput } from "@/components/custom/formula-input";
+import { NodeCombobox, type NodeOption } from "@/components/custom/node-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { atomNodes } from "../store/nodes";
 import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "../store/elements";
@@ -17,6 +18,8 @@ export function ElementTable() {
   const addElement = useSetAtom(atomAddElement);
   const removeElement = useSetAtom(atomRemoveElement);
   const updateField = useSetAtom(atomUpdateElementField);
+  // Una sola lista estable para toda la tabla: el combobox compara por identidad.
+  const options = useMemo<NodeOption[]>(() => nodes.map((n) => ({ value: n.id, label: n.name })), [nodes]);
 
   const femFields = [
     { field: "femAxialFrom", header: "N desde" },
@@ -32,7 +35,10 @@ export function ElementTable() {
       <p className="text-sm text-muted-foreground">
         Las columnas de empotramiento perfecto (FEM) son las cargas repartidas a lo largo de la barra, convertidas a
         fuerzas y momentos en sus extremos con las tablas de siempre. Van <strong>en ejes locales de la barra</strong>
-        {" "}(N sobre su eje, V perpendicular): el motor las lleva a ejes globales solo. Dejalas en cero si la barra no
+        {" "}(N sobre su eje, V perpendicular): el motor las lleva a ejes globales solo. El signo es el de la{" "}
+        <strong>reacción del empotramiento</strong>: N positiva hacia el extremo «hacia», V positiva a la izquierda de
+        la barra mirándola de «desde» a «hacia», y M positivo antihorario. Una viga horizontal con carga q hacia abajo
+        lleva V = qL/2 en los dos extremos, M = qL²/12 en «desde» y −qL²/12 en «hacia». Dejalas en cero si la barra no
         tiene carga repartida.
       </p>
       <div className="max-w-full overflow-x-auto">
@@ -71,53 +77,40 @@ export function ElementTable() {
                 />
               </TableCell>
               <TableCell>
-                <Select
+                <NodeCombobox
+                  options={options}
                   value={element.fromNodeId}
-                  onValueChange={(value) => updateField({ id: element.id, field: "fromNodeId", value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nudo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nodes.map((node) => (
-                      <SelectItem key={node.id} value={node.id}>
-                        {node.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  excluded={element.toNodeId}
+                  label={`Nudo de origen de ${element.name}`}
+                  onChange={(value) => updateField({ id: element.id, field: "fromNodeId", value })}
+                />
               </TableCell>
               <TableCell>
-                <Select
+                <NodeCombobox
+                  options={options}
                   value={element.toNodeId}
-                  onValueChange={(value) => updateField({ id: element.id, field: "toNodeId", value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nudo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nodes.map((node) => (
-                      <SelectItem key={node.id} value={node.id}>
-                        {node.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  excluded={element.fromNodeId}
+                  label={`Nudo de destino de ${element.name}`}
+                  onChange={(value) => updateField({ id: element.id, field: "toNodeId", value })}
+                />
               </TableCell>
               <TableCell>
                 <FormulaInput
+                  className="w-28"
                   value={element.area}
                   onChange={(value) => updateField({ id: element.id, field: "area", value })}
                 />
               </TableCell>
               <TableCell>
                 <FormulaInput
+                  className="w-28"
                   value={element.inertia}
                   onChange={(value) => updateField({ id: element.id, field: "inertia", value })}
                 />
               </TableCell>
               <TableCell>
                 <FormulaInput
+                  className="w-28"
                   value={element.elasticity}
                   onChange={(value) => updateField({ id: element.id, field: "elasticity", value })}
                 />
@@ -125,6 +118,7 @@ export function ElementTable() {
               {femFields.map(({ field }) => (
                 <TableCell key={field}>
                   <FormulaInput
+                    className="w-28"
                     value={element[field]}
                     onChange={(value) => updateField({ id: element.id, field, value })}
                   />

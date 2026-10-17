@@ -1,5 +1,6 @@
 import { atom } from "jotai";
 import { produce } from "immer";
+import { insertIndex, nextRowName } from "@/lib/row-names";
 import { seedNodeIds } from "./nodes";
 
 export interface ElementRow {
@@ -74,18 +75,32 @@ const atomElementsBase = atom<ElementRow[]>(initialElements);
 
 export const atomElements = atom((get) => get(atomElementsBase));
 
-export const atomAddElement = atom(null, (get, set) => {
+/**
+ * Sin argumento agrega al final; con `afterId`, debajo de esa fila.
+ *
+ * Área, inercia y módulo se **heredan de la fila anterior**: `FrameElement2D`
+ * rechaza valores no positivos, así que una barra nueva en cero nacía en error
+ * (B1 de docs/frame2d-v1.md). Los FEM no se heredan: son de la carga de cada
+ * barra, no de su sección.
+ */
+export const atomAddElement = atom(null, (get, set, afterId?: string) => {
   set(
     atomElementsBase,
     produce((draft: ElementRow[]) => {
-      draft.push({
+      const at = insertIndex(draft, afterId);
+      const previous = draft[at - 1] ?? draft[draft.length - 1];
+
+      draft.splice(at, 0, {
         id: crypto.randomUUID(),
-        name: `e${draft.length + 1}`,
+        name: nextRowName(
+          "e",
+          draft.map((e) => e.name),
+        ),
         fromNodeId: "",
         toNodeId: "",
-        area: 0,
-        elasticity: 0,
-        inertia: 0,
+        area: previous?.area ?? BEAM.area,
+        elasticity: previous?.elasticity ?? ELASTICITY,
+        inertia: previous?.inertia ?? BEAM.inertia,
         ...NO_FEM,
       });
     }),
