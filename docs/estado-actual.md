@@ -12,11 +12,11 @@
 | `/springs` | 2026-10-14 | [`springs-v1.md`](./springs-v1.md) |
 | `/armaduras-3d` | 2026-10-16 | [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) |
 | `/frame2d` | 2026-10-17 | [`frame2d-v1.md`](./frame2d-v1.md) |
-| `frame2d-seismic` | **no existe todavía** | ver sección 3 |
+| `frame2d-seismic` | **en curso** desde el 2026-10-17 | [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md), ver sección 3 |
 
 Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
-**No hay una tarea anotada esperando. Lo siguiente es preguntarle al usuario** qué sigue: lo natural es `frame2d-seismic` (ver sección 3), pero el orden lo decidió siempre él. `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
+**La tarea en curso es `frame2d-seismic`**: el usuario decidió el alcance el 2026-10-17 y el plan está en la sección 6 de [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md). **Lo siguiente es el primer paso del plan que figure como pendiente.** `pnpm build` compila limpio al cierre del 2026-10-17 (ver sección 6).
 
 ## 2. Qué tiene cada sistema
 
@@ -56,10 +56,16 @@ Además está la página de teoría [`/estabilidad`](../src/app/estabilidad).
 
 ### `frame2d-seismic`
 
-No existe. Va como **extensión real sobre `frame2d`, no un fork copiado**: ese fue el bug diagnosticado en el original (ver el roadmap). Lo que ya está preparado para eso:
+**En curso.** Todo está en [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md): los bugs del original (S1 a S9: los factores 1.4/1.7 nunca entraban al cálculo, no había combinaciones de norma, la «envolvente» comparaba contra un solo número y nunca se dibujaba), la normativa leída en los PDF oficiales (**E.030 2026**, modificada por la RM 183-2026-VIVIENDA, y **E.060 2009**), el alcance y el plan por pasos.
 
-- **Casos de carga (muerta/viva)**: por decisión del usuario (2026-10-17) son **exclusivos de `frame2d-seismic`**, no de `/frame2d`. El modelo de cargas de `/frame2d` (`store/loads.ts`) no los tiene; agregarlos es sumar un campo a `LoadRow` y una combinación antes de `loadFixedEndForces`.
-- El original sísmico tenía además una envolvente; sus bugs (la carga muerta contada dos veces, la viva nunca) están en la sección 1 de [`frame2d-v1.md`](./frame2d-v1.md).
+Resumen del alcance (decidido por el usuario el 2026-10-17):
+
+- **Entran los tres niveles**: casos CM/CV/CS con combinaciones y envolvente; el generador sísmico estático E.030 (V = ZUCS/R·P, αᵢ, Fᵢ); y **diafragma rígido, rigidez lateral por condensación estática y derivas**.
+- **Las combinaciones vienen de la E.060 por defecto** (1.4CM+1.7CV, 1.25(CM+CV)±CS, 0.9CM±CS) y son editables.
+- Es **una extensión de `/frame2d`, no un fork**: los casos de carga son exclusivos de este módulo (decisión del 2026-10-17), y `/frame2d` no cambia de comportamiento.
+- **Toca el motor**: el diafragma hace que varios nudos compartan un índice global en `System` (paso 1 del plan).
+
+Dos cosas de la norma que son fáciles de pasar por alto: para el cortante estático, C = 2.5 en todo 0 ≤ T ≤ T_P (18.3, el tramo nuevo 1 + 7.5T/T_P no aplica); y los desplazamientos se calculan **sin** el mínimo C/R ≥ 0.11 (50.3).
 
 ### Después de los sistemas
 
@@ -142,6 +148,7 @@ Recetas que ya funcionaron con `chrome-devtools`:
 | tocar algo que produce o muestra un error | [`errores.md`](./errores.md) |
 | tocar diagramas planos / la escena 3D | [`diagram-pattern.md`](./diagram-pattern.md) / [`diagram-3d-pattern.md`](./diagram-3d-pattern.md) |
 | tocar cargas en barras, diagramas N/V/M o la deformada de pórticos | [`frame2d-v1.md`](./frame2d-v1.md), secciones 4 y pasos 2–5 (la convención de signos está en la sección 4) |
+| tocar `frame2d-seismic`, el diafragma rígido o algo de la E.030/E.060 | [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md): la sección 3 tiene los artículos con lo que dicen y cómo bajar y leer los PDF |
 | tocar la exportación a Excel | [`excel-export.md`](./excel-export.md) |
 | tocar componentes de `ui/` | [`components.md`](./components.md): `ui/` es intocable, se forkea a `ui-custom/` |
 | hacer commits | [`git-workflow.md`](./git-workflow.md): commits directos a `main` hasta `v1.0.0`, Conventional Commits |
@@ -152,7 +159,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | docs: el README pasa a ser un mapa y el historial de avances se muda a `historial.md` |
+| (este) | docs: revisión, normativa y plan de `frame2d-seismic` |
+| `6089a2a` | docs: el README pasa a ser un mapa y el historial de avances se muda a `historial.md` |
 | `134fc59` | docs: `pnpm build` verificado al cierre de `/frame2d` |
 | `d7aeefa` | `/frame2d`: exportación a Excel con el FEM vivo (paso 10, cierre) |
 | `d590e1d` | `/frame2d`: persistencia y tres ejemplos con cargas en barras (paso 9) |

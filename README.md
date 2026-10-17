@@ -13,9 +13,9 @@ Refactor de **thesis-structures** (`D:\programming\repos_clonados\thesis-structu
 
 ### Estado y próximo paso
 
-> **Al 2026-10-17, los cuatro sistemas base están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d` y `/frame2d`. Falta `frame2d-seismic`, que todavía no existe y va como extensión de `/frame2d`, no como copia.
+> **Al 2026-10-17, los cuatro sistemas base están cerrados para la v1**: `/springs`, `/armaduras-2d`, `/armaduras-3d` y `/frame2d`. **En curso: `frame2d-seismic`**, como extensión de `/frame2d` y no como copia: casos de carga, combinaciones E.060 y envolvente, el cortante basal E.030, el diafragma rígido, la rigidez lateral por condensación y las derivas.
 >
-> **No hay tarea anotada: lo siguiente es preguntarle al usuario qué sigue** (lo natural es `frame2d-seismic`, ver la sección 3 de [`docs/estado-actual.md`](./docs/estado-actual.md)).
+> **Lo siguiente es el primer paso pendiente del plan**, en la sección 6 de [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md).
 >
 > Al cierre todo pasa: 518 tests, `tsc` limpio, `pnpm build` limpio y `pnpm lint` con solo los 2 errores preexistentes (ver abajo).
 
@@ -103,6 +103,7 @@ La regla que sostiene todo: **el motor es puro y es la única fuente de verdad**
 - [`docs/springs-v1.md`](./docs/springs-v1.md) — `/springs`.
 - [`docs/armaduras-3d-v1.md`](./docs/armaduras-3d-v1.md) — `/armaduras-3d`, con las recetas para capturar WebGL en headless y verificar el Excel por COM.
 - [`docs/frame2d-v1.md`](./docs/frame2d-v1.md) — `/frame2d`: las trece fallas del original en cargas y diagramas, **la convención de signos** (Hibbeler/Beer, sección 4), las cargas en barras con su FEM, los diagramas N/V/M y la deformada exactos.
+- [`docs/frame2d-seismic-v1.md`](./docs/frame2d-seismic-v1.md) — `frame2d-seismic` (**en curso**): los bugs del original, **la E.030 2026 y la E.060 leídas en los PDF oficiales** (artículo por artículo, con lo que el pórtico plano no puede representar), el alcance y el plan.
 
 **Patrones y convenciones** (leer antes de tocar esa parte)
 - [`docs/state-pattern.md`](./docs/state-pattern.md) — el patrón de estado (Jotai + motor puro) y de resultados pedagógicos; **antes de construir o cerrar un sistema**.
