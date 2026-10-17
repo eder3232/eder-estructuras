@@ -21,26 +21,8 @@ export function ElementTable() {
   // Una sola lista estable para toda la tabla: el combobox compara por identidad.
   const options = useMemo<NodeOption[]>(() => nodes.map((n) => ({ value: n.id, label: n.name })), [nodes]);
 
-  const femFields = [
-    { field: "femAxialFrom", header: "N desde" },
-    { field: "femShearFrom", header: "V desde" },
-    { field: "femMomentFrom", header: "M desde" },
-    { field: "femAxialTo", header: "N hacia" },
-    { field: "femShearTo", header: "V hacia" },
-    { field: "femMomentTo", header: "M hacia" },
-  ] as const;
-
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">
-        Las columnas de empotramiento perfecto (FEM) son las cargas repartidas a lo largo de la barra, convertidas a
-        fuerzas y momentos en sus extremos con las tablas de siempre. Van <strong>en ejes locales de la barra</strong>
-        {" "}(N sobre su eje, V perpendicular): el motor las lleva a ejes globales solo. El signo es el de la{" "}
-        <strong>reacción del empotramiento</strong>: N positiva hacia el extremo «hacia», V positiva a la izquierda de
-        la barra mirándola de «desde» a «hacia», y M positivo antihorario. Una viga horizontal con carga q hacia abajo
-        lleva V = qL/2 en los dos extremos, M = qL²/12 en «desde» y −qL²/12 en «hacia». Dejalas en cero si la barra no
-        tiene carga repartida.
-      </p>
       <div className="max-w-full overflow-x-auto">
         <Table className="border">
         <TableHeader>
@@ -56,9 +38,6 @@ export function ElementTable() {
             <TableHead>Área</TableHead>
             <TableHead>Inercia (I)</TableHead>
             <TableHead>Elasticidad (E)</TableHead>
-            {femFields.map(({ field, header }) => (
-              <TableHead key={field}>FEM {header}</TableHead>
-            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -115,15 +94,6 @@ export function ElementTable() {
                   onChange={(value) => updateField({ id: element.id, field: "elasticity", value })}
                 />
               </TableCell>
-              {femFields.map(({ field }) => (
-                <TableCell key={field}>
-                  <FormulaInput
-                    className="w-28"
-                    value={element[field]}
-                    onChange={(value) => updateField({ id: element.id, field, value })}
-                  />
-                </TableCell>
-              ))}
             </TableRow>
           ))}
           </TableBody>

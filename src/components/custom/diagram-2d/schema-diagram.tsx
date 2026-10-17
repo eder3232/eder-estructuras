@@ -2,9 +2,10 @@ import { axialLabelPoint } from "./axial-label";
 import { computeUnitSize } from "./unit-scale";
 import { DiagramLabel } from "./diagram-label";
 import { ForceGlyph } from "./force-glyph";
+import { MemberLoadGlyph, memberLoadSide } from "./member-load-glyph";
 import { DiagramScaleProvider } from "./scale-context";
 import { SupportIcon } from "./support-icon";
-import type { DiagramElement, DiagramForce, DiagramNode, DiagramSupport } from "./types";
+import type { DiagramElement, DiagramForce, DiagramMemberLoad, DiagramNode, DiagramSupport } from "./types";
 import { computeViewBox, projectPoint } from "./viewbox";
 import { SvgCanvas } from "./svg-canvas";
 
@@ -13,6 +14,8 @@ interface SchemaDiagramProps {
   elements: DiagramElement[];
   supports: DiagramSupport[];
   forces: DiagramForce[];
+  /** Cargas a lo largo de las barras: solo `/frame2d` las tiene. */
+  memberLoads?: DiagramMemberLoad[];
   /**
    * Qué señalar. Cuando hay algo señalado **el resto se apaga**, que es lo que
    * hace que se lea: resaltar sin atenuar deja la figura igual de cargada y hay
@@ -35,6 +38,7 @@ export function SchemaDiagram({
   elements,
   supports,
   forces,
+  memberLoads = [],
   highlight,
   onHighlight,
   className,
@@ -67,7 +71,7 @@ export function SchemaDiagram({
   const center = { x: viewBox.minX + viewBox.width / 2, y: viewBox.minY + viewBox.height / 2 };
 
   return (
-    <DiagramScaleProvider values={forces.map((f) => f.value)}>
+    <DiagramScaleProvider values={[...forces.map((f) => f.value), ...memberLoads.flatMap((l) => [l.q1, l.q2])]}>
       <SvgCanvas viewBox={viewBox} className={className}>
         <g className="stroke-foreground" strokeWidth={1.5}>
           {elements.map((element) => {
@@ -82,7 +86,12 @@ export function SchemaDiagram({
             // arriba, que es justo la regla que D6 descartó — y se vio en el
             // ejemplo de la cercha, donde el nombre de la diagonal quedaba
             // escrito encima del valor de la carga del nudo.
-            const { x, y, anchor } = axialLabelPoint(a, b, unitSize, center);
+            // Y si la barra tiene una carga dibujada, del lado contrario a sus flechas.
+            const occupied = memberLoads
+              .filter((l) => l.elementId === element.id)
+              .map((l) => memberLoadSide(l, from, to))
+              .find((side) => side !== null);
+            const { x, y, anchor } = axialLabelPoint(a, b, unitSize, center, occupied ?? undefined);
             return (
               <g key={element.id} className={dim(element.id, "element")}>
                 <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />
@@ -132,6 +141,22 @@ export function SchemaDiagram({
             />
           </g>
         ))}
+
+        {/* Se apagan con su barra, por la misma razón que las fuerzas con su
+            nudo — pero solo la opacidad: el engrosado de `dim()` pintaría las
+            flechas de la carga con el color de la barra señalada. */}
+        {memberLoads.map((load) => {
+          const element = elements.find((e) => e.id === load.elementId);
+          const from = element && nodesById.get(element.fromNodeId);
+          const to = element && nodesById.get(element.toNodeId);
+          if (!from || !to) return null;
+          const off = highlight && !highlight.elementIds.includes(load.elementId);
+          return (
+            <g key={load.id} className={off ? "opacity-20" : undefined}>
+              <MemberLoadGlyph load={load} from={from} to={to} unitSize={unitSize} />
+            </g>
+          );
+        })}
 
         {forces.map((force, i) => (
           <g key={`${force.nodeId}-${force.axis}-${i}`} className={dim(force.nodeId, "node")}>

@@ -39,6 +39,8 @@ export function NodeCombobox({
   excluded,
   label,
   onChange,
+  placeholder = "Nudo...",
+  emptyText = "Ningún nudo con ese nombre.",
 }: {
   options: NodeOption[];
   value: string;
@@ -46,12 +48,20 @@ export function NodeCombobox({
   excluded: string;
   label: string;
   onChange: (value: string) => void;
+  /** Para elegir otra cosa que un nudo (la barra de una carga, en `/frame2d`). */
+  placeholder?: string;
+  emptyText?: string;
 }) {
   const selected = options.find((option) => option.value === value) ?? null;
 
   return (
     <Combobox
       items={options}
+      // Escribir `v3` y apretar Enter tiene que elegir v3. Sin esto Base UI no
+      // marca ninguna opción mientras se escribe, así que Enter no hacía nada
+      // y el nudo quedaba como estaba. Lo encontró mirar `/frame2d` con el
+      // teclado; los tests elegían con click.
+      autoHighlight
       value={selected}
       onValueChange={(option) => {
         if (option) onChange(option.value);
@@ -66,12 +76,12 @@ export function NodeCombobox({
       */}
       <ComboboxInput
         aria-label={label}
-        placeholder="Nudo..."
+        placeholder={placeholder}
         className="w-32"
         onFocus={(event) => event.currentTarget.select()}
       />
       <ComboboxContent>
-        <ComboboxEmpty>Ningún nudo con ese nombre.</ComboboxEmpty>
+        <ComboboxEmpty>{emptyText}</ComboboxEmpty>
         <ComboboxList>
           {(option: NodeOption) => (
             <ComboboxItem key={option.value} value={option} disabled={option.value === excluded}>

@@ -13,10 +13,17 @@ export interface ElementRow {
   /** Momento de inercia de la sección: lo que `TrussElement2D` no necesitaba. */
   inertia: number;
   /**
-   * Momentos (y fuerzas) de empotramiento perfecto, **en ejes locales de la
-   * barra** — es como los dan las tablas. El motor se encarga de llevarlos a
-   * ejes globales para el vector de cargas; acá se guardan tal cual se leen de
-   * la tabla, sin transformar.
+   * `false` (lo normal): el FEM sale de las cargas de la tabla «Cargas en
+   * barras». `true`: se usan los seis valores de abajo tal cual, para una carga
+   * que la tabla no tenga. Es la flexibilidad que tenía el original; la barra
+   * se queda sin diagramas interiores, porque sin la carga no hay con qué
+   * dibujarlos (y la app lo dice, en vez de dibujar algo falso como V13).
+   */
+  manualFem: boolean;
+  /**
+   * Momentos (y fuerzas) de empotramiento perfecto escritos a mano, **en ejes
+   * locales de la barra** — es como los dan las tablas. Solo cuentan con
+   * `manualFem`. El motor se encarga de llevarlos a ejes globales.
    */
   femAxialFrom: number;
   femShearFrom: number;
@@ -27,6 +34,7 @@ export interface ElementRow {
 }
 
 const NO_FEM = {
+  manualFem: false,
   femAxialFrom: 0,
   femShearFrom: 0,
   femMomentFrom: 0,
@@ -135,18 +143,15 @@ export const atomUpdateElementField = atom(
     set,
     input:
       | { id: string; field: "name" | "fromNodeId" | "toNodeId"; value: string }
-      | { id: string; field: NumericField; value: number },
+      | { id: string; field: NumericField; value: number }
+      | { id: string; field: "manualFem"; value: boolean },
   ) => {
     set(
       atomElementsBase,
       produce((draft: ElementRow[]) => {
         const element = draft.find((e) => e.id === input.id);
         if (!element) return;
-        if (input.field === "name" || input.field === "fromNodeId" || input.field === "toNodeId") {
-          element[input.field] = input.value as string;
-        } else {
-          element[input.field] = input.value as number;
-        }
+        Object.assign(element, { [input.field]: input.value });
       }),
     );
   },

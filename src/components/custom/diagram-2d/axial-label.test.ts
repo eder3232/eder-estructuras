@@ -66,4 +66,16 @@ describe("axialLabelPoint", () => {
     expect(Number.isFinite(punto.x)).toBe(true);
     expect(Number.isFinite(punto.y)).toBe(true);
   });
+
+  it("con un lado ocupado (las flechas de una carga), va al otro aunque sea hacia adentro", () => {
+    // Viga horizontal arriba del centro: «afuera» es arriba (y menor en SVG).
+    const a = { x: 0, y: -4 };
+    const b = { x: 5, y: -4 };
+    const middle = { x: 2.5, y: 0 };
+    expect(axialLabelPoint(a, b, UNIT, middle).y).toBeLessThan(-4);
+
+    // Una carga de gravedad tiene las colas arriba de la viga: el nombre baja.
+    const conCarga = axialLabelPoint(a, b, UNIT, middle, { x: 0, y: -1 });
+    expect(conCarga.y).toBeGreaterThan(-4);
+  });
 });

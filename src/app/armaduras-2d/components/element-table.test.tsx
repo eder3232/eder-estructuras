@@ -178,6 +178,16 @@ describe("ElementTable · elegir los nudos de una barra", () => {
     expect(endpoints()[0]).toBe("e1:seed-v1:seed-v3");
   });
 
+  it("escribir el nombre y apretar Enter elige ese nudo", async () => {
+    const user = userEvent.setup();
+    renderWithEndpoints();
+
+    await user.click(screen.getByLabelText("Nudo de destino de e1"));
+    await user.keyboard("v3{Enter}");
+
+    expect(endpoints()[0]).toBe("e1:seed-v1:seed-v3");
+  });
+
   it("escribir cualquier cosa y salir no deja el input diciendo algo que el modelo no dice", async () => {
     const user = userEvent.setup();
     renderWithEndpoints();

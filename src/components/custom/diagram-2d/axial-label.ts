@@ -29,6 +29,11 @@ export interface AxialLabelPlacement extends SvgPoint {
  * extremo que da a la barra y crece hacia afuera; en las horizontales el
  * corrimiento vertical ya alcanza, porque ahí lo que mide poco es el alto.
  *
+ * **`occupied` le gana al centro.** Es el lado de la barra donde ya hay algo
+ * dibujado —las flechas de una carga a lo largo de ella, en `/frame2d`—: en la
+ * viga de arriba de un pórtico, «afuera» es justo donde cae la carga de
+ * gravedad, y el nombre quedaba tachado por sus flechas.
+ *
  * Todo en coordenadas SVG ya proyectadas (y hacia abajo).
  */
 export function axialLabelPoint(
@@ -36,6 +41,7 @@ export function axialLabelPoint(
   b: SvgPoint,
   unitSize: number,
   center: SvgPoint,
+  occupied?: SvgPoint,
 ): AxialLabelPlacement {
   const at = 0.25;
   const dx = b.x - a.x;
@@ -50,6 +56,10 @@ export function axialLabelPoint(
   // Hacia el lado opuesto al centro. Si el punto cae justo en el centro, el
   // producto escalar da 0 y queda la orientación de partida, que sirve igual.
   if (perpX * (anchorX - center.x) + perpY * (anchorY - center.y) < 0) {
+    perpX = -perpX;
+    perpY = -perpY;
+  }
+  if (occupied && perpX * occupied.x + perpY * occupied.y > 0) {
     perpX = -perpX;
     perpY = -perpY;
   }

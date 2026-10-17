@@ -3,7 +3,8 @@ import { createStore } from "jotai";
 
 import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "./elements";
 import { atomAddNode, atomNodes, atomRemoveNode, atomToggleNodeRestrained, atomUpdateNodeField, seedNodeIds } from "./nodes";
-import { atomResults } from "./results";
+import { atomAddLoad, atomLoads, atomUpdateLoadField } from "./loads";
+import { atomMemberLoads, atomResults } from "./results";
 
 /**
  * Cada bloque fija uno de los bugs de la revisión para la v1 (ver
@@ -121,6 +122,7 @@ describe("/frame2d — B6: la convención de los FEM a mano", () => {
   it("una carga hacia abajo da reacciones hacia arriba", () => {
     const store = createStore();
     store.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "forceX", value: 0 });
+    store.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
     const fem = [
       ["femShearFrom", 25],
       ["femMomentFrom", 250 / 12],
@@ -136,5 +138,122 @@ describe("/frame2d — B6: la convención de los FEM a mano", () => {
     expect(rz4).toBeCloseTo(25, 6);
     expect(solved.internalForces.get("seed-e2")).toMatchObject({ from: { shear: expect.closeTo(25, 6) } });
     expect((solved.internalForces.get("seed-e2") as { from: { moment: number } }).from.moment).toBeGreaterThan(0);
+  });
+});
+
+describe("/frame2d — cargas en barras (paso 3)", () => {
+  /** Saca la carga nodal de la semilla y pone q = −10 vertical en toda la viga e2. */
+  function withBeamLoad() {
+    const store = createStore();
+    store.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "forceX", value: 0 });
+    store.set(atomAddLoad, { elementId: "seed-e2" });
+    const load = store.get(atomLoads)[0];
+    store.set(atomUpdateLoadField, { id: load.id, field: "q1", value: -10 });
+    store.set(atomUpdateLoadField, { id: load.id, field: "q2", value: -10 });
+    return { store, load };
+  }
+
+  it("una carga vertical en toda la viga da el FEM de la tabla y las reacciones que suman qL", () => {
+    const { store } = withBeamLoad();
+    const fem = store.get(atomMemberLoads).fem.get("seed-e2")!;
+    expect(fem.from.shear).toBeCloseTo(25, 9);
+    expect(fem.from.moment).toBeCloseTo(250 / 12, 9);
+    expect(fem.to.moment).toBeCloseTo(-250 / 12, 9);
+
+    const solved = solvedOf(store);
+    expect(solved.reactions.get(seedNodeIds.v1)![1] + solved.reactions.get(seedNodeIds.v4)![1]).toBeCloseTo(50, 9);
+  });
+
+  it("y da lo mismo que escribir ese FEM a mano (el test de B6)", () => {
+    const { store } = withBeamLoad();
+    const fromLoads = solvedOf(store).internalForces.get("seed-e2");
+
+    const manual = createStore();
+    manual.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "forceX", value: 0 });
+    manual.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
+    for (const [field, value] of [
+      ["femShearFrom", 25],
+      ["femMomentFrom", 250 / 12],
+      ["femShearTo", 25],
+      ["femMomentTo", -250 / 12],
+    ] as const) {
+      manual.set(atomUpdateElementField, { id: "seed-e2", field, value });
+    }
+    // Gauss y la fórmula cerrada difieren en el último dígito: se compara con tolerancia.
+    const fromManual = solvedOf(manual).internalForces.get("seed-e2") as typeof fromLoads & {
+      from: Record<string, number>;
+      to: Record<string, number>;
+    };
+    const expected = fromLoads as typeof fromManual;
+    for (const end of ["from", "to"] as const) {
+      for (const key of ["axial", "shear", "moment"]) {
+        expect(fromManual[end][key]).toBeCloseTo(expected[end][key], 9);
+      }
+    }
+  });
+
+  it("mover un nudo recalcula el FEM: no queda congelado (V3 del original)", () => {
+    const { store } = withBeamLoad();
+    store.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "x", value: 6 });
+    expect(store.get(atomMemberLoads).fem.get("seed-e2")!.from.shear).toBeCloseTo(30, 9);
+  });
+
+  it("una carga nueva copia la de arriba, con nombre propio", () => {
+    const { store } = withBeamLoad();
+    store.set(atomAddLoad);
+    const [first, second] = store.get(atomLoads);
+    expect(second).toMatchObject({ name: "c2", elementId: "seed-e2", q1: -10, kind: "distributed" });
+    expect(second.id).not.toBe(first.id);
+  });
+
+  it("una posición fuera de la barra frena el cálculo, nombrando la carga", () => {
+    const { store, load } = withBeamLoad();
+    store.set(atomUpdateLoadField, { id: load.id, field: "kind", value: "point" });
+    store.set(atomUpdateLoadField, { id: load.id, field: "a", value: 6 });
+    const [error] = errorsOf(store);
+    expect(error).toMatchObject({ source: "load", refName: "c1" });
+    expect(error.message).toBe("La carga está en a = 6, fuera de la barra (el largo de la barra es L = 5).");
+    expect(store.get(atomMemberLoads).brokenElementIds.has("seed-e2")).toBe(true);
+  });
+
+  it("la primera carga nace en la primera barra, no en error", () => {
+    const store = createStore();
+    store.set(atomAddLoad);
+    expect(store.get(atomLoads)[0].elementId).toBe("seed-e1");
+    expect(store.get(atomResults).status).toBe("ok");
+  });
+
+  it("una carga sin barra, o en una barra borrada, es un error", () => {
+    const store = createStore();
+    store.set(atomAddLoad);
+    store.set(atomUpdateLoadField, { id: store.get(atomLoads)[0].id, field: "elementId", value: "" });
+    expect(errorsOf(store)[0].message).toBe("No tiene barra: elegí en cuál está.");
+
+    const { store: other } = withBeamLoad();
+    other.set(atomRemoveElement, "seed-e2");
+    expect(errorsOf(other).map((e) => e.message)).toContain("Está en una barra que ya no existe.");
+  });
+
+  it("con FEM a mano, las cargas de esa barra no cuentan y se avisa", () => {
+    const { store } = withBeamLoad();
+    store.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
+    const results = store.get(atomResults);
+    if (results.status !== "ok") throw new Error(results.status);
+    expect(results.warnings).toMatchObject([{ source: "load", refName: "c1", severity: "warning" }]);
+    // El FEM a mano está en cero: sin carga, las reacciones verticales no suman nada.
+    const v1 = results.solved.reactions.get(seedNodeIds.v1)![1];
+    const v4 = results.solved.reactions.get(seedNodeIds.v4)![1];
+    expect(v1 + v4).toBeCloseTo(0, 9);
+  });
+
+  it("toda la barra sigue a la barra: con `wholeBar` apagado, b queda donde estaba", () => {
+    const { store, load } = withBeamLoad();
+    store.set(atomUpdateLoadField, { id: load.id, field: "wholeBar", value: false });
+    store.set(atomUpdateLoadField, { id: load.id, field: "b", value: 5 });
+    // La viga se alarga a 6: la carga sigue cubriendo de 0 a 5 y lo dice el FEM.
+    store.set(atomUpdateNodeField, { id: seedNodeIds.v3, field: "x", value: 6 });
+    const fem = store.get(atomMemberLoads).fem.get("seed-e2")!;
+    expect(fem.from.shear + fem.to.shear).toBeCloseTo(50, 9);
+    expect(fem.from.shear).toBeGreaterThan(fem.to.shear);
   });
 });

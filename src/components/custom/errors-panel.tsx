@@ -16,7 +16,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui-custom/aler
  * los hacía desaparecer— y está contada en `docs/errores.md`.
  */
 export interface DomainIssue {
-  source: "node" | "element" | "system";
+  /** `load` solo lo usa `/frame2d`: sus cargas en barras son filas de una tabla propia. */
+  source: "node" | "element" | "load" | "system";
   refId: string;
   message: string;
   severity: "error" | "warning";
@@ -40,6 +41,7 @@ export type DomainError = DomainIssue & { severity: "error" };
 const TITLE: Record<DomainIssue["source"], string> = {
   node: "nudo",
   element: "elemento",
+  load: "carga",
   system: "modelo",
 };
 

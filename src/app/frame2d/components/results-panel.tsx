@@ -83,6 +83,7 @@ function WhyThereIsNothing({
   // Qué fila causó cada error, no el mensaje entero: ese está arriba, sobre la
   // tabla que hay que corregir.
   const nameOf = (error: (typeof results.errors)[number]) => {
+    if (error.source === "load") return `carga ${error.refName ?? error.refId}`;
     const name =
       error.source === "node"
         ? results.nodesById.get(error.refId)?.name
@@ -111,47 +112,51 @@ function SolvedResults({
   const { assembly } = solved;
 
   return (
-    <Accordion type="multiple" defaultValue={["dof"]}>
-      <AccordionItem value="dof">
-        <AccordionTrigger>1. Grados de libertad y matrices locales</AccordionTrigger>
-        <AccordionContent className="flex flex-col gap-6">
-          <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
-          <LocalStiffnessList elements={elements} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+    // Techo a toda la prosa del panel: la página es ancha para las matrices,
+    // no para los renglones (ver `/armaduras-2d`).
+    <div className="[&_p]:max-w-3xl">
+      <Accordion type="multiple" defaultValue={["dof"]}>
+        <AccordionItem value="dof">
+          <AccordionTrigger>1. Grados de libertad y matrices locales</AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-6">
+            <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
+            <LocalStiffnessList elements={elements} nodesById={nodesById} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="assembly">
-        <AccordionTrigger>2. Ensamblaje de la matriz global</AccordionTrigger>
-        <AccordionContent>
-          <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="assembly">
+          <AccordionTrigger>2. Ensamblaje de la matriz global</AccordionTrigger>
+          <AccordionContent>
+            <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="partition">
-        <AccordionTrigger>3. Partición y solución</AccordionTrigger>
-        <AccordionContent>
-          <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="partition">
+          <AccordionTrigger>3. Partición y solución</AccordionTrigger>
+          <AccordionContent>
+            <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="internal">
-        <AccordionTrigger>4. Fuerzas internas</AccordionTrigger>
-        <AccordionContent>
-          <InternalForcesTable
-            elements={elements}
-            internalForces={solved.internalForces}
-            displacements={solved.displacements}
-            nodesById={nodesById}
-          />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="internal">
+          <AccordionTrigger>4. Fuerzas internas</AccordionTrigger>
+          <AccordionContent>
+            <InternalForcesTable
+              elements={elements}
+              internalForces={solved.internalForces}
+              displacements={solved.displacements}
+              nodesById={nodesById}
+            />
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="deformed">
-        <AccordionTrigger>5. Forma deformada</AccordionTrigger>
-        <AccordionContent>
-          <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+        <AccordionItem value="deformed">
+          <AccordionTrigger>5. Forma deformada</AccordionTrigger>
+          <AccordionContent>
+            <DeformedShape elements={elements} nodesById={nodesById} solved={solved} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
   );
 }

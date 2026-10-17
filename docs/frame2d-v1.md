@@ -184,6 +184,28 @@ Lo que encontró: **un valor esperado mío estaba mal**, no el código — una c
 
 Suite: 429 tests, `tsc` limpio.
 
+### Paso 3: la tabla de cargas, el FEM por barra y el dibujo (2026-10-17) — hecho
+
+- **Store** (`store/loads.ts`): `LoadRow` plana para los tres tipos (lo que un tipo no usa queda guardado y la tabla lo deshabilita, así cambiar de tipo y volver no pierde nada). Una carga nueva **copia la de arriba** (la misma carga en varias vigas es lo habitual); la primera va en la primera barra. `toMemberLoad` la traduce al motor con la L actual.
+- **«Toda la barra»** (decisión de este paso): una distribuida guarda un interruptor en vez de `b = L` como número, encendido por defecto. Con `b` numérico, mover un nudo dejaba la carga corta o fuera de la barra sin avisar — el V3 del original por otro camino. `FormulaInput` no acepta variables, así que escribir «L» en la celda no era opción.
+- **FEM a mano**: `ElementRow.manualFem`. Las seis columnas FEM **salieron de la tabla de barras** (que tenía 13 columnas por un dato que casi ninguna barra usa) a una tabla **«FEM por barra»**: una fila por barra con «a mano»; apagado muestra el FEM calculado de sus cargas (solo lectura, para cotejar con el pizarrón), encendido edita los seis valores. Una carga en una barra con FEM a mano no cuenta y **se avisa** (advertencia, no error).
+- **Errores**: `DomainIssue.source` ganó `"load"` («Error en carga c1»). Una carga sin barra, en una barra borrada o con posición fuera de la barra frena el cálculo; la barra queda marcada en `brokenElementIds` y su FEM se muestra «—» (la suma de las demás sería el FEM de otra carga). El FEM sale de un átomo propio, `atomMemberLoads`, que leen el cálculo y la tabla.
+- **Dibujo** (`diagram-2d/member-load-glyph.tsx`, prop opcional `memberLoads` del esquema genérico — los otros tres sistemas no cambian): puntual que **llega** a la barra; distribuida como fila de flechas proporcionales con la envolvente por las colas (una triangular se ve triangular, una que cambia de signo cruza la barra); paralela a la barra (axial, o vertical sobre una columna) con flechas cortas al costado; momento con el mismo arco que el nodal. Se apagan con su barra al resaltar. Una carga por proyección se dibuja con lo que de verdad le llega a la barra.
+- **Página** a `max-w-[84rem]` (adelantado del paso 6: la tabla de cargas no entraba) con techo de prosa.
+- **Tests**: 9 más en `store.test.ts` (FEM de la tabla, igual que escribirlo a mano, mover un nudo lo recalcula, copia de la fila, errores con nombre, FEM a mano con aviso, «toda la barra» apagada), uno en `axial-label.test.ts` y uno en `armaduras-2d/.../element-table.test.tsx` (Enter en el combobox, ver abajo). Suite: 440, `tsc` limpio, lint con los 2 de siempre.
+
+Lo que encontró mirarlo:
+
+- **La primera carga nacía en error** («No tiene barra»): el B1 de las barras, otra vez. Ahora va a la primera barra.
+- **Escribir en el combobox y apretar Enter no elegía nada** — en los cuatro sistemas, porque el combobox es compartido. Base UI no marca ninguna opción mientras se escribe; `autoHighlight` lo arregla. Los tests elegían con click y no lo veían; el nuevo falla sin el arreglo (comprobado).
+- **La tabla medía 1593 px.** Etiquetas de dirección cortas (los signos van en la nota), encabezados de dos renglones, campos más angostos, sin el rótulo q₁/P/M por fila: 1296 px, que entra justo a 1440 de ventana. Más angosta se scrollea en horizontal.
+- **Las flechas de la viga tachaban el nombre «e2»**, porque «afuera de la figura» es justo donde cae la gravedad en la viga de arriba. `axialLabelPoint` acepta ahora un lado `occupied` que le gana al centro. Y 17 flechas en 5 m eran una mancha: ahora una cada 2.5 unidades.
+- Los nombres de los nudos «v2» y «v3» siguen cruzados por la primera y la última flecha; se leen por el halo. Es D17 (las etiquetas no se conocen entre sí).
+- En oscuro las cargas usan `blue-500`, la misma clase ya medida para las fuerzas nodales (5.26:1).
+- **Un test de `/armaduras-3d` es intermitente**: «cada barra tiene su cadena con "Ver apilada"…» tarda ~6.5 s con la suite entera en paralelo y a veces pasa el límite de 5 s. Solo pasa siempre; dos corridas completas seguidas dieron 440/440. No es de este paso, pero conviene subirle el límite.
+
+Quedó **sin cambiar a propósito**: el ejemplo inicial sigue sin cargas en barras (es el de la regresión del motor); los ejemplos con cargas van en el paso 9.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.
