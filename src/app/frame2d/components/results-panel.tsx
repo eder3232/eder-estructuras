@@ -17,6 +17,8 @@ import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
 import { DofOrderControl } from "./results/dof-order-control";
 import { EquilibriumBadge, EquilibriumSection } from "./results/equilibrium-check";
+import { GlobalEquation } from "./results/global-equation";
+import { PracticeMode } from "./results/practice-mode";
 import { InternalForcesTable } from "./results/internal-forces-table";
 import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { MechanismExplanation } from "./results/mechanism-explanation";
@@ -147,12 +149,16 @@ function SolvedResults({
                 <DofOrderTable dofOrder={assembly.dofOrder} nodesById={nodesById} dofLabels={dofLabels} />
               </div>
               <LocalStiffnessList elements={elements} nodesById={nodesById} />
+              <PracticeMode elements={elements} nodesById={nodesById} assembly={assembly} />
             </>,
           )}
           {section(
             "assembly",
             "2. Ensamblaje de la matriz global",
-            <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />,
+            <>
+              <AssemblySteps steps={assembly.steps} dofOrder={assembly.dofOrder} elements={elements} nodesById={nodesById} />
+              <GlobalEquation assembly={assembly} solved={solved} nodesById={nodesById} />
+            </>,
           )}
           {section("partition", "3. Partición y solución", <PartitionAndSolution assembly={assembly} solved={solved} nodesById={nodesById} />)}
           {section(

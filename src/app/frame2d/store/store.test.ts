@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createStore } from "jotai";
+import { add, inv, multiply, subtract } from "mathjs";
 
 import { atomClassification } from "./classification";
 import { atomToggleRestrainedFirst, atomToggleUseDofNumbers } from "./dof-order";
@@ -412,5 +413,55 @@ describe("/frame2d — lo genérico de los otros sistemas (paso 6)", () => {
     const store = createStore();
     store.set(atomAddNode, seedNodeIds.v1);
     expect(store.get(atomNodes).map((n) => n.name)).toEqual(["v1", "v5", "v2", "v3", "v4"]);
+  });
+});
+
+describe("/frame2d — la narrativa reproduce la solución (paso 7)", () => {
+  /**
+   * Con cargas en las barras, las ecuaciones que muestra la partición son
+   * `Uf = Kff⁻¹·(Ff − FEMf − Kfr·Ur)` y `Rr = Krf·Uf + Krr·Ur + FEMr`. Si el
+   * signo de `fixedEndForces` estuviera al revés, el alumno haría la cuenta de
+   * la pantalla y no le daría el resultado de al lado.
+   */
+  it("con q en la viga, la sustitución numérica da los desplazamientos y las reacciones del motor", () => {
+    const store = createStore();
+    store.set(atomAddLoad, { elementId: "seed-e2" });
+    const load = store.get(atomLoads)[0];
+    store.set(atomUpdateLoadField, { id: load.id, field: "q1", value: -10 });
+    store.set(atomUpdateLoadField, { id: load.id, field: "q2", value: -10 });
+    const solved = solvedOf(store);
+    const { partition, fixedEndForces, dofOrder } = solved.assembly;
+    const nodes = new Map(store.get(atomNodes).map((n) => [n.id, n]));
+    const entry = (globalIndex: number) => dofOrder.find((e) => e.globalIndex === globalIndex)!;
+    const force = (g: number) => {
+      const e = entry(g);
+      const n = nodes.get(e.nodeId)!;
+      return [n.forceX, n.forceZ, n.momentR][e.localDof];
+    };
+
+    const ff = partition.free.map((g) => [force(g)]);
+    const femF = partition.free.map((g) => [fixedEndForces[g]]);
+    const femR = partition.restrained.map((g) => [fixedEndForces[g]]);
+    const ur = partition.restrained.map(() => [0]);
+
+    const uf = multiply(inv(partition.kff), subtract(subtract(ff, femF), multiply(partition.kfr, ur))) as number[][];
+    partition.free.forEach((g, i) => {
+      const e = entry(g);
+      expect(uf[i][0]).toBeCloseTo(solved.displacements.get(e.nodeId)![e.localDof], 12);
+    });
+
+    const rr = add(add(multiply(partition.krf, uf), multiply(partition.krr, ur)), femR) as number[][];
+    partition.restrained.forEach((g, i) => {
+      const e = entry(g);
+      expect(rr[i][0]).toBeCloseTo(solved.reactions.get(e.nodeId)![e.localDof], 8);
+    });
+    // Y el término no es de adorno: sin cargas de barra sería cero.
+    expect(femF.some(([v]) => v !== 0)).toBe(true);
+  });
+
+  it("sin cargas en las barras el vector FEM global es todo ceros (y las ecuaciones quedan como siempre)", () => {
+    const { fixedEndForces } = solvedOf(createStore()).assembly;
+    expect(fixedEndForces.every((v) => v === 0)).toBe(true);
+    expect(fixedEndForces.some((v) => Object.is(v, -0))).toBe(false);
   });
 });

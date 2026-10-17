@@ -60,6 +60,14 @@ export interface AssemblyResult {
    * casualidad—, así que viaja explícito.
    */
   restrainedFirst: boolean;
+  /**
+   * El FEM de todas las barras en ejes globales, por índice global: `Tᵀ·FEM`
+   * de cada barra, sumado en su posición. Es el término de la ecuación de un
+   * pórtico con cargas en las barras, `F = K·U + FEM`, y es el opuesto de la
+   * carga nodal equivalente que `solve()` suma al vector de cargas. Cero en
+   * todos los sistemas sin cargas a lo largo de los elementos.
+   */
+  fixedEndForces: number[];
 }
 
 /**
@@ -466,6 +474,8 @@ export class System {
         steps,
         partition,
         restrainedFirst: options.restrainedFirst ?? false,
+        // `0 - v` y no `-v`: un `-0` no es un dato, y se escribiría como tal.
+        fixedEndForces: f0.map((v) => 0 - v),
       },
       warnings,
     };

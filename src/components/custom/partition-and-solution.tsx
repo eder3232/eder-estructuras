@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { inv } from "mathjs";
 
 import { ldl, type AssemblyResult, type SolveResult } from "@/lib/engine";
 import { DecimalsScope, ScopeDecimalsStepper } from "@/components/custom/decimals-scope";
@@ -49,6 +50,18 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
   const uf = freeEntries.map((e) => [solved.displacements.get(e.nodeId)![e.localDof]]);
   const rr = restrainedEntries.map((e) => [solved.reactions.get(e.nodeId)![e.localDof]]);
 
+  // La inversa de verdad. Hasta 2026-10-17 la tabla rotulada `K_ff⁻¹` mostraba
+  // `K_ff` —en los cuatro sistemas—, así que la sustitución numérica no daba
+  // el `U_f` de al lado. El motor ya comprobó que es invertible (si no, no
+  // habría resultados), así que acá no puede fallar.
+  const kffInverse = partition.free.length > 0 ? (inv(partition.kff) as number[][]) : [];
+
+  // El FEM de las barras, partido igual que las cargas. Solo los pórticos con
+  // cargas en las barras lo tienen; en el resto las ecuaciones quedan como siempre.
+  const femF = freeEntries.map((e) => [assembly.fixedEndForces[e.globalIndex]]);
+  const femR = restrainedEntries.map((e) => [assembly.fixedEndForces[e.globalIndex]]);
+  const hasFem = [...femF, ...femR].some(([value]) => value !== 0);
+
   // La matriz global con sus filas y columnas reordenadas. **El grupo que va
   // primero es el mismo con el que se ensambló** (`assembly.restrainedFirst`),
   // porque si no la partición contaría una historia distinta de la del paso
@@ -92,9 +105,14 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
 
         <MathBlock
           tex={
-            restrainedFirst
-              ? "\\begin{bmatrix} F_r \\\\ F_f \\end{bmatrix} = \\begin{bmatrix} K_{rr} & K_{rf} \\\\ K_{fr} & K_{ff} \\end{bmatrix} \\cdot \\begin{bmatrix} U_r \\\\ U_f \\end{bmatrix}"
-              : "\\begin{bmatrix} F_f \\\\ F_r \\end{bmatrix} = \\begin{bmatrix} K_{ff} & K_{fr} \\\\ K_{rf} & K_{rr} \\end{bmatrix} \\cdot \\begin{bmatrix} U_f \\\\ U_r \\end{bmatrix}"
+            (restrainedFirst
+              ? String.raw`\begin{bmatrix} F_r \\ F_f \end{bmatrix} = \begin{bmatrix} K_{rr} & K_{rf} \\ K_{fr} & K_{ff} \end{bmatrix} \cdot \begin{bmatrix} U_r \\ U_f \end{bmatrix}`
+              : String.raw`\begin{bmatrix} F_f \\ F_r \end{bmatrix} = \begin{bmatrix} K_{ff} & K_{fr} \\ K_{rf} & K_{rr} \end{bmatrix} \cdot \begin{bmatrix} U_f \\ U_r \end{bmatrix}`) +
+            (hasFem
+              ? restrainedFirst
+                ? String.raw` + \begin{bmatrix} \mathrm{FEM}_r \\ \mathrm{FEM}_f \end{bmatrix}`
+                : String.raw` + \begin{bmatrix} \mathrm{FEM}_f \\ \mathrm{FEM}_r \end{bmatrix}`
+              : "")
           }
         />
 
@@ -176,7 +194,13 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
             <ScopeDecimalsStepper />
           </div>
 
-          <MathBlock tex="\begin{bmatrix} U_f \end{bmatrix} = \begin{bmatrix} K_{ff} \end{bmatrix}^{-1} \cdot \left( \begin{bmatrix} F_f \end{bmatrix} - \begin{bmatrix} K_{fr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix} \right)" />
+          <MathBlock
+            tex={
+              hasFem
+                ? String.raw`\begin{bmatrix} U_f \end{bmatrix} = \begin{bmatrix} K_{ff} \end{bmatrix}^{-1} \cdot \left( \begin{bmatrix} F_f \end{bmatrix} - \begin{bmatrix} \mathrm{FEM}_f \end{bmatrix} - \begin{bmatrix} K_{fr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix} \right)`
+                : String.raw`\begin{bmatrix} U_f \end{bmatrix} = \begin{bmatrix} K_{ff} \end{bmatrix}^{-1} \cdot \left( \begin{bmatrix} F_f \end{bmatrix} - \begin{bmatrix} K_{fr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix} \right)`
+            }
+          />
 
           <MatrixEquation expand={{ title: "Los desplazamientos libres" }}>
             <EquationTerm tex="U_f">
@@ -184,7 +208,7 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
             </EquationTerm>
             <MathOp tex="=" />
             <EquationTerm tex="K_{ff}^{-1}">
-              <MatrixTable matrix={partition.kff} labels={freeLabels} />
+              <MatrixTable matrix={kffInverse} labels={freeLabels} />
             </EquationTerm>
             {/* `\Big(` y no `\left(`: `\left`/`\right` tienen que estar
                 balanceados dentro de una misma expresión, y acá cada operador es
@@ -193,6 +217,14 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
             <EquationTerm tex="F_f">
               <MatrixTable matrix={ff} rowLabels={freeLabels} />
             </EquationTerm>
+            {hasFem && (
+              <>
+                <MathOp tex="-" />
+                <EquationTerm tex="\mathrm{FEM}_f">
+                  <MatrixTable matrix={femF} rowLabels={freeLabels} />
+                </EquationTerm>
+              </>
+            )}
             <MathOp tex="-" />
             <EquationTerm tex="K_{fr}">
               <MatrixTable matrix={partition.kfr} rowLabels={freeLabels} colLabels={restrainedLabels} />
@@ -222,7 +254,12 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
             <ScopeDecimalsStepper />
           </div>
 
-          <MathBlock tex="\begin{bmatrix} R_r \end{bmatrix} = \begin{bmatrix} K_{rf} \end{bmatrix} \cdot \begin{bmatrix} U_f \end{bmatrix} + \begin{bmatrix} K_{rr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix}" />
+          <MathBlock
+            tex={
+              String.raw`\begin{bmatrix} R_r \end{bmatrix} = \begin{bmatrix} K_{rf} \end{bmatrix} \cdot \begin{bmatrix} U_f \end{bmatrix} + \begin{bmatrix} K_{rr} \end{bmatrix} \cdot \begin{bmatrix} U_r \end{bmatrix}` +
+              (hasFem ? String.raw` + \begin{bmatrix} \mathrm{FEM}_r \end{bmatrix}` : "")
+            }
+          />
 
           <MatrixEquation expand={{ title: "Las reacciones" }}>
             <EquationTerm tex="R_r">
@@ -244,6 +281,14 @@ export function PartitionAndSolution({ assembly, solved, labelOf, forceOf, displ
             <EquationTerm tex="U_r">
               <MatrixTable matrix={ur} rowLabels={restrainedLabels} />
             </EquationTerm>
+            {hasFem && (
+              <>
+                <MathOp tex="+" />
+                <EquationTerm tex="\mathrm{FEM}_r">
+                  <MatrixTable matrix={femR} rowLabels={restrainedLabels} />
+                </EquationTerm>
+              </>
+            )}
           </MatrixEquation>
         </div>
       </DecimalsScope>

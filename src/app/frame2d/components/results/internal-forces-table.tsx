@@ -1,12 +1,22 @@
 "use client";
 
+import { useAtomValue } from "jotai";
 import { multiply } from "mathjs";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FrameElement2D, beamConventionEnds, type FrameInternalForce, type SolveResult } from "@/lib/engine";
 import { useDecimals } from "@/components/custom/decimals-scope";
+import { texText } from "@/components/custom/math";
+import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
+import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
+import { atomMemberLoads } from "../../store/results";
+
+const LOCAL_AXES = ["x′", "y′", "θ"];
+
+/** Hasta cuántas barras las cuentas arrancan abiertas: con más, la sección se vuelve interminable. */
+const OPEN_UP_TO = 4;
 
 interface InternalForcesTableProps {
   elements: ElementRow[];
@@ -29,6 +39,7 @@ export function InternalForcesTable({
 }: InternalForcesTableProps) {
   const decimals = useDecimals();
   const show = (value: number) => value.toFixed(decimals);
+  const { fem } = useAtomValue(atomMemberLoads);
 
   return (
     <div className="flex flex-col gap-4">
@@ -117,6 +128,77 @@ export function InternalForcesTable({
             })}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          La cuenta de cada barra, con los números: la rigidez local por los desplazamientos locales, más el FEM.
+        </p>
+        {elements.map((element) => {
+          const from = nodesById.get(element.fromNodeId);
+          const to = nodesById.get(element.toNodeId);
+          const result = internalForces.get(element.id) as FrameInternalForce | undefined;
+          const elementFem = fem.get(element.id);
+          if (!from || !to || !result || !elementFem) return null;
+
+          const frameElement = new FrameElement2D(
+            element.id,
+            { id: from.id, x: from.x, z: from.z },
+            { id: to.id, x: to.x, z: to.z },
+            element.area,
+            element.elasticity,
+            element.inertia,
+          );
+          const localDisplacement = multiply(frameElement.transform(), [
+            ...(displacements.get(element.fromNodeId) ?? [0, 0, 0]),
+            ...(displacements.get(element.toNodeId) ?? [0, 0, 0]),
+          ].map((value) => [value])) as number[][];
+          const femVector = [
+            [elementFem.from.axial],
+            [elementFem.from.shear],
+            [elementFem.from.moment],
+            [elementFem.to.axial],
+            [elementFem.to.shear],
+            [elementFem.to.moment],
+          ];
+          const forces = [
+            [result.from.axial],
+            [result.from.shear],
+            [result.from.moment],
+            [result.to.axial],
+            [result.to.shear],
+            [result.to.moment],
+          ];
+          const labels = [from, to].flatMap((node) => LOCAL_AXES.map((axis) => `${node.name}${axis}`));
+          const barTex = texText(element.name);
+
+          return (
+            <details key={element.id} open={elements.length <= OPEN_UP_TO} className="flex flex-col gap-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                {element.name} ({from.name}↔{to.name})
+              </summary>
+              <div className="mt-2">
+                <MatrixEquation expand={{ title: `Las fuerzas de extremo de la barra ${element.name}` }}>
+                  <EquationTerm tex={`f_{${barTex}}`}>
+                    <MatrixTable matrix={forces} rowLabels={labels} />
+                  </EquationTerm>
+                  <MathOp tex="=" />
+                  <EquationTerm tex={`k_{${barTex}}`}>
+                    <MatrixTable matrix={frameElement.localStiffness()} labels={labels} />
+                  </EquationTerm>
+                  <MathOp tex="\cdot" />
+                  <EquationTerm tex={`u_{${barTex}}`}>
+                    <MatrixTable matrix={localDisplacement} rowLabels={labels} />
+                  </EquationTerm>
+                  <MathOp tex="+" />
+                  <EquationTerm tex={`\\mathrm{FEM}_{${barTex}}`}>
+                    <MatrixTable matrix={femVector} rowLabels={labels} />
+                  </EquationTerm>
+                </MatrixEquation>
+              </div>
+            </details>
+          );
+        })}
       </div>
     </div>
   );

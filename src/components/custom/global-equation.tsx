@@ -68,6 +68,10 @@ export function GlobalEquation({
     entry.restrained ? [solved.reactions.get(entry.nodeId)![entry.localDof]] : [forceOf(entry)],
   );
   const displacements = dofOrder.map((entry) => [solved.displacements.get(entry.nodeId)![entry.localDof]]);
+  // Solo los pórticos con cargas en las barras tienen este término: en el
+  // resto la ecuación queda como siempre, sin un vector de ceros de adorno.
+  const fem = dofOrder.map((entry) => [assembly.fixedEndForces[entry.globalIndex]]);
+  const hasFem = fem.some(([value]) => value !== 0);
 
   return (
     <DecimalsScope id="global-equation">
@@ -85,7 +89,13 @@ export function GlobalEquation({
           </div>
         </div>
 
-        <MathBlock tex="\begin{bmatrix} F \end{bmatrix} = \begin{bmatrix} K \end{bmatrix} \cdot \begin{bmatrix} U \end{bmatrix}" />
+        <MathBlock
+          tex={
+            hasFem
+              ? String.raw`\begin{bmatrix} F \end{bmatrix} = \begin{bmatrix} K \end{bmatrix} \cdot \begin{bmatrix} U \end{bmatrix} + \begin{bmatrix} \mathrm{FEM} \end{bmatrix}`
+              : String.raw`\begin{bmatrix} F \end{bmatrix} = \begin{bmatrix} K \end{bmatrix} \cdot \begin{bmatrix} U \end{bmatrix}`
+          }
+        />
 
         <MatrixEquation
           expand={{ title: "La ecuación de rigidez del sistema" }}
@@ -119,9 +129,26 @@ export function GlobalEquation({
               cellClass={(row) => (dofOrder[row].restrained ? undefined : UNKNOWN)}
             />
           </EquationTerm>
+          {hasFem && (
+            <>
+              <MathOp tex="+" />
+              <EquationTerm tex="\mathrm{FEM}">
+                <MatrixTable matrix={fem} rowLabels={labels} />
+              </EquationTerm>
+            </>
+          )}
         </MatrixEquation>
 
         {children}
+
+        {hasFem && (
+          <p className="text-xs text-muted-foreground">
+            <Math tex="\mathrm{FEM}" /> son los momentos y fuerzas de empotramiento perfecto de todas las barras, ya
+            en ejes globales y sumados en su posición: lo que las barras les harían a los nudos si estos no se
+            movieran. Por eso la ecuación de un pórtico con cargas en las barras lleva ese término, y{" "}
+            <Math tex="F" /> son solo las cargas puestas en los nudos.
+          </p>
+        )}
 
         <p className="text-xs text-muted-foreground">
           Al pasar el mouse se resalta además la celda <span className="font-medium text-foreground">simétrica</span>:{" "}

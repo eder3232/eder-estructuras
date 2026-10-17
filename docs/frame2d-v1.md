@@ -268,6 +268,25 @@ Lo que encontró mirarlo:
 
 Tests: 2 del motor (cuerpo libre de un pórtico cargado; una reacción de momento que sobra no pasa el control global) y 8 del store (equilibrio del inicial y del cargado, clasificación, orden, numeración, «aplicar a todas», insertar). Suite: 471, `tsc` limpio, lint con los 2 de siempre.
 
+### Paso 7: narrativa, matrices grandes y modo práctica (2026-10-17) — hecho
+
+- **Sección 1**: las fórmulas una vez arriba (la `k` de 6×6 con los términos de flexión, `T` y por qué deja el giro intacto) y por barra la cadena **`K = Tᵀ·k·T`** con `ChainEquation` («Ver apilada», «Pantalla completa») y stepper de decimales propio — con esto existe el «por tabla» de la cascada (D8). Debajo de cada barra cargada, **el FEM**: cada carga con su vector, la superposición y el pasaje a globales `Tᵀ·FEM`; con FEM a mano, el vector escrito. Un desplegable con **las fórmulas de tabla** de los tres casos de libro y la integral general que usa el programa.
+- **Sección 2**: el ensamblaje y la ecuación global genéricos (reemplazan a los propios, que mostraban todos los pasos abiertos). Con cargas en las barras la ecuación es **`F = K·U + FEM`**.
+- **Sección 3**: la partición genérica, con **`Uf = Kff⁻¹·(Ff − FEMf − Kfr·Ur)`** y **`Rr = Krf·Uf + Krr·Ur + FEMr`**.
+- **Sección 4**: por barra, la cuenta **`f = k·u + FEM`** con sus operandos (plegada si hay más de 4 barras).
+- **Modo práctica**: dónde aporta una barra y el **bloque de 3×3** del nudo de origen en ejes globales, con su fórmula. A diferencia de 3D, el texto **no** dice que los otros bloques son el mismo con el signo cambiado: en un pórtico no lo son (`2EI/L` contra `4EI/L`).
+- **Motor**: `AssemblyResult.fixedEndForces`, el FEM global por índice (`−F_eq`). Las ecuaciones genéricas muestran el término solo si no es todo cero: armaduras y resortes quedan como estaban (verificado en las tres páginas: cero términos FEM).
+
+Lo que encontró:
+
+- **Un bug en los cuatro sistemas**: la tabla rotulada `K_ff⁻¹` en el despeje de `Uf` mostraba **`K_ff`**. No era una decisión documentada (lo que sí está decidido es que el motor invierte en vez de factorizar, D15). Ahora muestra la inversa; verificado en la página: con los números mostrados (4 decimales), `Kff⁻¹·(Ff − FEMf − Kfr·Ur)` da `Uf` a 3–4 cifras — con `Kff` habría dado del orden de 10⁶.
+- **El test que importa**: con q en la viga, las ecuaciones de la pantalla reproducen la solución del motor (desplazamientos a 12 cifras, reacciones a 8). Si el signo de `fixedEndForces` estuviera invertido, el alumno haría la cuenta y no le daría.
+- **Las barras invertidas dobles se pierden en el texto de los comandos de shell** (heredoc, `python -`, aun con cadenas crudas): rompieron la ecuación de la partición en los cuatro sistemas (`F_f \ F_r`), el `\\mathrm` de la sección 4 y, en el paso 6, el `\\cdot` de la clasificación. Ningún test lo ve —son strings válidos—. Regla nueva: **TeX solo con Edit/Write**, y verificación en la app buscando `.katex-error` y TeX colado en el texto de KaTeX con todas las secciones abiertas: 135 fórmulas en `/frame2d`, 125/66/96 en las otras tres, **cero** errores.
+- **Un error de hidratación**: la fórmula del modo práctica iba en la `instruction` del ejercicio, que el componente envuelve en un `<p>`, y un bloque de KaTeX es un `div`. Lo marcó la consola (y el «2 Issues» de Next); la fórmula pasó afuera, y la matriz ganó `\arraystretch` porque los renglones con fracciones se tocaban.
+- «por superposición de sus carga» con una sola carga: ahora «de su carga».
+
+Tests: 2 del store (la sustitución reproduce la solución; sin cargas de barra el vector FEM es todo ceros, sin `−0`). Suite: 473, `tsc` limpio, lint con los 2 de siempre.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.
