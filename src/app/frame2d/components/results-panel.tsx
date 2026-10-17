@@ -10,8 +10,8 @@ import { DecimalsScope } from "@/components/custom/decimals-scope";
 import { DofOrderTable } from "@/components/custom/dof-order-table";
 import { SectionDecimals } from "@/components/custom/section-decimals";
 import { NoResults } from "@/components/custom/no-results";
-import { atomElements, type ElementRow } from "../store/elements";
-import { atomResults, type Frame2DResults } from "../store/results";
+import type { ElementRow } from "../store/elements";
+import type { Frame2DResults } from "../store/results";
 import { dofLabels } from "../store/nodes";
 import { AssemblySteps } from "./results/assembly-steps";
 import { DeformedShape } from "./results/deformed-shape";
@@ -24,6 +24,7 @@ import { LocalStiffnessList } from "./results/local-stiffness-list";
 import { MechanismExplanation } from "./results/mechanism-explanation";
 import { MemberDiagrams } from "./results/member-diagrams";
 import { PartitionAndSolution } from "./results/partition-and-solution";
+import { useFrame2DView } from "../frame2d-view";
 
 /**
  * La sección entera de resultados, con la forma de `/armaduras-2d`: el título
@@ -31,6 +32,7 @@ import { PartitionAndSolution } from "./results/partition-and-solution";
  * dependen de que haya números.
  */
 export function ResultsPanel() {
+  const { atomResults, atomElements } = useFrame2DView();
   const [results] = useAtom(atomResults);
   const [elements] = useAtom(atomElements);
 

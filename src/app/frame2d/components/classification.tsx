@@ -3,7 +3,7 @@
 import { useAtomValue } from "jotai";
 
 import { ClassificationView, plural } from "@/components/custom/classification-view";
-import { atomClassification } from "../store/classification";
+import { useFrame2DView } from "../frame2d-view";
 
 /**
  * La clasificación de un pórtico plano: `g = 3b + r − 3n`. Va entre el esquema
@@ -11,6 +11,7 @@ import { atomClassification } from "../store/classification";
  * después se calcula.
  */
 export function Classification() {
+  const { atomClassification } = useFrame2DView();
   const classification = useAtomValue(atomClassification);
 
   if (classification.status === "empty") {

@@ -3,7 +3,7 @@
 import { useAtom } from "jotai";
 
 import { ErrorsPanel as GenericErrorsPanel } from "@/components/custom/errors-panel";
-import { atomResults } from "../store/results";
+import { useFrame2DView } from "../frame2d-view";
 
 /**
  * Errores de datos y advertencias, donde se los corrige. Con las dos reglas de
@@ -12,6 +12,7 @@ import { atomResults } from "../store/results";
  * resultados.
  */
 export function ErrorsPanel() {
+  const { atomResults } = useFrame2DView();
   const [results] = useAtom(atomResults);
 
   if (results.status === "ok") return <GenericErrorsPanel issues={results.warnings} />;

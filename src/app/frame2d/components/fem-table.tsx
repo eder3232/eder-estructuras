@@ -6,8 +6,8 @@ import { useDecimals } from "@/components/custom/decimals-scope";
 import { FormulaInput } from "@/components/custom/formula-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { atomElements, atomUpdateElementField, type ElementRow } from "../store/elements";
-import { atomMemberLoads } from "../store/results";
+import { atomUpdateElementField, type ElementRow } from "../store/elements";
+import { useFrame2DView } from "../frame2d-view";
 
 const FIELDS = [
   { field: "femAxialFrom", end: "from", key: "axial", header: "N" },
@@ -28,6 +28,7 @@ const FIELDS = [
  * mayoría de las barras no tiene.
  */
 export function FemTable() {
+  const { atomElements, atomMemberLoads } = useFrame2DView();
   const elements = useAtomValue(atomElements);
   const { fem, brokenElementIds } = useAtomValue(atomMemberLoads);
   const update = useSetAtom(atomUpdateElementField);

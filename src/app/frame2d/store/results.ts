@@ -168,15 +168,52 @@ function fixedEndForcesByElement(
   return { fem, brokenElementIds, loadsByElement, axisByElement, equivalentByNode, errors, warnings };
 }
 
-/** El FEM de cada barra, calculado o a mano: lo leen el cálculo y la tabla «FEM por barra». */
-export const atomMemberLoads = atom((get) => {
-  const nodes = get(atomNodes);
-  return fixedEndForcesByElement(get(atomElements), get(atomLoads), new Map(nodes.map((n) => [n.id, n])));
-});
+export type Frame2DMemberLoads = ReturnType<typeof fixedEndForcesByElement>;
 
-export const atomResults = atom<Frame2DResults>((get) => {
-  const nodes = get(atomNodes);
-  const elements = get(atomElements);
+/**
+ * El FEM de cada barra, calculado o a mano: lo leen el cálculo y la tabla
+ * «FEM por barra». Función pura, para que `frame2d-seismic` la use caso por
+ * caso; `/frame2d` la envuelve en `atomMemberLoads`.
+ */
+export function frame2DMemberLoads(nodes: NodeRow[], elements: ElementRow[], loads: LoadRow[]): Frame2DMemberLoads {
+  return fixedEndForcesByElement(elements, loads, new Map(nodes.map((n) => [n.id, n])));
+}
+
+export const atomMemberLoads = atom((get) => frame2DMemberLoads(get(atomNodes), get(atomElements), get(atomLoads)));
+
+/** Lo que necesita `solveFrame2D`: el modelo plano, nada del store. */
+export interface Frame2DSolveInput {
+  nodes: NodeRow[];
+  elements: ElementRow[];
+  memberLoads: Frame2DMemberLoads;
+  restrainedFirst: boolean;
+  useDofNumbers: boolean;
+  /**
+   * Diafragmas rígidos: los nudos de cada uno comparten la traslación en x
+   * (ver `System.addDiaphragm`). `/frame2d` no los usa; `frame2d-seismic`, sí.
+   */
+  diaphragms?: { id: string; nodeIds: string[] }[];
+}
+
+export const atomResults = atom<Frame2DResults>((get) =>
+  solveFrame2D({
+    nodes: get(atomNodes),
+    elements: get(atomElements),
+    memberLoads: get(atomMemberLoads),
+    restrainedFirst: get(atomRestrainedFirst),
+    useDofNumbers: get(atomUseDofNumbers),
+  }),
+);
+
+/** El cálculo entero de un pórtico, como función pura. Ver `atomResults`. */
+export function solveFrame2D({
+  nodes,
+  elements,
+  memberLoads,
+  restrainedFirst,
+  useDofNumbers,
+  diaphragms = [],
+}: Frame2DSolveInput): Frame2DResults {
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
 
   // Sin barras no hay nada que resolver, y no un mecanismo; sin nudos, el motor
@@ -191,7 +228,6 @@ export const atomResults = atom<Frame2DResults>((get) => {
   }
 
   const system = new System(3);
-  const memberLoads = get(atomMemberLoads);
   const errors: DomainError[] = [...memberLoads.errors];
   // Los mensajes del motor nombran ids; acá se cambian por lo que ve el alumno (B2).
   const names = displayNames(nodes, elements);
@@ -245,12 +281,27 @@ export const atomResults = atom<Frame2DResults>((get) => {
     }
   }
 
+  for (const diaphragm of diaphragms) {
+    try {
+      system.addDiaphragm({ id: diaphragm.id, nodeIds: diaphragm.nodeIds, localDof: 0 });
+    } catch (e) {
+      const first = nodesById.get(diaphragm.nodeIds[0]);
+      errors.push({
+        source: "node",
+        refId: first?.id ?? "-",
+        refName: first?.name,
+        severity: "error",
+        message: withDisplayNames(e instanceof Error ? e.message : String(e), names),
+      });
+    }
+  }
+
   if (errors.length > 0) {
     return { status: "error", errors, nodesById };
   }
 
   try {
-    const solved = system.solve({ restrainedFirst: get(atomRestrainedFirst), useDofNumbers: get(atomUseDofNumbers) });
+    const solved = system.solve({ restrainedFirst, useDofNumbers });
     return {
       status: "ok",
       solved,
@@ -272,7 +323,7 @@ export const atomResults = atom<Frame2DResults>((get) => {
       nodesById,
     };
   }
-});
+}
 
 /**
  * Los diagramas N, V, M de cada barra, o la razón por la que no los hay.
@@ -284,13 +335,19 @@ export const atomResults = atom<Frame2DResults>((get) => {
  */
 export type MemberDiagramResult = { status: "ok"; diagram: MemberDiagram } | { status: "manual-fem" };
 
-export const atomMemberDiagrams = atom((get) => {
-  const results = get(atomResults);
+export const atomMemberDiagrams = atom((get) =>
+  frame2DMemberDiagrams(get(atomResults), get(atomElements), get(atomMemberLoads)),
+);
+
+export function frame2DMemberDiagrams(
+  results: Frame2DResults,
+  elements: ElementRow[],
+  { loadsByElement, axisByElement }: Frame2DMemberLoads,
+): Map<string, MemberDiagramResult> {
   const diagrams = new Map<string, MemberDiagramResult>();
   if (results.status !== "ok") return diagrams;
 
-  const { loadsByElement, axisByElement } = get(atomMemberLoads);
-  for (const element of get(atomElements)) {
+  for (const element of elements) {
     if (element.manualFem) {
       diagrams.set(element.id, { status: "manual-fem" });
       continue;
@@ -304,7 +361,7 @@ export const atomMemberDiagrams = atom((get) => {
     });
   }
   return diagrams;
-});
+}
 
 /**
  * La forma deformada de cada barra, entre sus nudos (D3): en ejes locales,
@@ -320,13 +377,19 @@ export interface MemberShape {
   homogeneousOnly: boolean;
 }
 
-export const atomMemberShapes = atom((get) => {
-  const results = get(atomResults);
+export const atomMemberShapes = atom((get) =>
+  frame2DMemberShapes(get(atomResults), get(atomElements), get(atomMemberLoads)),
+);
+
+export function frame2DMemberShapes(
+  results: Frame2DResults,
+  elements: ElementRow[],
+  { loadsByElement, axisByElement, fem }: Frame2DMemberLoads,
+): Map<string, MemberShape> {
   const shapes = new Map<string, MemberShape>();
   if (results.status !== "ok") return shapes;
 
-  const { loadsByElement, axisByElement, fem } = get(atomMemberLoads);
-  for (const element of get(atomElements)) {
+  for (const element of elements) {
     const axis = axisByElement.get(element.id);
     const from = results.solved.displacements.get(element.fromNodeId);
     const to = results.solved.displacements.get(element.toNodeId);
@@ -346,4 +409,4 @@ export const atomMemberShapes = atom((get) => {
     shapes.set(element.id, { points, axis, homogeneousOnly: element.manualFem });
   }
   return shapes;
-});
+}

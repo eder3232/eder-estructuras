@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
-import { atomMemberDiagrams, atomMemberLoads } from "../../store/results";
+import { useFrame2DView } from "../../frame2d-view";
 
 type Quantity = keyof DiagramValues;
 
@@ -95,6 +95,7 @@ function toLocalGlyph(load: MemberLoad, axis: MemberAxis, i: number): DiagramMem
 }
 
 export function MemberDiagrams({ elements, nodesById }: { elements: ElementRow[]; nodesById: Map<string, NodeRow> }) {
+  const { atomMemberDiagrams, atomMemberLoads } = useFrame2DView();
   const diagrams = useAtomValue(atomMemberDiagrams);
   const { loadsByElement, axisByElement } = useAtomValue(atomMemberLoads);
   const [quantity, setQuantity] = useState<Quantity>("M");

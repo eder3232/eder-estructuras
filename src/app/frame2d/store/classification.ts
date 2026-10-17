@@ -2,9 +2,9 @@ import { atom } from "jotai";
 
 import { determinacy, type Determinacy } from "@/lib/engine";
 import { classificationVerdict, type Verdict } from "@/lib/classification-verdict";
-import { atomElements } from "./elements";
-import { atomNodes } from "./nodes";
-import { atomResults } from "./results";
+import { atomElements, type ElementRow } from "./elements";
+import { atomNodes, type NodeRow } from "./nodes";
+import { atomResults, type Frame2DResults } from "./results";
 
 export type Frame2DClassification =
   | { status: "empty" }
@@ -19,11 +19,15 @@ export type Frame2DClassification =
  * veredicto cruza la cuenta con lo que encontró el motor
  * (`lib/classification-verdict.ts`).
  */
-export const atomClassification = atom<Frame2DClassification>((get) => {
-  const nodes = get(atomNodes);
-  const elements = get(atomElements);
-  const results = get(atomResults);
+export const atomClassification = atom<Frame2DClassification>((get) =>
+  frame2DClassification(get(atomNodes), get(atomElements), get(atomResults)),
+);
 
+export function frame2DClassification(
+  nodes: NodeRow[],
+  elements: ElementRow[],
+  results: Frame2DResults,
+): Frame2DClassification {
   if (results.status === "empty") return { status: "empty" };
 
   const reactions = nodes.reduce(
@@ -45,4 +49,4 @@ export const atomClassification = atom<Frame2DClassification>((get) => {
   );
 
   return { status: "counted", bars: elements.length, reactions, nodes: nodes.length, count, verdict };
-});
+}

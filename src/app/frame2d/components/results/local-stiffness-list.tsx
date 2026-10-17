@@ -10,8 +10,9 @@ import { Math, MathBlock, texText } from "@/components/custom/math";
 import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix-equation";
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
-import { atomLoads, toMemberLoad, type LoadRow } from "../../store/loads";
+import { toMemberLoad, type LoadRow } from "../../store/loads";
 import { dofLabels, type NodeRow } from "../../store/nodes";
+import { useFrame2DView } from "../../frame2d-view";
 
 interface LocalStiffnessListProps {
   elements: ElementRow[];
@@ -79,6 +80,7 @@ const KIND = { distributed: "distribuida", point: "puntual", moment: "momento" }
  * de `docs/frame2d-v1.md`).
  */
 export function LocalStiffnessList({ elements, nodesById }: LocalStiffnessListProps) {
+  const { atomLoads } = useFrame2DView();
   const loads = useAtomValue(atomLoads);
 
   return (

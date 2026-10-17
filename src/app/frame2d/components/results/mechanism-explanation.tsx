@@ -7,7 +7,7 @@ import { loadCompatibility, type MechanismDiagnosis } from "@/lib/engine";
 import { DeformedDiagram } from "@/components/custom/diagram-2d/deformed-diagram";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
-import { atomMemberLoads } from "../../store/results";
+import { useFrame2DView } from "../../frame2d-view";
 
 /** Por debajo de esto, la componente del modo se considera cero: ese nudo no se mueve. */
 const MOVES = 1e-9;
@@ -130,6 +130,7 @@ function Fredholm({
   mode: NonNullable<MechanismDiagnosis["mode"]>;
   nodesById: Map<string, NodeRow>;
 }) {
+  const { atomMemberLoads } = useFrame2DView();
   const { equivalentByNode } = useAtomValue(atomMemberLoads);
   const forces = mode.map((dof) => {
     const node = nodesById.get(dof.nodeId);

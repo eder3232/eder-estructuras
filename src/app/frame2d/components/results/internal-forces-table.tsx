@@ -11,7 +11,7 @@ import { EquationTerm, MathOp, MatrixEquation } from "@/components/custom/matrix
 import { MatrixTable } from "@/components/custom/matrix-table";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
-import { atomMemberLoads } from "../../store/results";
+import { useFrame2DView } from "../../frame2d-view";
 
 const LOCAL_AXES = ["x′", "y′", "θ"];
 
@@ -39,6 +39,7 @@ export function InternalForcesTable({
 }: InternalForcesTableProps) {
   const decimals = useDecimals();
   const show = (value: number) => value.toFixed(decimals);
+  const { atomMemberLoads } = useFrame2DView();
   const { fem } = useAtomValue(atomMemberLoads);
 
   return (

@@ -7,11 +7,11 @@ import type { DiagramForce, DiagramMemberLoad, DiagramSupport } from "@/componen
 import { useHighlight, useSetHighlight } from "@/components/custom/highlight";
 import { NoResults } from "@/components/custom/no-results";
 import { memberAxis } from "@/lib/engine";
-import { atomNodes } from "../store/nodes";
-import { atomElements } from "../store/elements";
-import { atomLoads, toMemberLoad } from "../store/loads";
+import { toMemberLoad } from "../store/loads";
+import { useFrame2DView } from "../frame2d-view";
 
 export function SchemaDiagram() {
+  const { atomNodes, atomElements, atomLoads } = useFrame2DView();
   const [nodes] = useAtom(atomNodes);
   const [elements] = useAtom(atomElements);
   const [loads] = useAtom(atomLoads);

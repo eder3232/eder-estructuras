@@ -7,7 +7,7 @@ import { DeformedDiagram } from "@/components/custom/diagram-2d/deformed-diagram
 import type { DiagramForce } from "@/components/custom/diagram-2d/types";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
-import { atomMemberShapes } from "../../store/results";
+import { useFrame2DView } from "../../frame2d-view";
 
 interface DeformedShapeProps {
   elements: ElementRow[];
@@ -16,6 +16,7 @@ interface DeformedShapeProps {
 }
 
 export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProps) {
+  const { atomMemberShapes } = useFrame2DView();
   const shapes = useAtomValue(atomMemberShapes);
   const nodes = [...nodesById.values()];
 
