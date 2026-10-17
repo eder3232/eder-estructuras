@@ -91,9 +91,9 @@ La tabla numerada con el detalle está en el roadmap, sección 4. Estado al 2026
 | # | Qué | Estado |
 |---|---|---|
 | D2 | Las tablas de barras de las dos armaduras | ✅ resuelta: una sola, `custom/truss-element-table.tsx` |
-| D3 | Deformada de `frame2d` como recta | abierta |
-| D4 | Diagramas de corte y momento | abierta |
-| D5 | Verificación visual pendiente | queda solo la deformada de `/frame2d` |
+| D3 | Deformada de `frame2d` como recta | ✅ resuelta el 2026-10-17 (`member-deflection.ts`: Hermite + flecha biempotrada; ver [`frame2d-v1.md`](./frame2d-v1.md), paso 5) |
+| D4 | Diagramas de corte y momento | ✅ resuelta el 2026-10-17 (`member-diagrams.ts`, N/V/M exactos; paso 4) |
+| D5 | Verificación visual pendiente | ✅ la deformada de `/frame2d` se miró y se midió el 2026-10-17 |
 | D7, D8, D11 | Insertar filas, decimales en cascada, narrativa | ✅ en tres sistemas; falta `/frame2d` |
 | D9 | El stepper de decimales puede saltar de renglón | abierta, afuera a propósito |
 | D12 | La ecuación que no se adapta a sus operandos | mitigada: «Ver apilada» y «Pantalla completa» (`custom/chain-equation.tsx`, `MatrixEquation expand`); el responsive sigue abierto |

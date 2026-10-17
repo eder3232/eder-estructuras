@@ -44,6 +44,20 @@ interface DeformedDiagramProps {
   showZeroAxialLabels?: boolean;
   /** Reemplaza la leyenda de abajo, que describe qué significa cada trazo. */
   legend?: ReactNode;
+  /**
+   * La forma de cada barra **entre** sus nudos, para los pórticos: puntos de la
+   * barra sin deformar (`x`, `z`) y su desplazamiento (`dx`, `dz`), sin escalar.
+   * Una barra que no esté acá se dibuja recta entre sus nudos, como en una
+   * armadura — donde eso es exacto.
+   */
+  elementShapes?: Map<string, { x: number; z: number; dx: number; dz: number }[]>;
+  /**
+   * Colorear cada barra por el signo de su axial y escribir el número. En una
+   * armadura la axial es una sola por barra; en un pórtico con cargas axiales
+   * varía a lo largo de ella y tiene su propio diagrama, así que ahí la
+   * deformada muestra solo la forma.
+   */
+  colorByForce?: boolean;
 }
 
 const DEFAULT_SCALE = { initial: 50, max: 500, step: 10 };
@@ -99,6 +113,8 @@ function DeformedDiagramBody({
   scale,
   showZeroAxialLabels = true,
   legend,
+  elementShapes,
+  colorByForce = true,
 }: DeformedDiagramProps) {
   const { initial, max, step } = { ...DEFAULT_SCALE, ...scale };
   const [scaleFactor, setScaleFactor] = useState(initial);
@@ -122,8 +138,18 @@ function DeformedDiagramBody({
     }),
   );
 
+  const displacedShapes = new Map<string, SvgPoint[]>(
+    [...(elementShapes ?? [])].map(([id, points]) => [
+      id,
+      points.map((p) => projectPoint({ x: p.x + p.dx * scaleFactor, z: p.z + p.dz * scaleFactor })),
+    ]),
+  );
+
   const originalPoints: SvgPoint[] = nodes.map((n) => projectPoint(n));
-  const displacedPoints: SvgPoint[] = [...displacedById.values()].map(projectPoint);
+  const displacedPoints: SvgPoint[] = [
+    ...[...displacedById.values()].map(projectPoint),
+    ...[...displacedShapes.values()].flat(),
+  ];
   const viewBox = computeViewBox([...originalPoints, ...displacedPoints]);
   const unitSize = computeUnitSize(viewBox);
   const nodeRadius = unitSize * 0.3;
@@ -201,6 +227,22 @@ function DeformedDiagramBody({
 
         <g strokeWidth={2}>
           {elements.map((element) => {
+            const strokeClass = colorByForce
+              ? STROKE_CLASS[state(elementForceValue.get(element.id))]
+              : "stroke-foreground";
+            const shape = displacedShapes.get(element.id);
+            if (shape) {
+              return (
+                <polyline
+                  key={element.id}
+                  points={shape.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="none"
+                  strokeLinejoin="round"
+                  className={strokeClass}
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            }
             const from = displacedById.get(element.fromNodeId);
             const to = displacedById.get(element.toNodeId);
             if (!from || !to) return null;
@@ -213,14 +255,14 @@ function DeformedDiagramBody({
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                className={STROKE_CLASS[state(elementForceValue.get(element.id))]}
+                className={strokeClass}
                 vectorEffect="non-scaling-stroke"
               />
             );
           })}
         </g>
 
-        {elements.map((element) => {
+        {colorByForce && elements.map((element) => {
           const from = displacedById.get(element.fromNodeId);
           const to = displacedById.get(element.toNodeId);
           if (!from || !to) return null;

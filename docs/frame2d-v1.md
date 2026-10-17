@@ -228,6 +228,21 @@ Lo que **no** se miró: un pórtico inclinado en pantalla (sí en el test de cie
 
 Queda para el paso 5: B7 (el color de la deformada supone N constante, y con carga axial ya no lo es).
 
+### Paso 5: la deformada real (2026-10-17) — hecho
+
+- **Motor** (`src/lib/engine/frame2d/member-deflection.ts`): deformada de cada barra = **homogénea** (Hermite con desplazamientos y giros de los extremos; lineal para `u`) + **particular** (la flecha de la barra biempotrada bajo su carga, de integrar `EI·v'' = M` con `M` = el diagrama de esa barra con el FEM como fuerzas de extremo; y `EA·u' = N` para la axial). Con `v(0) = v'(0) = 0`, que `v(L) = v'(L) = 0` salga solo es el **cierre**.
+- **La integral es exacta**: Gauss de 3 puntos por intervalo entre puntos del diagrama (ahí `M` es a lo sumo cúbica), con `v₁ = v₀ + θ₀h + ∫(x₁ − s)M/EI` para que el integrando sea de grado 4. **La primera versión usaba trapecios** y erraba en la quinta cifra; los tests contra las flechas de los libros la descartaron, y ahora piden 9 cifras.
+- **Tests** (6 + 3 del store): simplemente apoyada con uniforme `5qL⁴/384EI`; biempotrada `qL⁴/384EI` con los nudos quietos y tangente horizontal (al doble de distancia del apoyo, el cuádruple de flecha); ménsula `qL⁴/8EI` en la punta y `17qL⁴/384EI` a la mitad; ménsula con carga nodal (Hermite sola, `PL³/3EI` y `5PL³/48EI`); apoyada con puntual `PL³/48EI`; y el cierre de la particular con cargas mezcladas. **Mutación**: invertir el signo de la particular rompe 5 de 6.
+- **Vista**: `DeformedDiagram` ganó dos props opcionales — `elementShapes` (la curva de cada barra) y `colorByForce` — y los otros tres sistemas no cambian. En `/frame2d` la deformada muestra **solo la forma**, en el color del texto, sin número de axial (**B7**: con carga axial N varía a lo largo de la barra, y ya tiene su diagrama). La leyenda lo dice, y nombra las barras con FEM a mano, que se curvan solo por sus extremos.
+
+Lo que encontró mirarlo, **midiendo sobre el SVG**:
+
+- **El empotramiento ya no gira**: con la semilla, el primer tramo de cada columna se aparta 0.64° de la vertical contra 5.7° de la cuerda entera (lo que antes era la inclinación de toda la columna, desde la base).
+- **Los nudos siguen rígidos**: el ángulo entre la viga y cada columna da 90.5° y 92° con factor 50, y 90.1° y 90.4° con factor 10. La diferencia cae con la escala en proporción, así que es la cuerda de un tramo de L/24 sobre una curva exagerada, no un giro relativo; las tangentes verdaderas coinciden por construcción (Hermite da `v'` = giro del nudo y la particular tiene `v' = 0` en los extremos).
+- Con q = −10 en la viga, se flecta con contracurva cerca de las esquinas, donde el momento es negativo — lo mismo que dice el diagrama de M.
+
+Lo que **no** se miró: la deformada en oscuro (el trazo es `stroke-foreground`, el mismo de las barras del esquema), y un pórtico inclinado en pantalla.
+
 ## Decisiones (2026-10-17)
 
 - **Convención**: la de los textos usuales en Perú (Hibbeler, Beer); M del lado traccionado. Ver sección 4 y la pregunta 1 de la sección 6.

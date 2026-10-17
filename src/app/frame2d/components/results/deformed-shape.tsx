@@ -1,8 +1,13 @@
-import type { FrameInternalForce, SolveResult } from "@/lib/engine";
+"use client";
+
+import { useAtomValue } from "jotai";
+
+import type { SolveResult } from "@/lib/engine";
 import { DeformedDiagram } from "@/components/custom/diagram-2d/deformed-diagram";
 import type { DiagramForce } from "@/components/custom/diagram-2d/types";
 import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
+import { atomMemberShapes } from "../../store/results";
 
 interface DeformedShapeProps {
   elements: ElementRow[];
@@ -11,10 +16,9 @@ interface DeformedShapeProps {
 }
 
 export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProps) {
+  const shapes = useAtomValue(atomMemberShapes);
   const nodes = [...nodesById.values()];
 
-  // El diagrama solo mueve nudos: el giro no desplaza el nudo, se ve en el
-  // momento de las barras que concurren en él (tabla de fuerzas internas).
   const displacements = new Map<string, [number, number]>(
     nodes.map((n) => {
       const [dx, dz] = solved.displacements.get(n.id) ?? [0, 0];
@@ -30,16 +34,28 @@ export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProp
     if (n.restrainedR) reactions.push({ nodeId: n.id, x: n.x, z: n.z, axis: "r", value: mr });
   }
 
-  /**
-   * El color de la barra sigue siendo la fuerza axial, igual que en armaduras
-   * 2D: es el único de los tres esfuerzos que es un solo número con signo
-   * constante a lo largo de la barra (el momento varía punto a punto, colorear
-   * por él daría una lectura falsa). Se toma el extremo j, donde el signo
-   * positivo significa tracción.
-   */
-  const elementForceValue = new Map(
-    elements.map((e) => [e.id, (solved.internalForces.get(e.id) as FrameInternalForce | undefined)?.to.axial ?? 0]),
+  // La curva de cada barra en ejes globales: el punto sin deformar a lo largo
+  // de la barra, y su desplazamiento (u sobre la barra, v perpendicular) rotado.
+  const elementShapes = new Map(
+    elements.flatMap((element) => {
+      const shape = shapes.get(element.id);
+      const from = nodesById.get(element.fromNodeId);
+      if (!shape || !from) return [];
+      const { cos: c, sin: s } = shape.axis;
+      return [
+        [
+          element.id,
+          shape.points.map((p) => ({
+            x: from.x + c * p.x,
+            z: from.z + s * p.x,
+            dx: p.u * c - p.v * s,
+            dz: p.u * s + p.v * c,
+          })),
+        ] as const,
+      ];
+    }),
   );
+  const manual = elements.filter((e) => shapes.get(e.id)?.homogeneousOnly);
 
   return (
     <DeformedDiagram
@@ -47,7 +63,25 @@ export function DeformedShape({ elements, nodesById, solved }: DeformedShapeProp
       elements={elements}
       displacements={displacements}
       reactions={reactions}
-      elementForceValue={elementForceValue}
+      elementForceValue={new Map()}
+      elementShapes={elementShapes}
+      colorByForce={false}
+      legend={
+        <>
+          Línea punteada: forma original. Línea sólida: forma deformada (escalada), con la curva de cada barra entre
+          sus nudos: en un empotramiento la barra sale tangente, sin girar, y una barra cargada se flecta aunque sus
+          nudos no se muevan. Flechas: reacciones en los apoyos. Los esfuerzos de cada barra están en los diagramas de
+          la sección anterior.
+          {manual.length > 0 && (
+            <>
+              {" "}
+              {manual.map((e) => e.name).join(", ")} {manual.length === 1 ? "tiene" : "tienen"} el FEM a mano: se
+              {manual.length === 1 ? " dibuja" : " dibujan"} solo con lo que hacen sus extremos, sin la flecha propia
+              de su carga.
+            </>
+          )}
+        </>
+      }
     />
   );
 }

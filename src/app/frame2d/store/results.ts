@@ -5,11 +5,13 @@ import {
   System,
   loadFixedEndForces,
   memberAxis,
+  memberDeflection,
   memberDiagram,
   sumFixedEndForces,
   type FrameFixedEndForces,
   type FrameInternalForce,
   type MemberAxis,
+  type DeflectionPoint,
   type MemberDiagram,
   type MemberLoad,
   type SolveResult,
@@ -274,4 +276,46 @@ export const atomMemberDiagrams = atom((get) => {
     });
   }
   return diagrams;
+});
+
+/**
+ * La forma deformada de cada barra, entre sus nudos (D3): en ejes locales,
+ * `u` sobre la barra y `v` perpendicular. Ver `memberDeflection`.
+ *
+ * Una barra con **FEM a mano** se curva solo por lo que hacen sus extremos
+ * (`homogeneousOnly`): sin saber cómo está repartida su carga no hay flecha
+ * propia que sumarle. La deformada lo dice en su leyenda.
+ */
+export interface MemberShape {
+  points: DeflectionPoint[];
+  axis: MemberAxis;
+  homogeneousOnly: boolean;
+}
+
+export const atomMemberShapes = atom((get) => {
+  const results = get(atomResults);
+  const shapes = new Map<string, MemberShape>();
+  if (results.status !== "ok") return shapes;
+
+  const { loadsByElement, axisByElement, fem } = get(atomMemberLoads);
+  for (const element of get(atomElements)) {
+    const axis = axisByElement.get(element.id);
+    const from = results.solved.displacements.get(element.fromNodeId);
+    const to = results.solved.displacements.get(element.toNodeId);
+    if (!axis || !from || !to) continue;
+    const { cos: c, sin: s } = axis;
+    // T · u_global, extremo por extremo: la rotación no cambia.
+    const local = (d: number[]) => [c * d[0] + s * d[1], -s * d[0] + c * d[1], d[2]];
+    const zero = { from: { axial: 0, shear: 0, moment: 0 }, to: { axial: 0, shear: 0, moment: 0 } };
+    const { points } = memberDeflection({
+      axis,
+      localEnds: [...local(from), ...local(to)],
+      fixedEndForces: element.manualFem ? zero : (fem.get(element.id) ?? zero),
+      loads: element.manualFem ? [] : (loadsByElement.get(element.id) ?? []),
+      ea: element.elasticity * element.area,
+      ei: element.elasticity * element.inertia,
+    });
+    shapes.set(element.id, { points, axis, homogeneousOnly: element.manualFem });
+  }
+  return shapes;
 });

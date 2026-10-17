@@ -4,7 +4,7 @@ import { createStore } from "jotai";
 import { atomAddElement, atomElements, atomRemoveElement, atomUpdateElementField } from "./elements";
 import { atomAddNode, atomNodes, atomRemoveNode, atomToggleNodeRestrained, atomUpdateNodeField, seedNodeIds } from "./nodes";
 import { atomAddLoad, atomLoads, atomUpdateLoadField } from "./loads";
-import { atomMemberDiagrams, atomMemberLoads, atomResults } from "./results";
+import { atomMemberDiagrams, atomMemberLoads, atomMemberShapes, atomResults } from "./results";
 
 /**
  * Cada bloque fija uno de los bugs de la revisión para la v1 (ver
@@ -301,5 +301,34 @@ describe("/frame2d — diagramas (paso 4)", () => {
     const store = loadedFrame();
     store.set(atomUpdateElementField, { id: "seed-e2", field: "inertia", value: 0 });
     expect(store.get(atomMemberDiagrams).size).toBe(0);
+  });
+});
+
+describe("/frame2d — deformada entre nudos (paso 5)", () => {
+  it("en un empotramiento la columna sale sin girar: la flecha crece como x²", () => {
+    const shape = createStore().get(atomMemberShapes).get("seed-e1")!;
+    const [first, near, twice] = shape.points;
+    expect(first.v).toBe(0);
+    expect(twice.v / near.v).toBeGreaterThan(3.5);
+    expect(twice.v / near.v).toBeLessThan(4.5);
+  });
+
+  it("los extremos de cada barra van a donde fueron sus nudos", () => {
+    const store = createStore();
+    const results = store.get(atomResults);
+    if (results.status !== "ok") throw new Error(results.status);
+    const shape = store.get(atomMemberShapes).get("seed-e2")!;
+    const [dx, dz] = results.solved.displacements.get(seedNodeIds.v3)!;
+    const end = shape.points[shape.points.length - 1];
+    // Viga horizontal: u es dx y v es dz.
+    expect(end.u).toBeCloseTo(dx, 12);
+    expect(end.v).toBeCloseTo(dz, 12);
+  });
+
+  it("con FEM a mano la barra se curva solo por sus extremos, y queda marcado", () => {
+    const store = createStore();
+    store.set(atomUpdateElementField, { id: "seed-e2", field: "manualFem", value: true });
+    expect(store.get(atomMemberShapes).get("seed-e2")?.homogeneousOnly).toBe(true);
+    expect(store.get(atomMemberShapes).get("seed-e1")?.homogeneousOnly).toBe(false);
   });
 });
