@@ -52,11 +52,19 @@ export function caseNodes(
     return result;
   }
 
+  // Con el diafragma, una fuerza horizontal en cualquier nudo del piso es la
+  // misma (el motor las suma en el grado compartido): se escribe en el primero,
+  // el dueño del grado, para que el vector F del procedimiento muestre lo que
+  // de verdad entra. Sin esto, la ecuación global rotulaba con el nudo dueño una
+  // fuerza que no era solo suya.
+  const ownerOf = new Map(
+    levels.filter((l) => l.nodeIds.length > 1).flatMap((l) => l.nodeIds.map((id) => [id, l.nodeIds[0]] as const)),
+  );
   for (const load of nodalLoads) {
     if (load.loadCase !== caseId) continue;
     const node = byId.get(load.nodeId);
     if (!node) continue;
-    node.forceX += load.forceX;
+    byId.get(ownerOf.get(load.nodeId) ?? load.nodeId)!.forceX += load.forceX;
     node.forceZ += load.forceZ;
     node.momentR += load.moment;
   }

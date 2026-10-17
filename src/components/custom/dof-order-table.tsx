@@ -32,7 +32,13 @@ export function DofOrderTable({ dofOrder, nodesById, dofLabels }: DofOrderTableP
               return (
                 <TableRow key={entry.globalIndex}>
                   <TableCell>{entry.globalIndex}</TableCell>
-                  <TableCell>{node?.name ?? entry.nodeId}</TableCell>
+                  <TableCell>
+                    {node?.name ?? entry.nodeId}
+                    {/* Un grado de diafragma es de todo el piso: se rotula con el primer nudo y se dice cuál. */}
+                    {entry.diaphragmId && (
+                      <span className="text-muted-foreground"> — todo el {entry.diaphragmId.toLowerCase()}</span>
+                    )}
+                  </TableCell>
                   {dofLabels && <TableCell>{dofLabels[entry.localDof]}</TableCell>}
                   <TableCell>{entry.restrained ? "Sí" : "No"}</TableCell>
                   <TableCell>

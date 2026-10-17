@@ -22,9 +22,9 @@ import type { ElementRow } from "../../store/elements";
 import type { NodeRow } from "../../store/nodes";
 import { useFrame2DView } from "../../frame2d-view";
 
-type Quantity = keyof DiagramValues;
+export type Quantity = keyof DiagramValues;
 
-const QUANTITY: Record<Quantity, { title: string; side: "+y" | "-y"; rule: string }> = {
+export const QUANTITY: Record<Quantity, { title: string; side: "+y" | "-y"; rule: string }> = {
   N: { title: "Fuerza axial (N)", side: "+y", rule: "positiva en tracción" },
   V: {
     title: "Fuerza cortante (V)",
@@ -47,7 +47,7 @@ const QUANTITY: Record<Quantity, { title: string; side: "+y" | "-y"; rule: strin
  * las esquinas del pórtico, justo donde llegan los de la barra vecina: medido
  * en el ejemplo inicial, cuatro números de N se pisaban entre sí.
  */
-function curveOf(diagram: MemberDiagram, quantity: Quantity): MemberCurve {
+export function curveOf(diagram: MemberDiagram, quantity: Quantity): MemberCurve {
   const points = diagram.points.map((p) => ({ x: p.x, value: p[quantity] }));
   const max = Math.max(...points.map((p) => Math.abs(p.value)));
   if (points.every((p) => Math.abs(p.value - points[0].value) <= 1e-9 * (1 + max))) {

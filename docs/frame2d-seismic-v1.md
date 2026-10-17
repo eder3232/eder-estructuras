@@ -125,7 +125,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 3 | **`/frame2d` reutilizable**: hoy sus átomos son globales de módulo y leen su clave de `localStorage` al importarse. Hay que elegir entre una fábrica de stores con la clave como parámetro o un `Provider` de Jotai por página con la persistencia inyectada; se decide leyendo `state-pattern.md` y probando el más chico. `/frame2d` no cambia de comportamiento: sus tests siguen pasando sin tocarlos | **hecho** (ver abajo) |
 | 4 | **Store sísmico**: el caso en cada carga (`LoadRow.loadCase`) y en las fuerzas de nudo, los niveles derivados, los parámetros E.030, las combinaciones editables, una solución por caso, las combinaciones, la envolvente y las derivas. Tests del store | **hecho** (ver abajo) |
 | 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | **hecho** (ver abajo) |
-| 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | pendiente |
+| 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | **hecho** (ver abajo) |
 | 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | pendiente |
 | 8 | **Excel**, alcance tentativo, a confirmar al llegar: una hoja del sismo (V, αᵢ, Fᵢ como fórmulas vivas), una de la rigidez lateral (K_L con `MMULT`/`MINVERSE` desde K) y una de combinaciones (fuerzas de extremo por caso × factores) | pendiente |
 | 9 | Mirar la app de punta a punta, `pnpm build` y el cierre | pendiente |
@@ -240,3 +240,40 @@ En `src/app/frame2d-seismic/store/`:
   - Los campos de la E.030 no tienen nombre accesible: el `Label` lleva KaTeX y `FormulaInput` no acepta `aria-label`.
   - La fila de un nivel enciende solo su primer nudo: `useHighlightRows` con `kind: "node"` no recibe varios.
   - La tabla de cargas con la columna «Caso» pide scroll horizontal a 1080 px.
+
+### Paso 6: los resultados (2026-10-17) — hecho
+
+Cuatro secciones en la página, en el orden del curso:
+
+1. **Cada caso, por el método matricial** (`CaseProcedure`): `CaseSelector` y el `ErrorsPanel` y el `ResultsPanel` de `/frame2d` dentro de un `Frame2DViewProvider` con la vista del caso. Es el procedimiento entero, sin copiar nada. `ResultsPanel` aceptó un `title` opcional.
+2. **Rigidez lateral** (`LateralStiffness`): la deducción en TeX, K_aa, K_ab, K_bb, la corrección y K_L como matrices rotuladas (los grados de un piso, «N1 x»), y el control `K_L⁻¹·F` contra el análisis completo de CS. Explica por qué no da 12EI/h³ por columna.
+3. **Derivas** (`Drifts`): la tabla de la E.030 (hₑᵢ, δ elástico, × 0.75R, Δ, Δ/h, si cumple), qué entrepiso falla y qué pide la norma, y el período de Rayleigh contra h_n/C_T con lo que eso significa para C.
+4. **Envolvente** (`Envelope`): el dibujo de la envolvente (o de una combinación sola) en N, V o M sobre el pórtico, con `InternalForceDiagram` y **dos curvas por barra** (máximo y mínimo; donde tienen el mismo signo se ve la banda); la tabla del máximo y el mínimo de cada barra, con dónde y con qué combinación; y la envolvente de las reacciones, con la combinación de cada valor. `curveOf` y `QUANTITY` de `/frame2d` se exportaron para dibujar una combinación sola.
+
+Para que el procedimiento de `/frame2d` diga la verdad con el diafragma:
+
+- **Los ids de los diafragmas son el nombre del nivel** («Nivel 1»). La tabla de grados de libertad (genérica) agrega «— todo el nivel 1» al grado compartido.
+- **Una fuerza horizontal en un nudo del piso se escribe en el primero** (`caseNodes`): el motor las suma en el índice compartido, y la ecuación global rotulaba con el dueño una fuerza que no era solo suya.
+- **La sección de equilibrio genérica suma la columna «Diafragma»** cuando la hay, y un párrafo con el control de cada piso (Nivel 1 ≈ 0, Nivel 2 ≈ 0). Sin ella, la fila de un nudo del piso no se podía rehacer con los números de la pantalla. Los otros sistemas no la ven.
+
+**Lo que encontró mirar la app:**
+
+- Las matrices de 2×2 se estiraban a todo el ancho: ahora llevan `w-fit`.
+- «N1 x» se partía en dos renglones: ahora va con espacio duro.
+- **En la envolvente, los números se pisaban en todas las esquinas** (dos curvas por barra son el doble de números). Ahora cada curva rotula solo los puntos que llegan a la mitad de su máximo y del lado que le corresponde, M escribe una vez el valor repetido en un nudo, y un esfuerzo constante (N de una columna) va una vez a mitad de la barra: el −32.28 de una columna caía sobre el −13.56 de la de arriba. **Medido**: 0 superposiciones de texto en N, V, M de la envolvente y en M de una combinación.
+
+**Verificado a mano con los números de la pantalla:**
+
+- Equilibrio del caso CS: en v3, −1.7279 (columnas) + 3.4558 (carga) − 1.7279 (diafragma) = 0. Cada columna toma la mitad del corte: 3.8672 = 7.7344/2.
+- K_L₁₁ = K_aa₁₁ − corrección = 6.7178 − 1.0916 = 5.6262.
+- Reacciones: Rz máx = 1.4·16.5 + 1.7·5.4 = 32.28; Rz mín = 0.9·16.5 − 4.0727 = 10.7773 (con la reacción de CS).
+- Las derivas y Rayleigh, los del paso 4.
+- Cero `.katex-error` y la consola limpia.
+
+Tests: 2 más en `page-pieces.test.tsx` (el procedimiento con la vista del caso y los grados del piso rotulados; los números de la rigidez lateral, las derivas y la envolvente). 587 en total.
+
+**Sin hacer y anotado**:
+
+- La clasificación `3b + r − 3n` no se muestra en este módulo: con el diafragma la cuenta tendría que sumar las restricciones del piso, y la de `/frame2d` diría otra cosa.
+- El esquema del procedimiento de cada caso no dibuja el diafragma.
+- (La deformada de CS **sí** se miró: el pórtico se desplaza a la derecha, cada piso en bloque por el diafragma, y las reacciones dibujadas son las de la tabla de equilibrio.)

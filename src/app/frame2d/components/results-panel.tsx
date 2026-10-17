@@ -31,7 +31,10 @@ import { useFrame2DView } from "../frame2d-view";
  * vive acá porque la sección nunca desaparece, y los controles de al lado
  * dependen de que haya números.
  */
-export function ResultsPanel() {
+export function ResultsPanel({ title = "Resultados" }: {
+  /** `frame2d-seismic` muestra un panel por caso, cada uno con su título. */
+  title?: string;
+} = {}) {
   const { atomResults, atomElements } = useFrame2DView();
   const [results] = useAtom(atomResults);
   const [elements] = useAtom(atomElements);
@@ -39,7 +42,7 @@ export function ResultsPanel() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Resultados</h2>
+        <h2 className="text-lg font-semibold">{title}</h2>
         {results.status === "ok" && (
           <div className="flex items-center gap-4">
             <CompactNumbersControl />

@@ -113,6 +113,9 @@ export function EquilibriumSection({
     equilibrium.nodes.reduce((total, node) => total.map((value, i) => value + pick(node)[i]), zeros);
   const appliedTotal = sum((n) => n.applied);
   const reactionTotal = sum((n) => n.reaction);
+  // Solo `frame2d-seismic` tiene diafragmas: los otros sistemas no ven la columna.
+  const withDiaphragm = equilibrium.diaphragms.length > 0;
+  const diaphragmTotal = sum((n) => n.diaphragm ?? zeros);
 
   /**
    * La celda del residuo dice **si cerró**, no cuánto dio: con 4 decimales
@@ -146,7 +149,13 @@ export function EquilibriumSection({
       </TableCell>
     ));
 
-  const groups = [`${capitalized(vocabulary.many)} que llegan`, "Carga aplicada", "Reacción", "Suma"];
+  const groups = [
+    `${capitalized(vocabulary.many)} que llegan`,
+    "Carga aplicada",
+    "Reacción",
+    ...(withDiaphragm ? ["Diafragma"] : []),
+    "Suma",
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -196,6 +205,7 @@ export function EquilibriumSection({
                 {cells(node.fromElements)}
                 {cells(node.applied)}
                 {cells(node.reaction)}
+                {withDiaphragm && cells(node.diaphragm ?? zeros)}
                 {cells(node.residual, residualCell)}
               </TableRow>
             ))}
@@ -211,11 +221,29 @@ export function EquilibriumSection({
               </TableCell>
               {!structureTotal && totalCells(appliedTotal)}
               {!structureTotal && totalCells(reactionTotal)}
+              {withDiaphragm && totalCells(diaphragmTotal, residualCell)}
               {totalCells(equilibrium.global, residualCell)}
             </TableRow>
           </TableBody>
         </Table>
       </div>
+
+      {withDiaphragm && (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">La columna del diafragma</span> es la fuerza que el piso le
+          hace a cada uno de sus nudos para que se muevan juntos: no sale de ninguna {vocabulary.one}, así que se
+          deduce —es lo que le falta al nudo para estar en equilibrio— y{" "}
+          <span className="font-medium text-foreground">lo que se controla es que sume cero en cada piso</span>, porque
+          el diafragma es interno a la estructura:{" "}
+          {equilibrium.diaphragms.map((d, i) => (
+            <span key={d.id}>
+              {i > 0 && ", "}
+              {d.id} {residualCell(d.residual)}
+            </span>
+          ))}
+          .
+        </p>
+      )}
 
       {structureTotal ? (
         <p className="text-sm text-muted-foreground">{structureTotal.explanation}</p>

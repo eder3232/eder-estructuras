@@ -8,8 +8,12 @@ import { HighlightProvider } from "@/components/custom/highlight";
 import { LoadTable } from "@/app/frame2d/components/load-table";
 import { NodeTable } from "@/app/frame2d/components/node-table";
 import { createSeismicStore } from "../store/persistence";
+import { CaseProcedure } from "./case-procedure";
 import { CaseSchema } from "./case-schema";
 import { GRAVITY_CASES } from "./cases";
+import { Drifts } from "./drifts";
+import { Envelope } from "./envelope";
+import { LateralStiffness } from "./lateral-stiffness";
 import { LevelsTable } from "./levels-table";
 import { SeismicSteps } from "./seismic-params";
 
@@ -52,6 +56,34 @@ describe("la página sísmica", () => {
     expect(headers).not.toContain("Desplazamiento");
     expect(headers).toContain("Caso");
     expect(screen.getByRole("combobox", { name: "Caso de la carga c3" }).textContent).toContain("CV");
+  });
+
+  it("el procedimiento es el de /frame2d con la vista del caso, y rotula el grado del piso", () => {
+    renderWithStore(<CaseProcedure />);
+    expect(screen.getByRole("heading", { name: "Procedimiento del caso CS (sismo)" })).toBeTruthy();
+    // La sección de grados de libertad está abierta por defecto.
+    expect(screen.getAllByText(/todo el nivel 1/)).toHaveLength(1);
+    expect(screen.getAllByText(/todo el nivel 2/)).toHaveLength(1);
+  });
+
+  it("rigidez lateral, derivas y envolvente con los números medidos del ejemplo", () => {
+    const { container } = renderWithStore(
+      <>
+        <LateralStiffness />
+        <Drifts />
+        <Envelope />
+      </>,
+    );
+    const text = container.textContent ?? "";
+    // K_L (×10³) y el primer entrepiso que no pasa: 0.0073 > 0.007.
+    expect(text).toContain("5.6262");
+    expect(text).toContain("0.0073");
+    expect(text).toContain("Nivel 1 no cumple");
+    expect(text).toContain("0.3690");
+    // El máximo de M de la viga baja lo da la de gravedad; la reacción vertical máxima, también.
+    expect(text).toContain("13.3049");
+    expect(text).toContain("32.2800");
+    expect(container.querySelectorAll(".katex-error")).toHaveLength(0);
   });
 
   it("los niveles y el cortante salen con los números del ejemplo", () => {

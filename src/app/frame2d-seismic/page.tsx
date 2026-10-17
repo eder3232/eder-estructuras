@@ -10,9 +10,13 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { ElementTable } from "@/app/frame2d/components/element-table";
 import { LoadTable } from "@/app/frame2d/components/load-table";
 import { NodeTable } from "@/app/frame2d/components/node-table";
+import { CaseProcedure } from "./components/case-procedure";
 import { CaseSchema } from "./components/case-schema";
 import { GRAVITY_CASES } from "./components/cases";
 import { CombinationsTable } from "./components/combinations-table";
+import { Drifts } from "./components/drifts";
+import { Envelope } from "./components/envelope";
+import { LateralStiffness } from "./components/lateral-stiffness";
 import { LevelsTable } from "./components/levels-table";
 import { ModelPersistence, ResetModelButton } from "./components/model-persistence";
 import { NodalLoadTable } from "./components/nodal-load-table";
@@ -114,6 +118,29 @@ function SeismicPage() {
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Combinaciones de carga</h2>
           {hydrated ? <CombinationsTable /> : <Reserved className="h-80 w-full" />}
+        </div>
+
+        {/* Los resultados, en el orden del curso: cada caso por el método
+            matricial, la rigidez lateral y las derivas, y al final lo que se
+            diseña. */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">1. Cada caso, por el método matricial</h2>
+          {hydrated ? <CaseProcedure /> : <Reserved className="h-96 w-full" />}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">2. Rigidez lateral por condensación estática</h2>
+          {hydrated ? <LateralStiffness /> : <Reserved className="h-96 w-full" />}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">3. Desplazamientos laterales y derivas (E.030, 50 y 51)</h2>
+          {hydrated ? <Drifts /> : <Reserved className="h-64 w-full" />}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">4. Combinaciones y envolvente de diseño</h2>
+          {hydrated ? <Envelope /> : <Reserved className="h-[36rem] w-full" />}
         </div>
       </div>
     </HighlightProvider>

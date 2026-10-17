@@ -57,11 +57,15 @@ export function deriveLevels(nodes: NodeRow[]): Level[] {
 
 export const atomLevels = atom((get) => deriveLevels(get(atomNodes)));
 
-/** Los diafragmas que van al motor: solo los niveles con más de un nudo. */
+/**
+ * Los diafragmas que van al motor: solo los niveles con más de un nudo. **El
+ * id es el nombre del nivel** («Nivel 1»): el procedimiento de `/frame2d` lo
+ * muestra tal cual en la tabla de grados de libertad y en el equilibrio.
+ */
 export const atomDiaphragms = atom((get) =>
   get(atomLevels)
     .filter((level) => level.nodeIds.length > 1)
-    .map((level) => ({ id: level.id, nodeIds: level.nodeIds })),
+    .map((level) => ({ id: level.name, nodeIds: level.nodeIds })),
 );
 
 export type SeismicForces =
