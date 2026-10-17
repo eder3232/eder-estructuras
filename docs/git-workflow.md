@@ -1,24 +1,46 @@
 # Flujo de trabajo con Git
 
-Este documento define cómo se versiona este proyecto. Aplica desde el primer commit y se actualiza el día que se marque `v1.0.0` como primera versión de producción.
+Este documento define cómo se versiona este proyecto.
 
-## Fase actual: desarrollo pre-producción (commits directos a `main`)
+## Fase actual: en producción, todo pasa por un pull request
 
-Mientras no exista un tag `v1.0.0`, el trabajo se hace **directamente sobre `main`**, sin ramas de feature ni pull requests. El objetivo de esta fase es agilidad: el proyecto tiene un solo desarrollador y aún no hay nada corriendo en producción que se pueda romper.
+Desde el **2026-10-17** la app está publicada en **https://tesis.eder3232.com**, y cada push a `main` despliega a producción (Vercel, proyecto `eder-estructuras`, conectado a [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras)). Por eso **ya no se hace push directo a `main`**, aunque la v1 todavía no esté tageada: el disparador del cambio de flujo iba a ser el tag `v1.0.0`, y resultó ser estar publicado.
 
-Esto no significa "sin disciplina". Las reglas mínimas que sí aplican desde ya:
+Hasta el 2026-10-17 el trabajo fue **directo sobre `main`** (pre-producción, un solo desarrollador, nada que romper). Ese historial queda como está.
 
-- **Commits atómicos**: cada commit representa un cambio completo y coherente (una funcionalidad, un fix, una refactorización). Evitar commits gigantes que mezclan varias cosas no relacionadas.
-- **`main` debe poder ejecutarse** en todo momento razonable. Si un cambio grande necesita varios días y deja el proyecto en un estado roto, usar una rama corta de trabajo (ver más abajo) en vez de forzarlo en `main`.
-- **No commitear secretos** (`.env`, credenciales, tokens). Verificar `git status` antes de un `git add` amplio.
+### El ciclo de un cambio
 
-### Excepción: ramas cortas para cambios grandes
+1. **Una rama desde `main`**, con prefijo según el tipo de cambio (el mismo de Conventional Commits, abajo):
+   - `feat/nombre-corto` — funcionalidad nueva
+   - `fix/nombre-corto` — corrección de un bug
+   - `docs/nombre-corto` — solo documentación
+   - `refactor/`, `test/`, `chore/` — según corresponda
+2. **Commits atómicos en la rama**, uno por paso, como se hizo siempre: un paso del cierre de un sistema es un commit.
+3. **Push de la rama y pull request a `main`** (`gh pr create`), incluso trabajando solo: el PR deja escrito por qué se hizo el cambio y es el punto de revisión propia.
+4. **Mirar el preview**: Vercel despliega cada rama con su propia URL y la publica en el PR. Se verifica ahí —tests, y la app mirada (`docs/estado-actual.md`, sección 6)— antes de integrar. El check **«Vercel»** del PR tiene que estar en verde: si el build falla, el PR no se puede mergear.
+5. **Merge por rebase** (`gh pr merge --rebase --delete-branch`): los commits de la rama entran a `main` uno por uno y en línea, sin commit de merge. No se usa *squash* porque colapsaría los pasos en un solo commit, y el historial del proyecto se lee justamente por pasos.
+6. **El merge despliega a producción.** Después, mirar https://tesis.eder3232.com: el «Ready» de Vercel no dice que la app se vea bien.
 
-Aunque se trabaje en `main`, es válido crear una rama temporal para cambios grandes o riesgosos que tomarán más de una sesión de trabajo (ej. una migración de estructura de carpetas, un cambio de librería de estilos). Esto no contradice la agilidad, solo evita dejar `main` en un estado roto por varios días. Al terminar, se mergea a `main` y se borra la rama.
+### Lo que impone GitHub
+
+`main` está **protegida** (branch protection):
+
+- no se puede hacer push directo: todo entra por PR;
+- el check «Vercel» tiene que pasar antes del merge;
+- sin force push ni borrado de la rama;
+- **aplica también a los administradores** (`enforce_admins`): un push directo a `main` lo rechaza GitHub, no la memoria de nadie.
+
+No se exigen aprobaciones (0 reviews): con un solo desarrollador, nadie podría aprobar.
+
+### Reglas que siguen igual
+
+- **Commits atómicos**: cada commit es un cambio completo y coherente.
+- **`main` siempre desplegable**: lo que entra a `main` sale a producción en minutos.
+- **No commitear secretos** (`.env`, credenciales, tokens). El repo es **público**: verificar `git status` antes de un `git add` amplio. `.env*` y `.vercel` están en el `.gitignore`.
 
 ## Mensajes de commit: Conventional Commits
 
-Se usa el estándar [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/). Formato:
+Se usa el estándar [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/), en español. Formato:
 
 ```
 <tipo>(<alcance opcional>): <descripción corta en imperativo>
@@ -41,12 +63,13 @@ Tipos principales:
 Ejemplos:
 
 ```
-feat(auth): agregar login con Google
-fix(dashboard): corregir cálculo de totales en resumen mensual
-refactor(api): extraer lógica de validación a helpers
-docs: agregar guía de flujo de git
+feat(frame2d): diagramas N, V y M
+fix(armaduras-2d): la tabla rotulada K_ff⁻¹ mostraba K_ff
+docs: el despliegue en Vercel y la home
 chore: actualizar dependencias de shadcn
 ```
+
+El título del PR sigue el mismo formato.
 
 **Por qué**: un historial consistente permite generar changelog automáticamente más adelante y hace que `git log` sea útil para entender la evolución del proyecto, no solo para revertir cambios.
 
@@ -54,34 +77,21 @@ chore: actualizar dependencias de shadcn
 
 Se usa [Semantic Versioning](https://semver.org/lang/es/) (`MAJOR.MINOR.PATCH`):
 
-- **`0.x.y`**: todo lo anterior a producción. Se puede tagear hitos relevantes (ej. `v0.1.0` al terminar la base del layout, `v0.2.0` al terminar una sección importante). No es obligatorio tagear cada commit, solo hitos con sentido.
-- **`v1.0.0`**: primera versión de producción. Este tag es el punto de quiebre que activa el cambio de flujo descrito abajo.
-- **`1.x.y`** en adelante: `MINOR` para funcionalidad nueva compatible, `PATCH` para fixes, `MAJOR` para cambios que rompen compatibilidad (poco común en una app web propia, más relevante si en algún momento se expone una API pública).
+- **`0.x.y`**: mientras la v1 no esté completa (quedan las fases 6 a 8 del roadmap). Se puede tagear hitos relevantes; no es obligatorio tagear cada cambio.
+- **`v1.0.0`**: cuando el usuario dé por completa la v1. Ya no cambia el flujo (eso pasó al publicar), solo marca la versión.
+- **`1.x.y`** en adelante: `MINOR` para funcionalidad nueva compatible, `PATCH` para fixes, `MAJOR` para cambios que rompen compatibilidad.
 
-Crear un tag:
+Un tag se crea sobre `main` ya mergeado:
 
 ```bash
-git tag -a v0.1.0 -m "Base de layout y configuración de shadcn"
+git switch main && git pull
+git tag -a v0.1.0 -m "Los cinco sistemas cerrados para la v1"
 git push origin v0.1.0
 ```
 
-## A partir de `v1.0.0`: cambio de flujo
-
-En cuanto se taggea `v1.0.0`, el proyecto pasa a considerarse "en producción" y el flujo cambia:
-
-1. **`main` se protege** (branch protection en GitHub: no permitir push directo, requerir pull request).
-2. **Todo cambio pasa por una rama** con prefijo según su naturaleza:
-   - `feat/nombre-corto` — nueva funcionalidad
-   - `fix/nombre-corto` — corrección de bug
-   - `chore/nombre-corto` — mantenimiento
-3. **Pull request obligatorio** hacia `main`, incluso trabajando solo — sirve como punto de revisión propia y deja registro de por qué se hizo el cambio.
-4. **Merge y borrado de rama** al integrar, para mantener el repositorio limpio.
-
-Este documento se actualiza en ese momento para reflejar el flujo real de ramas y PRs.
-
 ## Resumen rápido
 
-| Fase                  | Dónde se trabaja        | Commits          | Tags                    |
-| ---------------------- | ------------------------ | ----------------- | ------------------------ |
-| Pre-producción (ahora) | `main` directo            | Conventional Commits | `v0.x.y` en hitos       |
-| Producción (`v1.0.0`+) | Ramas `feat/`, `fix/`, `chore/` + PR | Conventional Commits | `v1.x.y` según SemVer |
+| Fase | Dónde se trabaja | Cómo entra a `main` | Tags |
+| --- | --- | --- | --- |
+| Pre-producción (hasta el 2026-10-17) | `main` directo | push | — |
+| **En producción (ahora)** | ramas `feat/`, `fix/`, `docs/`… | PR con preview de Vercel en verde, merge por rebase | `v0.x.y` en hitos, `v1.0.0` al completar la v1 |

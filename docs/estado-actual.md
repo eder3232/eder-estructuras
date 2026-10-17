@@ -131,7 +131,7 @@ pnpm lint          # 2 errores preexistentes en ui/ (carousel.tsx, use-mobile.ts
 
 **`pnpm build` compila limpio** (2026-10-17, cierre de `/frame2d-seismic`): TypeScript sin errores y las ocho rutas generadas como estáticas, `/frame2d-seismic` incluida. Hay que correrlo con el servidor de desarrollo apagado. La revisión final de `/frame2d-seismic` se hizo **sobre la build de producción** (`pnpm start`), en claro y en oscuro.
 
-**Desplegar en Vercel**: `git push` a `main` (o, a mano, `vercel deploy --prod --yes`). El build de Vercel es el mismo `pnpm build` y lista las ocho rutas como estáticas. Trampa que ya pasó: un proyecto creado con `vercel project add` nace con el preset **«Other»**, publica `public/` y **todas las rutas dan 404 aunque el build termine bien**. Se arregla con `vercel api /v9/projects/<id> -X PATCH -f framework=nextjs` y otro deploy. Después de desplegar, pedir las rutas y mirar la home: el «Ready» del CLI no dice que la app se vea.
+**Desplegar en Vercel**: mergear un PR a `main` (protegida: no acepta push directo, ver [`git-workflow.md`](./git-workflow.md)). Cada rama tiene su preview, publicado en el PR. El build de Vercel es el mismo `pnpm build` y lista las ocho rutas como estáticas. Trampa que ya pasó: un proyecto creado con `vercel project add` nace con el preset **«Other»**, publica `public/` y **todas las rutas dan 404 aunque el build termine bien**. Se arregla con `vercel api /v9/projects/<id> -X PATCH -f framework=nextjs` y otro deploy. Después de desplegar, pedir las rutas y mirar la home: el «Ready» del CLI no dice que la app se vea.
 
 **Mirar la app.** El proyecto tiene tres servidores MCP configurados en local (`claude mcp list`): **`chrome-devtools`** (el que se usa: abre la app, hace click y hover de verdad, mide con `evaluate_script`, captura), `playwright` (deja una carpeta `.playwright-mcp/` en la raíz con cada snapshot: borrarla o ignorarla) y `context7` (documentación de librerías; para Next.js manda igual `node_modules/next/dist/docs/`, ver `AGENTS.md`). La receta de Chrome headless por línea de comandos sigue en el roadmap (sección 5) y la de WebGL en headless, en [`armaduras-3d-v1.md`](./armaduras-3d-v1.md) («Paso 0»).
 
@@ -176,7 +176,7 @@ Recetas que ya funcionaron con `chrome-devtools`:
 | tocar `frame2d-seismic`, el diafragma rígido o algo de la E.030/E.060 | [`frame2d-seismic-v1.md`](./frame2d-seismic-v1.md): la sección 3 tiene los artículos con lo que dicen y cómo bajar y leer los PDF |
 | tocar la exportación a Excel | [`excel-export.md`](./excel-export.md) |
 | tocar componentes de `ui/` | [`components.md`](./components.md): `ui/` es intocable, se forkea a `ui-custom/` |
-| hacer commits | [`git-workflow.md`](./git-workflow.md): commits directos a `main` hasta `v1.0.0`, Conventional Commits |
+| hacer commits | [`git-workflow.md`](./git-workflow.md): **rama + PR a `main`, nunca push directo** (está en producción); merge por rebase; Conventional Commits |
 | decidir algo que el original tenía | [`pendientes-comparacion.md`](./pendientes-comparacion.md) |
 | tocar APIs de Next.js | `node_modules/next/dist/docs/` (ver `AGENTS.md`: esta versión tiene cambios) |
 
@@ -184,7 +184,8 @@ Recetas que ya funcionaron con `chrome-devtools`:
 
 | Commit | Qué |
 |---|---|
-| (este) | docs: repo en GitHub, deploy desde `main` y tesis.eder3232.com |
+| (este, primer PR) | docs: el flujo pasa a ramas y PR con `main` protegida |
+| `5cc67f8` | docs: repo en GitHub, deploy desde `main` y tesis.eder3232.com |
 | `52b0fac` | docs: el despliegue en Vercel y la home |
 | `837ee6f` | la home: el método, los sistemas con fotos y lo que tienen todos |
 | `cdacce5` | docs: los pendientes juntos en la sección 3 y el README al día |
