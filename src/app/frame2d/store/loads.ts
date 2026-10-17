@@ -40,6 +40,13 @@ export interface LoadRow {
   b: number;
   /** Intensidad por unidad de proyección; solo distribuidas en dirección global. */
   projected: boolean;
+  /**
+   * El caso de carga: **solo lo usa `frame2d-seismic`** (los casos son
+   * exclusivos de ese módulo, decisión del 2026-10-17). `/frame2d` no lo
+   * mira ni lo guarda. Sin valor es carga muerta. Al agregar una fila se
+   * copia de la de arriba, como el resto.
+   */
+  loadCase?: "CM" | "CV";
 }
 
 // Exportado solo para la persistencia, que lo pisa al restaurar.
@@ -104,7 +111,8 @@ type LoadUpdate =
   | { id: string; field: "kind"; value: LoadKind }
   | { id: string; field: "direction"; value: LoadDirection }
   | { id: string; field: "q1" | "q2" | "a" | "b"; value: number }
-  | { id: string; field: "wholeBar" | "projected"; value: boolean };
+  | { id: string; field: "wholeBar" | "projected"; value: boolean }
+  | { id: string; field: "loadCase"; value: "CM" | "CV" };
 
 export const atomUpdateLoadField = atom(null, (get, set, input: LoadUpdate) => {
   set(

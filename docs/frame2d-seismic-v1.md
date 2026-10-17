@@ -123,7 +123,7 @@ Un commit por paso, verificando cada uno con tests **y mirando la app**, como en
 | 1 | **Motor: diafragma rígido** en `System` (índices compartidos, fuerzas sumadas, validación, equilibrio por nivel). Tests: un pórtico de un vano con dos nudos acoplados tiene los dos con el mismo `u_x`, el resultado coincide con el de vigas de área muy grande, y los cuatro sistemas sin diafragma no cambian (los 518 tests) | **hecho** (ver abajo) |
 | 2 | **Motor: `seismic/`**: `condense()` y la rigidez lateral; `e030.ts` (C(T) con la regla 18.3, k, αᵢ, V con C/R ≥ 0.11, el V para derivas sin el mínimo, T por C_T y por Rayleigh); `combinations.ts` (combinación lineal de resultados y envolvente sobre estaciones comunes); derivas. Tests contra valores conocidos: portal biempotrado con viga rígida, `K_L = 24EI/h³`; edificio de corte de 2 y 3 pisos; un ejemplo de la E.030 hecho a mano | **hecho** (ver abajo) |
 | 3 | **`/frame2d` reutilizable**: hoy sus átomos son globales de módulo y leen su clave de `localStorage` al importarse. Hay que elegir entre una fábrica de stores con la clave como parámetro o un `Provider` de Jotai por página con la persistencia inyectada; se decide leyendo `state-pattern.md` y probando el más chico. `/frame2d` no cambia de comportamiento: sus tests siguen pasando sin tocarlos | **hecho** (ver abajo) |
-| 4 | **Store sísmico**: el caso en cada carga (`LoadRow.loadCase`) y en las fuerzas de nudo, los niveles derivados, los parámetros E.030, las combinaciones editables, una solución por caso, las combinaciones, la envolvente y las derivas. Tests del store | pendiente |
+| 4 | **Store sísmico**: el caso en cada carga (`LoadRow.loadCase`) y en las fuerzas de nudo, los niveles derivados, los parámetros E.030, las combinaciones editables, una solución por caso, las combinaciones, la envolvente y las derivas. Tests del store | **hecho** (ver abajo) |
 | 5 | **Página y tablas**: parámetros E.030 con el cálculo paso a paso en KaTeX (C, k, V, αᵢ, Fᵢ, y los dos V si el mínimo manda), tabla de niveles (hᵢ, Pᵢ, Fᵢ), tabla de combinaciones y el caso en las tablas de cargas | pendiente |
 | 6 | **Resultados**: el procedimiento por caso (reusa el panel de `/frame2d`), la condensación paso a paso (K_aa, K_ab, K_bb, K_L), el control δ de `K_L` contra δ del análisis completo, la tabla de derivas con Δᵢ/hᵢ contra el límite, y la envolvente de N/V/M y de las reacciones dibujada (máximo y mínimo) | pendiente |
 | 7 | **Ejemplos y persistencia**: tres ejemplos con lecciones **medidas antes de escribirlas** (por ejemplo, un pórtico de 2 pisos y 1 vano, uno de 3 pisos y 2 vanos, y uno donde manda C/R ≥ 0.11) | pendiente |
@@ -164,3 +164,46 @@ Cuatro módulos puros en `src/lib/engine/seismic/`, exportados desde `@/lib/engi
 - **El cálculo salió de los átomos** (`store/results.ts`): `frame2DMemberLoads`, `solveFrame2D`, `frame2DMemberDiagrams` y `frame2DMemberShapes` son funciones puras. La clasificación es `frame2DClassification`. Los átomos de `/frame2d` son ahora una línea cada uno. **`solveFrame2D` recibe `diaphragms`**: un diafragma inválido es un error de nudo, como los demás.
 - Tests: 4 nuevos (`frame2d-view.test.tsx`: stores aislados; el esquema sin proveedor y con uno que le cambia las barras; y el panel de errores mostrando el error del caso y no el del modelo). **Los 561 anteriores pasan sin tocarlos.** Se miró `/frame2d` con todas las secciones abiertas: las tres barras, 133 fórmulas sin `.katex-error`, el equilibrio cierra y la consola está limpia.
 - **Para el paso 4**: con diafragmas, la clasificación `g = 3b + r − 3n` no cuenta lo que fija el diafragma (cada nudo extra del grupo es una ecuación de restricción). Hay que decidir si se ajusta la cuenta o si se dice en la página.
+
+### Paso 4: el store sísmico (2026-10-17) — hecho
+
+En `src/app/frame2d-seismic/store/`:
+
+- **`model.ts`**: lo que `/frame2d` no tiene.
+  - Las **cargas en nudos por caso** (`NodalLoadRow`). Las fuerzas y los desplazamientos de `NodeRow` no se usan en este módulo.
+  - Los **parámetros E.030** (`SeismicParams`: Z, U, S, T_P, T_L, R₀, Iₐ, Iₚ, T por C_T o escrito, Fᵢ calculadas o escritas, regular o no, el límite de deriva y g).
+  - Los **pesos y fuerzas por nivel**, de abajo hacia arriba.
+  - Las **combinaciones editables**, que arrancan en las cinco de la E.060.
+  - El ejemplo inicial: dos pisos (3.5 y 3 m) y un vano de 6 m, en t y m.
+  - **Las cargas en barras son las de `/frame2d` con `LoadRow.loadCase`** («CM» | «CV», opcional, sin valor es muerta). `/frame2d` no lo mira; al agregar una fila se copia de la de arriba.
+- **`seismic.ts`**:
+  - `deriveLevels`: los niveles salen de las cotas, y son los nudos con la x libre por encima de la base (la cota más baja).
+  - `atomDiaphragms`: un diafragma por nivel de dos o más nudos.
+  - `seismicForces`: T, el C de la tabla y el del estático, V, Fᵢ y `driftScale` = V_derivas/V.
+- **`cases.ts`**: **una `Frame2DView` por caso** (`caseViews.CM/CV/CS`), con los nudos cargados con lo de ese caso, las cargas en barras de ese caso, el FEM a mano apagado y los diafragmas. En CS, cada Fᵢ va al primer nudo de su nivel. Errores propios del caso: una carga en un nudo que no existe, o las fuerzas sísmicas inválidas (eso es error de CS solamente, y CM y CV siguen).
+- **`analysis.ts`**:
+  - `atomLateralAnalysis`: la condensación de `K_ff` del caso CS, el control `K_L⁻¹·F` contra el análisis completo, Rayleigh y las derivas con `driftScale`.
+  - `atomCombinationResults`: desplazamientos, reacciones, fuerzas de extremo y diagramas por combinación, más la envolvente por barra y la de las reacciones por apoyo.
+  - Las dos piden los tres casos resueltos.
+- **`persistence.ts`**: la clave `eder-estructuras:frame2d-seismic`. La validación **reusa la de `/frame2d`** para el pórtico y agrega el caso de cada carga y lo propio del sismo. **`createSeismicStore()`** crea el store de Jotai de la página y le restaura lo guardado o el ejemplo, cosa obligatoria porque los átomos del pórtico traen el modelo de `/frame2d`.
+- Tests (17, `store.test.ts`):
+  - El aislamiento entre stores.
+  - Los niveles.
+  - El ejemplo hecho a mano: V = 0.45·2.5·1.1/8·50 = 7.734 t, F = 3.456 y 4.279 t.
+  - El mínimo de C/R y las derivas.
+  - Las Fᵢ a mano.
+  - El error de CS que no tumba CM y CV.
+  - Las reacciones verticales de cada caso igualan su carga.
+  - En CS, el corte basal es −V y los nudos del piso se mueven juntos.
+  - Cambiar el caso de una carga, y las cargas en nudos por caso.
+  - `K_L⁻¹·F` contra el análisis completo.
+  - Las derivas con 0.75R.
+  - Las combinaciones como suma de los casos.
+  - La envolvente.
+  - La persistencia.
+- **Lo que dice el ejemplo** (medido, para usarlo en la página y en el paso 7):
+  - **El primer entrepiso no pasa la deriva**: Δ/h = 0.0073 > 0.007. El segundo da 0.0053.
+  - **Rayleigh da T = 0.369 s, el doble que h_n/C_T = 0.186 s** (el pórtico desnudo es más flexible que el edificio que supone la fórmula empírica). Con T_P = 0.6, C queda en 2.5 igual.
+  - La envolvente de M en las columnas es antisimétrica entre e1 y e2, como corresponde a un pórtico simétrico con sismo en los dos sentidos.
+  - K_L = [[5626, −2969], [−2969, 2451]] t/m.
+- **Pendiente para el paso 6**: la clasificación por caso usa `3b + r − 3n` sin contar el diafragma. Se dice en la página.
