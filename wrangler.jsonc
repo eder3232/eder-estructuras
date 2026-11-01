@@ -6,5 +6,7 @@
   "assets": {
     "directory": "./out",
     "not_found_handling": "404-page"
-  }
+  },
+  // Cada rama y PR tiene su preview (`wrangler preview`, lo corre Workers Builds); vacío hereda lo de arriba.
+  "previews": {}
 }
