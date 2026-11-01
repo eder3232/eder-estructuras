@@ -4,7 +4,7 @@ Este documento define cómo se versiona este proyecto.
 
 ## Fase actual: en producción, todo pasa por un pull request
 
-Desde el **2026-10-17** la app está publicada en **https://tesis.eder3232.com**, y cada push a `main` despliega a producción (Vercel, proyecto `eder-estructuras`, conectado a [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras)). Por eso **ya no se hace push directo a `main`**, aunque la v1 todavía no esté tageada: el disparador del cambio de flujo iba a ser el tag `v1.0.0`, y resultó ser estar publicado.
+Desde el **2026-10-17** la app está publicada en **https://tesis.eder3232.com**, y cada push a `main` despliega a producción. Desde el **2026-11-01** la sirve **Cloudflare**: el Worker `eder-estructuras` (solo archivos estáticos, `wrangler.jsonc`), conectado a [`eder3232/eder-estructuras`](https://github.com/eder3232/eder-estructuras) con Workers Builds. Antes la servía Vercel. Por eso **ya no se hace push directo a `main`**, aunque la v1 todavía no esté tageada: el disparador del cambio de flujo iba a ser el tag `v1.0.0`, y resultó ser estar publicado.
 
 Hasta el 2026-10-17 el trabajo fue **directo sobre `main`** (pre-producción, un solo desarrollador, nada que romper). Ese historial queda como está.
 
@@ -17,16 +17,16 @@ Hasta el 2026-10-17 el trabajo fue **directo sobre `main`** (pre-producción, un
    - `refactor/`, `test/`, `chore/` — según corresponda
 2. **Commits atómicos en la rama**, uno por paso, como se hizo siempre: un paso del cierre de un sistema es un commit.
 3. **Push de la rama y pull request a `main`** (`gh pr create`), incluso trabajando solo: el PR deja escrito por qué se hizo el cambio y es el punto de revisión propia.
-4. **Mirar el preview**: Vercel despliega cada rama con su propia URL y la publica en el PR. Se verifica ahí —tests, y la app mirada (`docs/estado-actual.md`, sección 6)— antes de integrar. El check **«Vercel»** del PR tiene que estar en verde: si el build falla, el PR no se puede mergear.
+4. **Mirar el preview**: Workers Builds construye cada rama, la publica en una URL de preview (`*.eder3232.workers.dev`) y la deja en el PR. Se verifica ahí —tests, y la app mirada (`docs/estado-actual.md`, sección 6)— antes de integrar. El check de **Workers Builds** del PR tiene que estar en verde: si el build falla, el PR no se puede mergear.
 5. **Merge por rebase** (`gh pr merge --rebase --delete-branch`): los commits de la rama entran a `main` uno por uno y en línea, sin commit de merge. No se usa *squash* porque colapsaría los pasos en un solo commit, y el historial del proyecto se lee justamente por pasos.
-6. **El merge despliega a producción.** Después, mirar https://tesis.eder3232.com: el «Ready» de Vercel no dice que la app se vea bien.
+6. **El merge despliega a producción.** Después, mirar https://tesis.eder3232.com: que el build termine bien no dice que la app se vea bien.
 
 ### Lo que impone GitHub
 
 `main` está **protegida** (branch protection):
 
 - no se puede hacer push directo: todo entra por PR;
-- el check «Vercel» tiene que pasar antes del merge;
+- el check de Workers Builds tiene que pasar antes del merge (hasta el 2026-11-01 era el check «Vercel»);
 - sin force push ni borrado de la rama;
 - historial lineal: el repo **solo permite merge por rebase** (squash y merge commit están apagados) y borra la rama al mergear;
 - **aplica también a los administradores** (`enforce_admins`): un push directo a `main` lo rechaza GitHub, no la memoria de nadie.
@@ -37,7 +37,7 @@ No se exigen aprobaciones (0 reviews): con un solo desarrollador, nadie podría 
 
 - **Commits atómicos**: cada commit es un cambio completo y coherente.
 - **`main` siempre desplegable**: lo que entra a `main` sale a producción en minutos.
-- **No commitear secretos** (`.env`, credenciales, tokens). El repo es **público**: verificar `git status` antes de un `git add` amplio. `.env*` y `.vercel` están en el `.gitignore`.
+- **No commitear secretos** (`.env`, credenciales, tokens). El repo es **público**: verificar `git status` antes de un `git add` amplio. `.env*`, `.vercel` y `.wrangler` están en el `.gitignore`.
 
 ## Mensajes de commit: Conventional Commits
 
@@ -95,4 +95,4 @@ git push origin v0.1.0
 | Fase | Dónde se trabaja | Cómo entra a `main` | Tags |
 | --- | --- | --- | --- |
 | Pre-producción (hasta el 2026-10-17) | `main` directo | push | — |
-| **En producción (ahora)** | ramas `feat/`, `fix/`, `docs/`… | PR con preview de Vercel en verde, merge por rebase | `v0.x.y` en hitos, `v1.0.0` al completar la v1 |
+| **En producción (ahora)** | ramas `feat/`, `fix/`, `docs/`… | PR con preview de Workers Builds en verde, merge por rebase | `v0.x.y` en hitos, `v1.0.0` al completar la v1 |
