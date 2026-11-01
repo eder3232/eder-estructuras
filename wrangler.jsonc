@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "eder-estructuras",
+  "compatibility_date": "2026-11-01",
+  // Solo archivos estáticos: el sitio sale de `next build` con output: "export".
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  }
+}
